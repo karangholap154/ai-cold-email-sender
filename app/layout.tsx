@@ -31,7 +31,7 @@ export default function RootLayout({
       lang="en"
       className={`${ibmPlexSans.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
         <TooltipProvider>
           <Header />
           {children}
