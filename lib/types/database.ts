@@ -1,7 +1,19 @@
 export type EmailStatus = "sent" | "failed" | "draft";
+export type UserPlan = "free" | "pro";
+
+export interface Profile {
+  id: string;
+  plan: UserPlan;
+  stripe_customer_id: string | null;
+  stripe_subscription_status: string | null;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Resume {
   id: string;
+  user_id?: string;
   file_url: string;
   file_name?: string | null;
   skills_summary: string;
@@ -11,6 +23,7 @@ export interface Resume {
 
 export interface SentEmail {
   id: string;
+  user_id?: string;
   jd_text: string;
   hr_email: string;
   company_name: string | null;

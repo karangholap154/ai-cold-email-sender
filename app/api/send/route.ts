@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { getServiceSupabase } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
-  const supabase = getServiceSupabase();
   let bodyData: any = {};
 
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "You must be signed in to send emails." },
+        { status: 401 }
+      );
+    }
+
     bodyData = await req.json();
     const { hrEmail, subject, body, jdText, companyName, roleTitle } = bodyData;
 
@@ -29,8 +41,9 @@ export async function POST(req: NextRequest) {
     const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
 
     if (!gmailUser || !gmailAppPassword) {
-      // Record failed attempt in database
+      // Record failed attempt in database for this user
       await supabase.from("sent_emails").insert({
+        user_id: user.id,
         jd_text: jdText || "",
         hr_email: hrEmail,
         company_name: companyName || null,
@@ -52,11 +65,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Fetch latest resume PDF from Supabase Storage
+    // 2. Fetch user's latest resume PDF from Supabase Storage
     const { data: resumeRow } = await supabase
       .from("resume")
       .select("*")
-      .order("updated_at", { ascending: false })
+      .eq("user_id", user.id)
       .limit(1)
       .maybeSingle();
 
@@ -95,8 +108,9 @@ export async function POST(req: NextRequest) {
       attachments,
     });
 
-    // 4. Log successful send to sent_emails table
+    // 4. Log successful send to sent_emails table scoped to user
     await supabase.from("sent_emails").insert({
+      user_id: user.id,
       jd_text: jdText || "",
       hr_email: hrEmail.trim(),
       company_name: companyName || null,
@@ -120,18 +134,26 @@ export async function POST(req: NextRequest) {
     // Log failure to database if possible
     try {
       if (bodyData?.hrEmail) {
-        await supabase.from("sent_emails").insert({
-          jd_text: bodyData.jdText || "",
-          hr_email: bodyData.hrEmail,
-          company_name: bodyData.companyName || null,
-          role_title: bodyData.roleTitle || null,
-          generated_subject: bodyData.subject || "Unknown",
-          generated_body: bodyData.body || "Unknown",
-          final_subject: bodyData.subject || "Unknown",
-          final_body: bodyData.body || "Unknown",
-          status: "failed",
-          error_message: message,
-        });
+        const supabase = await createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          await supabase.from("sent_emails").insert({
+            user_id: user.id,
+            jd_text: bodyData.jdText || "",
+            hr_email: bodyData.hrEmail,
+            company_name: bodyData.companyName || null,
+            role_title: bodyData.roleTitle || null,
+            generated_subject: bodyData.subject || "Unknown",
+            generated_body: bodyData.body || "Unknown",
+            final_subject: bodyData.subject || "Unknown",
+            final_body: bodyData.body || "Unknown",
+            status: "failed",
+            error_message: message,
+          });
+        }
       }
     } catch (logErr) {
       console.error("Failed to log error to sent_emails table:", logErr);

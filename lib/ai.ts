@@ -59,18 +59,47 @@ ${jdText.trim()}`;
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    
-    // Use gemini-3.6-flash which is active and tested
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+    const models = ["gemini-3.6-flash", "gemini-3.5-flash"];
+    let lastError: unknown = null;
 
-    const responseText = response.text || "";
-    return parseAiJson(responseText);
+    for (const model of models) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const response = await ai.models.generateContent({
+            model,
+            contents: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
+            config: {
+              responseMimeType: "application/json",
+            },
+          });
+
+          const responseText = response.text || "";
+          return parseAiJson(responseText);
+        } catch (err: unknown) {
+          lastError = err;
+          const errMsg = err instanceof Error ? err.message : String(err);
+          const isDemandError =
+            errMsg.includes("503") ||
+            errMsg.includes("high demand") ||
+            errMsg.includes("UNAVAILABLE");
+
+          if (isDemandError && attempt < 2) {
+            // Short backoff before retrying
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+            continue;
+          }
+
+          // If demand error continues, break to next fallback model
+          if (isDemandError) {
+            break;
+          }
+
+          throw err;
+        }
+      }
+    }
+
+    throw lastError || new Error("Failed to generate content with Gemini.");
   }
 
   if (provider === "anthropic") {

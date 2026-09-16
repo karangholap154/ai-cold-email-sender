@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
-    const supabase = getServiceSupabase();
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { data, error } = await supabase
       .from("resume")
       .select("*")
+      .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -24,23 +34,32 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getServiceSupabase();
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const skillsSummary = (formData.get("skills_summary") as string) || "";
 
-    // 1. Fetch current latest resume row if it exists
+    // 1. Fetch current resume row for this user if it exists
     const { data: existingResume } = await supabase
       .from("resume")
       .select("*")
-      .order("updated_at", { ascending: false })
+      .eq("user_id", user.id)
       .limit(1)
       .maybeSingle();
 
     let fileUrl = existingResume?.file_url || "";
     let fileName = existingResume?.file_name || "";
 
-    // 2. If a new file is uploaded, validate and upload to Supabase Storage
+    // 2. If a new file is uploaded, validate and upload to user's isolated folder in Supabase Storage
     if (file && file.size > 0) {
       if (file.type !== "application/pdf") {
         return NextResponse.json(
@@ -58,7 +77,8 @@ export async function POST(req: NextRequest) {
       }
 
       const fileBuffer = await file.arrayBuffer();
-      const storagePath = `resume_${Date.now()}.pdf`;
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storagePath = `${user.id}/${Date.now()}_${sanitizedName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("resumes")
@@ -85,7 +105,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Update or Insert in resume table
+    // 3. Update or Insert in resume table scoped to user.id
     let savedData;
     if (existingResume?.id) {
       const { data, error } = await supabase
@@ -97,6 +117,7 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingResume.id)
+        .eq("user_id", user.id)
         .select()
         .single();
 
@@ -108,6 +129,7 @@ export async function POST(req: NextRequest) {
       const { data, error } = await supabase
         .from("resume")
         .insert({
+          user_id: user.id,
           file_url: fileUrl,
           file_name: fileName,
           skills_summary: skillsSummary.trim(),
