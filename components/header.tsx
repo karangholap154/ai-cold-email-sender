@@ -49,16 +49,16 @@ export function Header() {
   ];
 
   return (
-    <header className="border-b border-hairline bg-paper">
-      <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
+    <header className="border-b border-hairline bg-paper sticky top-0 z-30">
+      <div className="mx-auto flex max-w-4xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
         <Link
           href="/"
-          className="font-heading text-xl text-ink tracking-tight hover:opacity-90 transition-opacity"
+          className="font-heading text-lg sm:text-xl text-ink tracking-tight hover:opacity-90 transition-opacity shrink-0"
         >
           Cold email
         </Link>
 
-        {/* Center / Left Navigation for logged in users */}
+        {/* Center Navigation for logged-in users on tablet/desktop */}
         {user && (
           <nav className="hidden sm:flex items-center gap-6 text-sm">
             {navLinks.map((link) => {
@@ -67,7 +67,7 @@ export function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`transition-colors ${
+                  className={`transition-colors py-1 ${
                     isActive
                       ? "font-medium text-ink underline underline-offset-8 decoration-hairline decoration-2"
                       : "text-muted-ink hover:text-ink"
@@ -81,11 +81,11 @@ export function Header() {
         )}
 
         {/* Right side: Auth status */}
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-2 sm:gap-4 text-xs">
           {!isLoading && user ? (
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-1.5 text-muted-ink">
-                <span className="truncate max-w-[160px] text-ink font-medium">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="hidden sm:flex items-center gap-1.5 text-muted-ink">
+                <span className="truncate max-w-[110px] md:max-w-[160px] text-ink font-medium">
                   {user.email}
                 </span>
                 <span className="rounded-sm border border-hairline px-1.5 py-0.5 text-[10px] text-muted-ink uppercase tracking-wider">
@@ -95,23 +95,23 @@ export function Header() {
               <button
                 onClick={handleSignOut}
                 title="Sign out"
-                className="inline-flex items-center gap-1 text-muted-ink hover:text-ink transition-colors py-1 px-2 border border-transparent hover:border-hairline rounded-sm"
+                className="inline-flex items-center gap-1 text-muted-ink hover:text-ink transition-colors py-1.5 px-2 sm:px-2.5 border border-transparent hover:border-hairline rounded-sm cursor-pointer"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Sign out</span>
+                <span className="text-[11px] sm:text-xs">Sign out</span>
               </button>
             </div>
           ) : !isLoading && !user && pathname !== "/login" && pathname !== "/signup" ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Link
                 href="/login"
-                className="text-muted-ink hover:text-ink transition-colors"
+                className="text-muted-ink hover:text-ink transition-colors px-2 py-1 text-[11px] sm:text-xs"
               >
                 Sign in
               </Link>
               <Link
                 href="/signup"
-                className="rounded-sm border border-hairline bg-ink px-3 py-1 text-xs font-medium text-paper hover:bg-ink/90 transition-colors"
+                className="rounded-sm border border-hairline bg-ink px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-medium text-paper hover:bg-ink/90 transition-colors shrink-0"
               >
                 Create account
               </Link>
@@ -122,18 +122,18 @@ export function Header() {
 
       {/* Mobile navigation bar when logged in */}
       {user && (
-        <div className="sm:hidden border-t border-hairline px-6 py-2.5 flex items-center justify-around text-xs">
+        <div className="sm:hidden border-t border-hairline px-3 py-2 flex items-center justify-around text-xs bg-paper">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={
+                className={`px-3 py-1.5 rounded-sm transition-colors ${
                   isActive
-                    ? "font-medium text-ink"
+                    ? "font-medium text-ink bg-[#EDEAE2]"
                     : "text-muted-ink hover:text-ink"
-                }
+                }`}
               >
                 {link.label}
               </Link>

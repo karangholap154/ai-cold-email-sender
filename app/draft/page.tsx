@@ -179,24 +179,24 @@ export default function DraftPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col px-6 py-10">
+    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
         {step === "input" && (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Header */}
             <div>
-              <h1 className="font-heading text-2xl sm:text-3xl text-ink">
+              <h1 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink">
                 Draft correspondence
               </h1>
-              <p className="mt-1 text-sm text-muted-ink leading-relaxed">
+              <p className="mt-1 text-xs sm:text-sm text-muted-ink leading-relaxed">
                 Paste a Job Description and recipient email. The AI will extract the key requirements, match them against your background, and draft a concise, tailored letter for your review.
               </p>
             </div>
 
             {/* Resume status banner */}
             {!isResumeLoading && !resume?.file_url && (
-              <div className="flex items-start justify-between gap-4 border border-hairline bg-[#FAF9F5] p-4 rounded-sm">
-                <div className="flex items-start gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm">
+                <div className="flex items-start gap-3 min-w-0">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" />
                   <div className="text-xs">
                     <p className="font-medium text-ink">No resume active yet</p>
@@ -207,7 +207,7 @@ export default function DraftPage() {
                 </div>
                 <Link
                   href="/settings"
-                  className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0"
+                  className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0 self-start sm:self-auto py-1"
                 >
                   <span>Configure resume</span>
                   <ExternalLink className="h-3 w-3" />
@@ -216,14 +216,14 @@ export default function DraftPage() {
             )}
 
             {/* Input Form */}
-            <form onSubmit={handleGenerate} className="space-y-6">
+            <form onSubmit={handleGenerate} className="space-y-5 sm:space-y-6">
               {/* Recipient HR Email */}
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-baseline justify-between gap-2">
                   <label htmlFor="hr-email" className="block text-xs font-medium uppercase tracking-wider text-muted-ink">
                     Recipient Email
                   </label>
-                  <span className="text-[11px] text-muted-ink">HR or hiring manager</span>
+                  <span className="text-[11px] text-muted-ink shrink-0">HR or hiring manager</span>
                 </div>
                 <input
                   id="hr-email"
@@ -232,23 +232,23 @@ export default function DraftPage() {
                   onChange={(e) => setHrEmail(e.target.value)}
                   placeholder="recruiter@company.com"
                   required
-                  className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
+                  className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono min-h-[42px]"
                 />
               </div>
 
               {/* Job Description */}
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-baseline justify-between gap-2">
                   <label htmlFor="jd-text" className="block text-xs font-medium uppercase tracking-wider text-muted-ink">
                     Job Description
                   </label>
-                  <span className="text-[11px] text-muted-ink">
+                  <span className="text-[11px] text-muted-ink shrink-0">
                     {jdText.length > 0 ? `${jdText.length} characters` : "Raw text from posting"}
                   </span>
                 </div>
                 <TextareaAutosize
                   id="jd-text"
-                  minRows={10}
+                  minRows={8}
                   value={jdText}
                   onChange={(e) => setJdText(e.target.value)}
                   placeholder="Paste the full job posting text here (roles, responsibilities, required qualifications)..."
@@ -258,11 +258,11 @@ export default function DraftPage() {
               </div>
 
               {/* Submit Action */}
-              <div className="flex items-center justify-end pt-2">
+              <div className="flex items-center justify-end pt-1 sm:pt-2">
                 <button
                   type="submit"
                   disabled={isAnalyzing || !jdText.trim() || !hrEmail.trim()}
-                  className="inline-flex items-center gap-2 rounded-sm bg-ink px-5 py-2.5 text-xs font-medium text-paper hover:bg-ink/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-sm bg-ink px-5 py-2.5 text-xs font-medium text-paper hover:bg-ink/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer min-h-[42px]"
                 >
                   {isAnalyzing ? (
                     <>

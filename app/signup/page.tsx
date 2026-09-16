@@ -67,11 +67,11 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+    <main className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="font-heading text-2xl text-ink">Create an account</h1>
+        <div className="mb-6 sm:mb-8 text-center">
+          <h1 className="font-heading text-xl sm:text-2xl text-ink">Create an account</h1>
           <p className="mt-1.5 text-xs text-muted-ink">
             Start drafting tailored, genuine cold applications in seconds.
           </p>
@@ -79,16 +79,16 @@ export default function SignupPage() {
 
         {/* Success confirmation state */}
         {isSuccess ? (
-          <div className="border border-hairline bg-paper p-6 rounded-sm text-center">
+          <div className="border border-hairline bg-paper p-5 sm:p-6 rounded-sm text-center">
             <CheckCircle2 className="mx-auto h-8 w-8 text-confirmed mb-3" />
             <h2 className="text-sm font-medium text-ink">Check your inbox</h2>
             <p className="mt-1.5 text-xs text-muted-ink leading-relaxed">
-              We&apos;ve sent a confirmation link to <strong className="font-medium text-ink">{email}</strong>. Click the link in that email to confirm your account and sign in.
+              We&apos;ve sent a confirmation link to <strong className="font-medium text-ink break-all">{email}</strong>. Click the link in that email to confirm your account and sign in.
             </p>
             <div className="mt-5 border-t border-hairline pt-4">
               <Link
                 href="/login"
-                className="text-xs text-ink underline underline-offset-4 hover:opacity-80"
+                className="text-xs text-ink underline underline-offset-4 hover:opacity-80 py-1"
               >
                 Back to Sign in
               </Link>
@@ -96,7 +96,7 @@ export default function SignupPage() {
           </div>
         ) : (
           /* Form Card */
-          <div className="border border-hairline bg-paper p-6 rounded-sm shadow-none">
+          <div className="border border-hairline bg-paper p-5 sm:p-6 rounded-sm shadow-none">
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-1.5">
                 <label
@@ -113,7 +113,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@domain.com"
-                  className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors"
+                  className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 sm:py-2 text-sm sm:text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors min-h-[40px]"
                 />
               </div>
 
@@ -132,7 +132,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 6 characters"
-                  className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors"
+                  className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 sm:py-2 text-sm sm:text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors min-h-[40px]"
                 />
               </div>
 
@@ -151,14 +151,14 @@ export default function SignupPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat password"
-                  className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors"
+                  className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 sm:py-2 text-sm sm:text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors min-h-[40px]"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-hairline bg-ink py-2 text-xs font-medium text-paper transition-colors hover:bg-ink/90 disabled:opacity-50"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-sm border border-hairline bg-ink py-2.5 sm:py-2 text-xs font-medium text-paper transition-colors hover:bg-ink/90 disabled:opacity-50 cursor-pointer min-h-[42px]"
               >
                 {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 <span>{isLoading ? "Creating account..." : "Create account"}</span>
@@ -173,7 +173,7 @@ export default function SignupPage() {
             Already have an account?{" "}
             <Link
               href="/login"
-              className="text-ink underline underline-offset-4 hover:opacity-80 transition-opacity"
+              className="text-ink underline underline-offset-4 hover:opacity-80 transition-opacity py-1"
             >
               Sign in
             </Link>
