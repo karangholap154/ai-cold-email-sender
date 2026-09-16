@@ -52,7 +52,7 @@ export default function SignupPage() {
       // If user session exists immediately (email confirmation disabled in Supabase)
       if (data.session) {
         toast.success("Account created successfully.");
-        router.push("/");
+        router.push("/draft");
         router.refresh();
       } else {
         // Confirmation email sent

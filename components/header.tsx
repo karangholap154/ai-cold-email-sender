@@ -43,7 +43,7 @@ export function Header() {
   };
 
   const navLinks = [
-    { href: "/", label: "Draft" },
+    { href: "/draft", label: "Draft" },
     { href: "/log", label: "Send Log" },
     { href: "/settings", label: "Settings & Resume" },
   ];

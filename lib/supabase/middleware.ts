@@ -42,9 +42,10 @@ export async function updateSession(request: NextRequest) {
   // Auth pages: /login, /signup
   const isAuthPage = pathname === "/login" || pathname.startsWith("/login/") || pathname === "/signup" || pathname.startsWith("/signup/");
 
-  // Protected pages: /, /settings, /log (use exact match or / prefix to avoid /login matching /log)
+  // Protected pages: /draft, /settings, /log (use exact match or / prefix to avoid /login matching /log)
   const isProtectedPage =
-    pathname === "/" ||
+    pathname === "/draft" ||
+    pathname.startsWith("/draft/") ||
     pathname === "/settings" ||
     pathname.startsWith("/settings/") ||
     pathname === "/log" ||
@@ -60,7 +61,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isAuthPage) {
-    url.pathname = "/";
+    url.pathname = "/draft";
     const redirectResponse = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie);
