@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeJdAndDraftEmail } from "@/lib/ai";
+import { formatSenderSignature } from "@/lib/signature";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,8 +15,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Fetch authenticated user's background / skills summary from Supabase if logged in
+    // 1. Fetch authenticated user's background / skills summary & sender signature from Supabase if logged in
     let skillsSummary = "";
+    let senderSignature = "";
     try {
       const supabase = await createClient();
       const {
@@ -23,6 +25,7 @@ export async function POST(req: NextRequest) {
       } = await supabase.auth.getUser();
 
       if (user) {
+        // Fetch resume skills summary
         const { data: resumeData } = await supabase
           .from("resume")
           .select("skills_summary")
@@ -33,15 +36,28 @@ export async function POST(req: NextRequest) {
         if (resumeData?.skills_summary) {
           skillsSummary = resumeData.skills_summary;
         }
+
+        // Fetch profile signature
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature")
+          .eq("id", user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (profileData) {
+          senderSignature = formatSenderSignature(profileData);
+        }
       }
     } catch (dbErr) {
-      console.warn("Could not fetch skills summary from Supabase, proceeding with JD only:", dbErr);
+      console.warn("Could not fetch user profile or resume from Supabase, proceeding with JD only:", dbErr);
     }
 
     // 2. Call AI extraction and email generation
     const result = await analyzeJdAndDraftEmail({
       jdText: jdText.trim(),
       skillsSummary,
+      senderSignature,
     });
 
     return NextResponse.json(result);

@@ -3,8 +3,31 @@
 import { useEffect, useState, useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
-import { FileText, Upload, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import {
+  FileText,
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Copy,
+  Sparkles,
+  User,
+  Globe,
+  Code2,
+  Link2,
+  Phone,
+} from "lucide-react";
 import type { Resume } from "@/lib/types/database";
+import { generateFormattedSignature } from "@/lib/signature";
+
+const MIGRATION_SQL = `alter table public.profiles
+  add column if not exists full_name text,
+  add column if not exists sign_off text default 'Best regards,',
+  add column if not exists portfolio_url text,
+  add column if not exists github_url text,
+  add column if not exists linkedin_url text,
+  add column if not exists phone text,
+  add column if not exists custom_signature text;`;
 
 export default function SettingsPage() {
   const [resume, setResume] = useState<Resume | null>(null);
@@ -14,26 +37,118 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load existing resume data
+  // Profile & Sender Signature State
+  const [fullName, setFullName] = useState("");
+  const [signOff, setSignOff] = useState("Best regards,");
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [phone, setPhone] = useState("");
+  const [customSignature, setCustomSignature] = useState("");
+  const [activeLayout, setActiveLayout] = useState<"stack" | "inline" | "compact">("stack");
+  const [isCustomDirty, setIsCustomDirty] = useState(false);
+  const [migrationRequired, setMigrationRequired] = useState(false);
+
+  // Load existing resume & profile data
   useEffect(() => {
-    async function loadResume() {
+    async function loadData() {
       try {
-        const res = await fetch("/api/resume");
-        if (!res.ok) throw new Error("Failed to load resume");
-        const data = await res.json();
-        if (data.resume) {
-          setResume(data.resume);
-          setSkillsSummary(data.resume.skills_summary || "");
+        const [resumeRes, profileRes] = await Promise.all([
+          fetch("/api/resume"),
+          fetch("/api/profile"),
+        ]);
+
+        if (resumeRes.ok) {
+          const rData = await resumeRes.json();
+          if (rData.resume) {
+            setResume(rData.resume);
+            setSkillsSummary(rData.resume.skills_summary || "");
+          }
+        }
+
+        if (profileRes.ok) {
+          const pData = await profileRes.json();
+          if (pData.profile) {
+            const fn = pData.profile.full_name || "";
+            const so = pData.profile.sign_off || "Best regards,";
+            const po = pData.profile.portfolio_url || "";
+            const gh = pData.profile.github_url || "";
+            const li = pData.profile.linkedin_url || "";
+            const ph = pData.profile.phone || "";
+            const cs = pData.profile.custom_signature || "";
+
+            setFullName(fn);
+            setSignOff(so);
+            setPortfolioUrl(po);
+            setGithubUrl(gh);
+            setLinkedinUrl(li);
+            setPhone(ph);
+
+            if (cs) {
+              setCustomSignature(cs);
+              setIsCustomDirty(true);
+            } else {
+              const gen = generateFormattedSignature({
+                full_name: fn,
+                sign_off: so,
+                portfolio_url: po,
+                github_url: gh,
+                linkedin_url: li,
+                phone: ph,
+              }, "stack");
+              setCustomSignature(gen);
+            }
+          }
+          if (pData.migrationRequired) {
+            setMigrationRequired(true);
+          }
         }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Error loading resume";
-        toast.error(msg);
+        console.warn("Could not load settings:", err);
       } finally {
         setIsLoading(false);
       }
     }
-    loadResume();
+    loadData();
   }, []);
+
+  // Update signature when fields change if user hasn't manually customized textarea
+  const updateGeneratedSignature = (
+    fn: string,
+    so: string,
+    po: string,
+    gh: string,
+    li: string,
+    ph: string,
+    layout: "stack" | "inline" | "compact" = activeLayout
+  ) => {
+    if (!isCustomDirty) {
+      const generated = generateFormattedSignature({
+        full_name: fn,
+        sign_off: so,
+        portfolio_url: po,
+        github_url: gh,
+        linkedin_url: li,
+        phone: ph,
+      }, layout);
+      setCustomSignature(generated);
+    }
+  };
+
+  const applyPreset = (layout: "stack" | "inline" | "compact") => {
+    setActiveLayout(layout);
+    const text = generateFormattedSignature({
+      full_name: fullName,
+      sign_off: signOff,
+      portfolio_url: portfolioUrl,
+      github_url: githubUrl,
+      linkedin_url: linkedinUrl,
+      phone: phone,
+    }, layout);
+    setCustomSignature(text);
+    setIsCustomDirty(true);
+    toast.success(`Signature layout set to "${layout === "stack" ? "Line by line" : layout === "inline" ? "Single line" : "Compact"}"`);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -52,40 +167,74 @@ export default function SettingsPage() {
     setSelectedFile(file);
   };
 
+  const handleCopySql = async () => {
+    try {
+      await navigator.clipboard.writeText(MIGRATION_SQL);
+      toast.success("SQL migration query copied to clipboard");
+    } catch {
+      toast.error("Failed to copy SQL to clipboard");
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!resume && !selectedFile) {
-      toast.error("Please select a resume PDF to upload.");
-      return;
-    }
-
     setIsSaving(true);
-    try {
-      const formData = new FormData();
-      if (selectedFile) {
-        formData.append("file", selectedFile);
-      }
-      formData.append("skills_summary", skillsSummary);
 
-      const res = await fetch("/api/resume", {
+    try {
+      // 1. Save Resume & Skills Summary if changed or uploaded
+      if (selectedFile || (resume && skillsSummary !== resume.skills_summary)) {
+        const formData = new FormData();
+        if (selectedFile) {
+          formData.append("file", selectedFile);
+        }
+        formData.append("skills_summary", skillsSummary);
+
+        const res = await fetch("/api/resume", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Failed to save resume.");
+        }
+
+        setResume(data.resume);
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+
+      // 2. Save Profile & Custom Sender Signature
+      const profileRes = await fetch("/api/profile", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: fullName,
+          sign_off: signOff,
+          portfolio_url: portfolioUrl,
+          github_url: githubUrl,
+          linkedin_url: linkedinUrl,
+          phone: phone,
+          custom_signature: customSignature,
+        }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to save changes.");
+      const pData = await profileRes.json();
+      if (!profileRes.ok) {
+        if (pData.migrationRequired) {
+          setMigrationRequired(true);
+          toast.error("Database table missing columns. Please run the SQL migration below in Supabase.");
+          return;
+        }
+        throw new Error(pData.error || "Failed to save sender signature.");
       }
 
-      setResume(data.resume);
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      toast.success("Resume and skills summary updated.");
+      setMigrationRequired(false);
+      toast.success("Settings and sender signature saved successfully.");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error saving";
+      const msg = err instanceof Error ? err.message : "Error saving settings";
       toast.error(msg);
     } finally {
       setIsSaving(false);
@@ -96,16 +245,16 @@ export default function SettingsPage() {
     <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-6 sm:mb-8">
-          <h1 className="font-heading text-xl sm:text-2xl text-ink">Resume & Background</h1>
+          <h1 className="font-heading text-xl sm:text-2xl text-ink">Settings & Profile</h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-ink">
-            Configure the resume PDF attached to outgoing letters and provide your key background summary for the AI.
+            Configure your active resume, background skills summary, and automatic sender signature for correspondence.
           </p>
         </div>
 
         {isLoading ? (
           <div className="flex items-center gap-2 py-12 text-xs sm:text-sm text-muted-ink">
             <Loader2 className="h-4 w-4 animate-spin text-muted-ink" />
-            <span>Loading resume settings...</span>
+            <span>Loading settings...</span>
           </div>
         ) : (
           <form onSubmit={handleSave} className="space-y-6 sm:space-y-8">
@@ -205,19 +354,249 @@ export default function SettingsPage() {
                 <span className="text-[11px] text-muted-ink">Passed into AI prompt</span>
               </div>
               <p className="text-xs text-muted-ink leading-relaxed">
-                Provide 3–6 sentences or bullet points highlighting your years of experience, core technologies, notable achievements, and primary domains. The AI uses this context to genuinely link your background to each job description.
+                Provide 3–6 sentences or bullet points highlighting your years of experience, core technologies, notable achievements, and primary domains.
               </p>
               <TextareaAutosize
                 id="skills-summary"
-                minRows={5}
+                minRows={4}
                 value={skillsSummary}
                 onChange={(e) => setSkillsSummary(e.target.value)}
-                placeholder="e.g. 5+ years building full-stack web applications with React, Next.js, Node.js, and PostgreSQL. Experienced in distributed systems, real-time architectures, and developer tooling. Previously reduced page load latency by 40% at..."
+                placeholder="e.g. 5+ years building full-stack web applications with React, Next.js, Node.js, and PostgreSQL..."
                 className="w-full resize-none border border-hairline bg-paper px-3.5 py-3 text-sm text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none rounded-sm transition-colors leading-relaxed"
               />
             </section>
 
-            {/* 3. Submit Action */}
+            {/* 3. Custom Sender Signature Section */}
+            <section className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+                <label className="block text-xs sm:text-sm font-medium text-ink">
+                  Custom Sender Signature & Contact Links
+                </label>
+                <span className="text-[11px] text-muted-ink">Appended to drafted letters</span>
+              </div>
+              <p className="text-xs text-muted-ink leading-relaxed">
+                Set your professional sign-off, portfolio, and contact links. Choose a layout preset or directly edit the signature box below.
+              </p>
+
+              {/* Supabase migration alert if database columns not present */}
+              {migrationRequired && (
+                <div className="border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm space-y-2.5 text-xs">
+                  <div className="flex items-center gap-2 text-amber-800 font-medium">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>One-time database migration query needed in Supabase</span>
+                  </div>
+                  <p className="text-[11px] text-muted-ink leading-relaxed">
+                    To persist your signature fields in Supabase, run this query in your <strong>Supabase Dashboard → SQL Editor</strong>:
+                  </p>
+                  <div className="flex items-center justify-between gap-2 border border-hairline bg-paper p-2 rounded-xs overflow-x-auto font-mono text-[11px] text-ink">
+                    <span className="truncate">{MIGRATION_SQL.replace(/\s+/g, " ")}</span>
+                    <button
+                      type="button"
+                      onClick={handleCopySql}
+                      className="inline-flex items-center gap-1 shrink-0 rounded-xs border border-hairline bg-[#EDEAE2] px-2 py-1 text-[10px] font-sans font-medium text-ink hover:bg-[#E2DDD3] cursor-pointer"
+                    >
+                      <Copy className="h-3 w-3" />
+                      <span>Copy SQL</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="border border-hairline bg-paper p-4 sm:p-5 rounded-sm space-y-4">
+                {/* Row 1: Full Name & Sign-off Phrase */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="full-name" className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                      <User className="h-3.5 w-3.5 text-muted-ink" />
+                      <span>Full Name</span>
+                    </label>
+                    <input
+                      id="full-name"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFullName(val);
+                        updateGeneratedSignature(val, signOff, portfolioUrl, githubUrl, linkedinUrl, phone);
+                      }}
+                      placeholder="e.g. Karan Gholap"
+                      className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="sign-off" className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                      <Sparkles className="h-3.5 w-3.5 text-muted-ink" />
+                      <span>Sign-off Phrase</span>
+                    </label>
+                    <input
+                      id="sign-off"
+                      type="text"
+                      value={signOff}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSignOff(val);
+                        updateGeneratedSignature(fullName, val, portfolioUrl, githubUrl, linkedinUrl, phone);
+                      }}
+                      placeholder="e.g. Best regards, / Best,"
+                      className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Portfolio / Website & Phone */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="portfolio-url" className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                      <Globe className="h-3.5 w-3.5 text-muted-ink" />
+                      <span>Portfolio / Website</span>
+                    </label>
+                    <input
+                      id="portfolio-url"
+                      type="url"
+                      value={portfolioUrl}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPortfolioUrl(val);
+                        updateGeneratedSignature(fullName, signOff, val, githubUrl, linkedinUrl, phone);
+                      }}
+                      placeholder="https://www.karangholap.com/"
+                      className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="phone" className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                      <Phone className="h-3.5 w-3.5 text-muted-ink" />
+                      <span>Phone Number (optional)</span>
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPhone(val);
+                        updateGeneratedSignature(fullName, signOff, portfolioUrl, githubUrl, linkedinUrl, val);
+                      }}
+                      placeholder="8421955664"
+                      className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: GitHub & LinkedIn */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="github-url" className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                      <Code2 className="h-3.5 w-3.5 text-muted-ink" />
+                      <span>GitHub URL</span>
+                    </label>
+                    <input
+                      id="github-url"
+                      type="url"
+                      value={githubUrl}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setGithubUrl(val);
+                        updateGeneratedSignature(fullName, signOff, portfolioUrl, val, linkedinUrl, phone);
+                      }}
+                      placeholder="https://github.com/karangholap154/"
+                      className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label htmlFor="linkedin-url" className="flex items-center gap-1.5 text-xs font-medium text-ink">
+                      <Link2 className="h-3.5 w-3.5 text-muted-ink" />
+                      <span>LinkedIn URL</span>
+                    </label>
+                    <input
+                      id="linkedin-url"
+                      type="url"
+                      value={linkedinUrl}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setLinkedinUrl(val);
+                        updateGeneratedSignature(fullName, signOff, portfolioUrl, githubUrl, val, phone);
+                      }}
+                      placeholder="https://www.linkedin.com/in/karangholap/"
+                      className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Interactive Signature Preview & Direct Editor */}
+                <div className="space-y-2 pt-3 border-t border-hairline">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="block text-xs font-medium text-ink">
+                        Signature Preview & Customizer
+                      </span>
+                      <span className="text-[11px] text-muted-ink">
+                        Click a format preset or edit the text directly:
+                      </span>
+                    </div>
+
+                    {/* Layout Preset Buttons */}
+                    <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => applyPreset("stack")}
+                        title="Each link on its own line (clean, no broken wraps)"
+                        className={`rounded-xs border border-hairline px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
+                          activeLayout === "stack"
+                            ? "bg-ink text-paper"
+                            : "bg-paper text-ink hover:bg-[#EDEAE2]"
+                        }`}
+                      >
+                        Line by line
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyPreset("inline")}
+                        title="All links in a single line separated by pipes"
+                        className={`rounded-xs border border-hairline px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
+                          activeLayout === "inline"
+                            ? "bg-ink text-paper"
+                            : "bg-paper text-ink hover:bg-[#EDEAE2]"
+                        }`}
+                      >
+                        Single line
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyPreset("compact")}
+                        title="Clean domain handles separated by bullets"
+                        className={`rounded-xs border border-hairline px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
+                          activeLayout === "compact"
+                            ? "bg-ink text-paper"
+                            : "bg-paper text-ink hover:bg-[#EDEAE2]"
+                        }`}
+                      >
+                        Compact
+                      </button>
+                    </div>
+                  </div>
+
+                  <TextareaAutosize
+                    minRows={5}
+                    value={customSignature}
+                    onChange={(e) => {
+                      setCustomSignature(e.target.value);
+                      setIsCustomDirty(true);
+                    }}
+                    placeholder={`Best regards,\nKaran Gholap\n\nPortfolio: https://...\nGitHub: https://...`}
+                    className="w-full resize-none rounded-xs border border-dashed border-hairline bg-[#FAF9F5] p-3 sm:p-4 font-mono text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none leading-relaxed transition-colors"
+                  />
+                  <p className="text-[11px] text-muted-ink">
+                    This exact signature text will be automatically appended to the bottom of your drafted emails.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* 4. Submit Action */}
             <div className="flex items-center justify-end border-t border-hairline pt-5 sm:pt-6">
               <button
                 type="submit"
@@ -225,7 +604,7 @@ export default function SettingsPage() {
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-sm border border-hairline bg-ink px-5 py-2.5 sm:py-2 text-xs font-medium text-paper hover:bg-ink/90 disabled:opacity-50 transition-colors cursor-pointer min-h-[42px]"
               >
                 {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>{isSaving ? "Saving..." : "Save changes"}</span>
+                <span>{isSaving ? "Saving..." : "Save settings"}</span>
               </button>
             </div>
           </form>

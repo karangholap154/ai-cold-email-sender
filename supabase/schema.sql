@@ -226,3 +226,16 @@ create policy "Users can delete their own resume"
     bucket_id = 'resumes' and
     (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ==============================================================================
+-- 7. Sender Signature Migration on public.profiles
+-- ==============================================================================
+alter table public.profiles
+  add column if not exists full_name text,
+  add column if not exists sign_off text default 'Best regards,',
+  add column if not exists portfolio_url text,
+  add column if not exists github_url text,
+  add column if not exists linkedin_url text,
+  add column if not exists phone text,
+  add column if not exists custom_signature text;
+

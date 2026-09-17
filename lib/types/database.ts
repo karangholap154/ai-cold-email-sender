@@ -7,6 +7,13 @@ export interface Profile {
   stripe_customer_id: string | null;
   stripe_subscription_status: string | null;
   current_period_end: string | null;
+  full_name?: string | null;
+  sign_off?: string | null;
+  portfolio_url?: string | null;
+  github_url?: string | null;
+  linkedin_url?: string | null;
+  phone?: string | null;
+  custom_signature?: string | null;
   created_at: string;
   updated_at: string;
 }

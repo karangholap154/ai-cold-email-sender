@@ -6,6 +6,7 @@ import type { AnalyzeResponse } from "./types/database";
 export interface GenerateEmailParams {
   jdText: string;
   skillsSummary?: string;
+  senderSignature?: string;
 }
 
 const SYSTEM_PROMPT = `You are an expert career correspondence writer specializing in high-response, authentic cold outreach. Your task is to analyze a job description (JD) and the applicant's background/skills summary, and:
@@ -25,7 +26,7 @@ const SYSTEM_PROMPT = `You are an expert career correspondence writer specializi
      - Reference 2-3 specific technical skills or problem areas from the JD that match your experience.
      - Note that your resume is attached for their convenience.
      - End with a low-pressure, polite call to action (e.g., "I've attached my resume. Happy to share relevant work or chat briefly if this looks like a fit.").
-     - Include a clean sign-off like "Best," or "Best regards,".
+     - Close with the provided Applicant Signature Block exactly as provided, or a clean sign-off like "Best regards," if none provided.
    - Prohibited clichés: Do NOT use "I am writing to express my interest...", "I hope this email finds you well", "I was thrilled to see...", "I believe I am the perfect candidate", or inflated flattery.
 
 You must respond ONLY with valid JSON in this exact structure:
@@ -41,12 +42,14 @@ You must respond ONLY with valid JSON in this exact structure:
 export async function analyzeJdAndDraftEmail({
   jdText,
   skillsSummary = "",
+  senderSignature = "",
 }: GenerateEmailParams): Promise<AnalyzeResponse> {
   const provider = (process.env.AI_PROVIDER || "gemini").toLowerCase();
 
   const userPrompt = `Applicant Background & Skills Summary:
 ${skillsSummary ? skillsSummary.trim() : "(No specific background provided; write a sharp, capable engineering cold email highlighting relevant strengths from the JD)"}
 
+${senderSignature ? `Applicant Signature Block (attach this exact block at the bottom of the email):\n${senderSignature.trim()}\n` : ""}
 ---
 
 Job Description:
@@ -74,7 +77,7 @@ ${jdText.trim()}`;
           });
 
           const responseText = response.text || "";
-          return parseAiJson(responseText);
+          return parseAiJson(responseText, senderSignature);
         } catch (err: unknown) {
           lastError = err;
           const errMsg = err instanceof Error ? err.message : String(err);
@@ -121,7 +124,7 @@ ${jdText.trim()}`;
       .map((block) => (block as { type: "text"; text: string }).text)
       .join("\n");
 
-    return parseAiJson(text);
+    return parseAiJson(text, senderSignature);
   }
 
   if (provider === "openai") {
@@ -141,13 +144,31 @@ ${jdText.trim()}`;
     });
 
     const text = completion.choices[0]?.message?.content || "";
-    return parseAiJson(text);
+    return parseAiJson(text, senderSignature);
   }
 
   throw new Error(`Unsupported AI_PROVIDER: "${provider}". Must be "gemini", "anthropic", or "openai".`);
 }
 
-function parseAiJson(rawText: string): AnalyzeResponse {
+function applySignature(body: string, signature?: string): string {
+  if (!signature || !signature.trim()) return body;
+  const cleanSig = signature.trim();
+
+  // If the body already contains the signature, keep it
+  if (body.includes(cleanSig)) {
+    return body;
+  }
+
+  // If body ends with a generic sign-off like "Best,\n[Your Name]" or "Best regards,", replace it cleanly
+  const signoffPattern = /(?:Best regards|Best|Sincerely|Warm regards|Thanks),?\s*(?:\n+\[?(?:Your Name|Candidate|Applicant)\]?)?\s*$/i;
+  if (signoffPattern.test(body)) {
+    return `${body.replace(signoffPattern, "").trim()}\n\n${cleanSig}`;
+  }
+
+  return `${body.trim()}\n\n${cleanSig}`;
+}
+
+function parseAiJson(rawText: string, senderSignature?: string): AnalyzeResponse {
   let cleaned = rawText.trim();
   if (cleaned.startsWith("```json")) {
     cleaned = cleaned.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
@@ -157,9 +178,10 @@ function parseAiJson(rawText: string): AnalyzeResponse {
 
   try {
     const parsed = JSON.parse(cleaned);
+    const rawBody = parsed.body || "";
     return {
       subject: parsed.subject || "Application for role",
-      body: parsed.body || "",
+      body: applySignature(rawBody, senderSignature),
       companyName: parsed.companyName || undefined,
       roleTitle: parsed.roleTitle || undefined,
       skills: Array.isArray(parsed.skills) ? parsed.skills : [],
