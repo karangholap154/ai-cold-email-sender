@@ -143,14 +143,21 @@ export default function DraftPage() {
     body: string;
     companyName?: string;
     roleTitle?: string;
+    hrEmail?: string;
   }) => {
+    const targetEmail = (finalData.hrEmail || hrEmail).trim();
+    if (!targetEmail) {
+      toast.error("Please provide a recipient email address.");
+      return;
+    }
+
     setIsSending(true);
     try {
       const res = await fetch("/api/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          hrEmail: hrEmail.trim(),
+          hrEmail: targetEmail,
           subject: finalData.subject,
           body: finalData.body,
           jdText,
@@ -164,7 +171,7 @@ export default function DraftPage() {
         throw new Error(data.error || "Failed to send email.");
       }
 
-      toast.success(`Letter sent successfully to ${hrEmail.trim()}`);
+      toast.success(`Letter sent successfully to ${targetEmail}`);
       // Return to fresh input state
       setStep("input");
       setJdText("");
@@ -238,13 +245,24 @@ export default function DraftPage() {
 
               {/* Job Description */}
               <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex items-baseline justify-between gap-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <label htmlFor="jd-text" className="block text-xs font-medium uppercase tracking-wider text-muted-ink">
                     Job Description
                   </label>
-                  <span className="text-[11px] text-muted-ink shrink-0">
-                    {jdText.length > 0 ? `${jdText.length} characters` : "Raw text from posting"}
-                  </span>
+                  <div className="flex items-center gap-2.5 text-[11px] text-muted-ink shrink-0">
+                    {jdText.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setJdText("")}
+                        className="hover:text-ink underline underline-offset-2 cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <span>
+                      {jdText.length > 0 ? `${jdText.length} characters` : "Raw text from posting"}
+                    </span>
+                  </div>
                 </div>
                 <TextareaAutosize
                   id="jd-text"
@@ -290,6 +308,7 @@ export default function DraftPage() {
             isRegenerating={isRegenerating}
             onBack={() => setStep("input")}
             onSend={handleSend}
+            onEmailChange={setHrEmail}
             isSending={isSending}
           />
         )}
