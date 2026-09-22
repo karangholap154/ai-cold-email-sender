@@ -625,11 +625,11 @@ Qualifications:
             <Link href="/settings" className="hover:text-ink transition-colors py-1">
               Resume Settings
             </Link>
-            <Link href="/login" className="hover:text-ink transition-colors py-1">
-              Sign In
+            <Link href="/privacy" className="hover:text-ink transition-colors py-1">
+              Privacy Policy
             </Link>
-            <Link href="/signup" className="hover:text-ink transition-colors py-1">
-              Create Account
+            <Link href="/terms" className="hover:text-ink transition-colors py-1">
+              Terms of Service
             </Link>
           </div>
         </div>
@@ -639,7 +639,9 @@ Qualifications:
             © {new Date().getFullYear()} Cold Email Sender. All rights reserved.
           </div>
           <div className="flex items-center justify-center gap-3 sm:gap-4">
-            <span>Google API Verification Compliant</span>
+            <Link href="/privacy" className="hover:text-ink transition-colors">
+              Google API Verification Compliant
+            </Link>
             <span>•</span>
             <span>Encrypted at rest</span>
           </div>
