@@ -122,10 +122,26 @@ create index if not exists idx_sent_emails_hr_email on public.sent_emails(user_i
 create index if not exists idx_sent_emails_company_name on public.sent_emails(user_id, company_name);
 create index if not exists idx_sent_emails_created_at on public.sent_emails(user_id, created_at desc);
 
--- 5. Enable Row Level Security (RLS)
+-- 5. Create gmail_connections table
+create table if not exists public.gmail_connections (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  gmail_address text not null,
+  refresh_token_encrypted text not null,
+  iv text not null,
+  tag text not null,
+  connected_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  constraint unique_active_user_connection unique (user_id)
+);
+
+create index if not exists idx_gmail_connections_user_id on public.gmail_connections(user_id);
+
+-- 6. Enable Row Level Security (RLS)
 alter table public.profiles enable row level security;
 alter table public.resume enable row level security;
 alter table public.sent_emails enable row level security;
+alter table public.gmail_connections enable row level security;
 
 -- Drop legacy open policies if they exist
 drop policy if exists "Allow all access to resume" on public.resume;
@@ -138,6 +154,10 @@ drop policy if exists "Users can update own resume" on public.resume;
 drop policy if exists "Users can delete own resume" on public.resume;
 drop policy if exists "Users can view own sent emails" on public.sent_emails;
 drop policy if exists "Users can insert own sent emails" on public.sent_emails;
+drop policy if exists "Users can view their own gmail connection" on public.gmail_connections;
+drop policy if exists "Users can insert their own gmail connection" on public.gmail_connections;
+drop policy if exists "Users can update their own gmail connection" on public.gmail_connections;
+drop policy if exists "Users can delete their own gmail connection" on public.gmail_connections;
 
 -- Profiles policies
 create policy "Users can view own profile"
@@ -182,7 +202,28 @@ create policy "Users can insert own sent emails"
   to authenticated
   with check (auth.uid() = user_id);
 
--- 6. Supabase Storage Bucket for resumes
+-- Gmail connections policies
+create policy "Users can view their own gmail connection"
+  on public.gmail_connections for select
+  to authenticated
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own gmail connection"
+  on public.gmail_connections for insert
+  to authenticated
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own gmail connection"
+  on public.gmail_connections for update
+  to authenticated
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own gmail connection"
+  on public.gmail_connections for delete
+  to authenticated
+  using (auth.uid() = user_id);
+
+-- 7. Supabase Storage Bucket for resumes
 insert into storage.buckets (id, name, public)
 values ('resumes', 'resumes', false)
 on conflict (id) do nothing;
@@ -228,7 +269,7 @@ create policy "Users can delete their own resume"
   );
 
 -- ==============================================================================
--- 7. Sender Signature Migration on public.profiles
+-- 8. Sender Signature Migration on public.profiles
 -- ==============================================================================
 alter table public.profiles
   add column if not exists full_name text,
