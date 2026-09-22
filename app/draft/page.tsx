@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume } from "@/lib/types/database";
@@ -20,6 +21,11 @@ export default function DraftPage() {
   const [resume, setResume] = useState<Resume | null>(null);
   const [isResumeLoading, setIsResumeLoading] = useState(true);
 
+  // Gmail connection state
+  const [isGmailConnected, setIsGmailConnected] = useState(false);
+  const [gmailAddress, setGmailAddress] = useState<string | undefined>(undefined);
+  const [isGmailLoading, setIsGmailLoading] = useState(true);
+
   // Analysis / Generation state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -29,24 +35,35 @@ export default function DraftPage() {
   const [isSending, setIsSending] = useState(false);
   const [isDuplicateEmail, setIsDuplicateEmail] = useState(false);
 
-  // Load active resume configuration
+  // Load active resume & Gmail connection status
   useEffect(() => {
-    async function checkResume() {
+    async function loadStatus() {
       try {
-        const res = await fetch("/api/resume");
-        if (res.ok) {
-          const data = await res.json();
+        const [resumeRes, gmailRes] = await Promise.all([
+          fetch("/api/resume"),
+          fetch("/api/gmail/status"),
+        ]);
+
+        if (resumeRes.ok) {
+          const data = await resumeRes.json();
           if (data.resume) {
             setResume(data.resume);
           }
         }
+
+        if (gmailRes.ok) {
+          const gData = await gmailRes.json();
+          setIsGmailConnected(Boolean(gData.connected));
+          setGmailAddress(gData.email);
+        }
       } catch (err) {
-        console.warn("Could not check resume status:", err);
+        console.warn("Could not check settings status:", err);
       } finally {
         setIsResumeLoading(false);
+        setIsGmailLoading(false);
       }
     }
-    checkResume();
+    loadStatus();
   }, []);
 
   // Check duplicate email when hrEmail changes
@@ -151,6 +168,18 @@ export default function DraftPage() {
       return;
     }
 
+    if (!isGmailConnected) {
+      toast.error("Please connect your Gmail account in Settings before sending.", {
+        action: {
+          label: "Connect",
+          onClick: () => {
+            window.location.href = "/settings";
+          },
+        },
+      });
+      return;
+    }
+
     setIsSending(true);
     try {
       const res = await fetch("/api/send", {
@@ -199,6 +228,28 @@ export default function DraftPage() {
                 Paste a Job Description and recipient email. The AI will extract the key requirements, match them against your background, and draft a concise, tailored letter for your review.
               </p>
             </div>
+
+            {/* Gmail connection status banner */}
+            {!isGmailLoading && !isGmailConnected && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" />
+                  <div className="text-xs">
+                    <p className="font-medium text-ink">Gmail not connected</p>
+                    <p className="text-muted-ink mt-0.5">
+                      Connect your Google account in Settings to dispatch letters directly from your personal address.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/settings"
+                  className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0 self-start sm:self-auto py-1"
+                >
+                  <span>Connect Gmail</span>
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
+            )}
 
             {/* Resume status banner */}
             {!isResumeLoading && !resume?.file_url && (
@@ -304,6 +355,8 @@ export default function DraftPage() {
             initialData={analyzedData}
             hrEmail={hrEmail}
             isDuplicateEmail={isDuplicateEmail}
+            senderEmail={gmailAddress}
+            isGmailConnected={isGmailConnected}
             onRegenerate={handleRegenerate}
             isRegenerating={isRegenerating}
             onBack={() => setStep("input")}

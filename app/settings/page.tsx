@@ -16,8 +16,10 @@ import {
   Code2,
   Link2,
   Phone,
+  Mail,
+  Unlink,
 } from "lucide-react";
-import type { Resume } from "@/lib/types/database";
+import type { Resume, GmailConnectionStatus } from "@/lib/types/database";
 import { generateFormattedSignature } from "@/lib/signature";
 
 const MIGRATION_SQL = `alter table public.profiles
@@ -37,6 +39,10 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Gmail OAuth Connection State
+  const [gmailStatus, setGmailStatus] = useState<GmailConnectionStatus>({ connected: false });
+  const [isDisconnectingGmail, setIsDisconnectingGmail] = useState(false);
+
   // Profile & Sender Signature State
   const [fullName, setFullName] = useState("");
   const [signOff, setSignOff] = useState("Best regards,");
@@ -49,14 +55,34 @@ export default function SettingsPage() {
   const [isCustomDirty, setIsCustomDirty] = useState(false);
   const [migrationRequired, setMigrationRequired] = useState(false);
 
-  // Load existing resume & profile data
+  // Handle URL query feedback from OAuth redirect
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("gmail") === "connected") {
+        toast.success("Gmail account connected! Emails will now be sent directly from your account.");
+        window.history.replaceState({}, "", "/settings");
+      } else if (params.get("error")) {
+        toast.error(`Could not connect Gmail: ${params.get("error")}`);
+        window.history.replaceState({}, "", "/settings");
+      }
+    }
+  }, []);
+
+  // Load existing resume, profile & gmail data
   useEffect(() => {
     async function loadData() {
       try {
-        const [resumeRes, profileRes] = await Promise.all([
+        const [resumeRes, profileRes, gmailRes] = await Promise.all([
           fetch("/api/resume"),
           fetch("/api/profile"),
+          fetch("/api/gmail/status"),
         ]);
+
+        if (gmailRes.ok) {
+          const gData = await gmailRes.json();
+          setGmailStatus(gData);
+        }
 
         if (resumeRes.ok) {
           const rData = await resumeRes.json();
@@ -241,13 +267,34 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDisconnectGmail = async () => {
+    if (!confirm("Are you sure you want to disconnect your Gmail account? You won't be able to send letters until you reconnect.")) {
+      return;
+    }
+    setIsDisconnectingGmail(true);
+    try {
+      const res = await fetch("/api/gmail/disconnect", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setGmailStatus({ connected: false });
+        toast.success("Gmail account disconnected.");
+      } else {
+        throw new Error(data.error || "Failed to disconnect Gmail.");
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error disconnecting Gmail");
+    } finally {
+      setIsDisconnectingGmail(false);
+    }
+  };
+
   return (
     <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-6 sm:mb-8">
           <h1 className="font-heading text-xl sm:text-2xl text-ink">Settings & Profile</h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-ink">
-            Configure your active resume, background skills summary, and automatic sender signature for correspondence.
+            Configure your active resume, sending identity, background skills summary, and automatic sender signature for correspondence.
           </p>
         </div>
 
@@ -258,7 +305,76 @@ export default function SettingsPage() {
           </div>
         ) : (
           <form onSubmit={handleSave} className="space-y-6 sm:space-y-8">
-            {/* 1. Resume File Section */}
+            {/* 1. Gmail Sending Identity Section */}
+            <section className="space-y-2.5 sm:space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs sm:text-sm font-medium text-ink">
+                  Sending Identity (Gmail)
+                </label>
+                {gmailStatus.connected && (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-confirmed bg-confirmed/5 px-2 py-0.5 rounded-sm border border-confirmed/20">
+                    <span className="h-1.5 w-1.5 rounded-full bg-confirmed"></span>
+                    <span>Connected</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="border border-hairline bg-paper p-3.5 sm:p-5 rounded-sm">
+                {gmailStatus.connected ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <Mail className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-ink truncate font-mono">
+                          {gmailStatus.email}
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
+                          Direct personal OAuth dispatch • Connected {gmailStatus.connectedAt ? new Date(gmailStatus.connectedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isDisconnectingGmail}
+                      onClick={handleDisconnectGmail}
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-ink hover:text-red-700 underline underline-offset-4 self-start sm:self-auto py-1 cursor-pointer disabled:opacity-50 transition-colors"
+                    >
+                      {isDisconnectingGmail ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Unlink className="h-3.5 w-3.5" />
+                      )}
+                      <span>Disconnect</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-ink">
+                          No Gmail account connected
+                        </p>
+                        <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
+                          Connect your Google account so correspondence sends directly from your personal address. We only request permission to send approved drafts (<span className="font-mono">gmail.send</span>).
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href="/api/gmail/connect"
+                      className="inline-flex items-center justify-center gap-2 rounded-sm border border-hairline bg-[#EDEAE2] hover:bg-[#E4DFD3] text-ink px-4 py-2 text-xs font-medium transition-colors shrink-0 self-start sm:self-auto min-h-[38px]"
+                    >
+                      <Mail className="h-3.5 w-3.5 text-seal" />
+                      <span>Connect with Google</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* 2. Resume File Section */}
             <section className="space-y-2.5 sm:space-y-3">
               <label className="block text-xs sm:text-sm font-medium text-ink">
                 Resume PDF

@@ -71,3 +71,20 @@ export interface SendEmailResponse {
   messageId?: string;
   error?: string;
 }
+
+export interface GmailConnection {
+  id: string;
+  user_id: string;
+  gmail_address: string;
+  refresh_token_encrypted: string;
+  iv: string;
+  tag: string;
+  connected_at: string;
+  revoked_at: string | null;
+}
+
+export interface GmailConnectionStatus {
+  connected: boolean;
+  email?: string;
+  connectedAt?: string;
+}

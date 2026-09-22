@@ -24,6 +24,8 @@ export interface LetterFrameProps {
   initialData: AnalyzeResponse;
   hrEmail: string;
   isDuplicateEmail?: boolean;
+  senderEmail?: string;
+  isGmailConnected?: boolean;
   onRegenerate: () => void;
   isRegenerating: boolean;
   onBack: () => void;
@@ -42,6 +44,8 @@ export function LetterFrame({
   initialData,
   hrEmail,
   isDuplicateEmail = false,
+  senderEmail,
+  isGmailConnected = true,
   onRegenerate,
   isRegenerating,
   onBack,
@@ -207,7 +211,22 @@ export function LetterFrame({
       {/* 2. Letter Frame: The Actual Correspondence Sheet */}
       <div className="relative border border-hairline bg-paper p-4 sm:p-7 md:p-10 rounded-sm shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         {/* Recipient Metadata Header & Quick Copy */}
-        <div className="border-b border-hairline pb-4 sm:pb-5 mb-5 sm:mb-6 text-xs text-muted-ink">
+        <div className="border-b border-hairline pb-4 sm:pb-5 mb-5 sm:mb-6 text-xs text-muted-ink space-y-2.5">
+          {senderEmail ? (
+            <div className="flex items-center gap-2">
+              <span className="text-muted-ink/70 shrink-0 font-medium">From:</span>
+              <span className="font-mono text-ink font-medium">{senderEmail}</span>
+              <span className="text-[10px] text-confirmed bg-confirmed/5 px-1.5 py-0.5 rounded-sm border border-confirmed/20">
+                Personal Gmail
+              </span>
+            </div>
+          ) : !isGmailConnected ? (
+            <div className="flex items-center gap-2 text-amber-700 bg-amber-50/60 border border-amber-200/70 px-2.5 py-1.5 rounded-sm">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>No Gmail connected. Connect in Settings before sending.</span>
+            </div>
+          ) : null}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="text-muted-ink/70 shrink-0 font-medium">To:</span>
