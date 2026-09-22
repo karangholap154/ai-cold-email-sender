@@ -10,9 +10,10 @@ import {
   AlertCircle,
   ExternalLink,
   Mail,
+  ArrowRight,
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
-import type { AnalyzeResponse, Resume } from "@/lib/types/database";
+import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
 
 export default function DraftPage() {
   const [step, setStep] = useState<"input" | "review">("input");
@@ -20,6 +21,11 @@ export default function DraftPage() {
   const [hrEmail, setHrEmail] = useState("");
   const [resume, setResume] = useState<Resume | null>(null);
   const [isResumeLoading, setIsResumeLoading] = useState(true);
+
+  // User Plan & Monthly Quota state
+  const [usage, setUsage] = useState<UserUsage | null>(null);
+  const [regenerationCount, setRegenerationCount] = useState(0);
+  const [isCapped, setIsCapped] = useState(false);
 
   // Gmail connection state
   const [isGmailConnected, setIsGmailConnected] = useState(false);
@@ -35,14 +41,25 @@ export default function DraftPage() {
   const [isSending, setIsSending] = useState(false);
   const [isDuplicateEmail, setIsDuplicateEmail] = useState(false);
 
-  // Load active resume & Gmail connection status
+  // Load active resume, user usage & Gmail connection status
   useEffect(() => {
     async function loadStatus() {
       try {
-        const [resumeRes, gmailRes] = await Promise.all([
+        const [profileRes, resumeRes, gmailRes] = await Promise.all([
+          fetch("/api/profile"),
           fetch("/api/resume"),
           fetch("/api/gmail/status"),
         ]);
+
+        if (profileRes.ok) {
+          const pData = await profileRes.json();
+          if (pData.usage) {
+            setUsage(pData.usage);
+            if (pData.usage.plan === "free" && pData.usage.monthlySends >= (pData.usage.monthlyLimit ?? 5)) {
+              setIsCapped(true);
+            }
+          }
+        }
 
         if (resumeRes.ok) {
           const data = await resumeRes.json();
@@ -120,6 +137,7 @@ export default function DraftPage() {
       }
 
       setAnalyzedData(data);
+      setRegenerationCount(0);
       setStep("review");
       toast.success("Draft prepared. Review the letter before sending.");
     } catch (err: unknown) {
@@ -132,6 +150,14 @@ export default function DraftPage() {
 
   const handleRegenerate = async () => {
     if (!jdText) return;
+    const isFreePlan = usage ? usage.plan === "free" : true;
+    const maxRegens = isFreePlan ? 2 : Infinity;
+
+    if (regenerationCount >= maxRegens) {
+      toast.error(`Free plan limit reached: up to ${maxRegens} AI regenerations allowed per draft. Edit the text directly or upgrade to Pro.`);
+      return;
+    }
+
     setIsRegenerating(true);
     try {
       const res = await fetch("/api/analyze", {
@@ -146,6 +172,7 @@ export default function DraftPage() {
       }
 
       setAnalyzedData(data);
+      setRegenerationCount((prev) => prev + 1);
       toast.success("New draft generated.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error regenerating letter.";
@@ -197,15 +224,26 @@ export default function DraftPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.code === "PLAN_LIMIT_REACHED") {
+          setIsCapped(true);
+          if (data.sentCount && usage) {
+            setUsage({ ...usage, monthlySends: data.sentCount });
+          }
+        }
         throw new Error(data.error || "Failed to send email.");
       }
 
       toast.success(`Letter sent successfully to ${targetEmail}`);
+      // Increment local monthly sends count
+      setUsage((prev) =>
+        prev ? { ...prev, monthlySends: prev.monthlySends + 1 } : null
+      );
       // Return to fresh input state
       setStep("input");
       setJdText("");
       setHrEmail("");
       setAnalyzedData(null);
+      setRegenerationCount(0);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error sending email.";
       toast.error(msg);
@@ -221,13 +259,51 @@ export default function DraftPage() {
           <div className="space-y-6 sm:space-y-8">
             {/* Header */}
             <div>
-              <h1 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink">
-                Draft correspondence
-              </h1>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <h1 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink">
+                  Draft correspondence
+                </h1>
+                {usage && (
+                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-ink">
+                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${usage.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? 5) ? "bg-amber-700" : "bg-seal"}`}></span>
+                    {usage.plan === "pro" ? (
+                      <span className="font-medium text-ink">Pro Plan • Unlimited</span>
+                    ) : (
+                      <span>
+                        Monthly quota: <strong className="font-medium text-ink">{usage.monthlySends} of {usage.monthlyLimit ?? 5}</strong> sends used
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
               <p className="mt-1 text-xs sm:text-sm text-muted-ink leading-relaxed">
                 Paste a Job Description and recipient email. The AI will extract the key requirements, match them against your background, and draft a concise, tailored letter for your review.
               </p>
             </div>
+
+            {/* Quota reached callout banner if capped on free tier */}
+            {usage?.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? 5) && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-seal/30 bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
+                  <div>
+                    <p className="font-medium text-ink">
+                      Monthly send limit reached ({usage.monthlySends}/{usage.monthlyLimit ?? 5})
+                    </p>
+                    <p className="text-muted-ink mt-0.5">
+                      Free accounts include 5 sent letters per calendar month. Upgrade to Pro for unlimited correspondence.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/#pricing"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3.5 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto transition-colors"
+                >
+                  <span>Upgrade to Pro</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
+            )}
 
             {/* Gmail connection status banner */}
             {!isGmailLoading && !isGmailConnected && (
@@ -357,6 +433,10 @@ export default function DraftPage() {
             isDuplicateEmail={isDuplicateEmail}
             senderEmail={gmailAddress}
             isGmailConnected={isGmailConnected}
+            usage={usage ?? undefined}
+            regenerationCount={regenerationCount}
+            maxRegenerations={usage?.plan === "pro" ? Infinity : 2}
+            isCapped={isCapped}
             onRegenerate={handleRegenerate}
             isRegenerating={isRegenerating}
             onBack={() => setStep("input")}

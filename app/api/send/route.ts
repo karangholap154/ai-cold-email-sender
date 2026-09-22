@@ -91,7 +91,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Fetch user's active Gmail OAuth connection
+    // 1. Enforce Free-Tier Monthly Send Cap (5 sends/calendar month)
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const plan = profile?.plan || "free";
+    if (plan === "free") {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const { count, error: countError } = await supabase
+        .from("sent_emails")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "sent")
+        .gte("created_at", startOfMonth);
+
+      const sentCount = count ?? 0;
+      const FREE_TIER_LIMIT = 5;
+
+      if (!countError && sentCount >= FREE_TIER_LIMIT) {
+        return NextResponse.json(
+          {
+            error: `Monthly quota reached: Free accounts include ${FREE_TIER_LIMIT} sent letters per calendar month. Upgrade to Pro for unlimited correspondence.`,
+            code: "PLAN_LIMIT_REACHED",
+            sentCount,
+            limit: FREE_TIER_LIMIT,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 2. Fetch user's active Gmail OAuth connection
     const { data: connection, error: connError } = await supabase
       .from("gmail_connections")
       .select("*")

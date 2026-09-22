@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import Link from "next/link";
 import {
   Building2,
   Briefcase,
@@ -11,14 +12,16 @@ import {
   Send,
   RotateCcw,
   ArrowLeft,
+  ArrowRight,
   Loader2,
   AlertTriangle,
   AlertCircle,
   CheckCircle2,
   Copy,
   Check,
+  Lock,
 } from "lucide-react";
-import type { AnalyzeResponse } from "@/lib/types/database";
+import type { AnalyzeResponse, UserUsage } from "@/lib/types/database";
 
 export interface LetterFrameProps {
   initialData: AnalyzeResponse;
@@ -26,6 +29,10 @@ export interface LetterFrameProps {
   isDuplicateEmail?: boolean;
   senderEmail?: string;
   isGmailConnected?: boolean;
+  usage?: UserUsage;
+  regenerationCount?: number;
+  maxRegenerations?: number;
+  isCapped?: boolean;
   onRegenerate: () => void;
   isRegenerating: boolean;
   onBack: () => void;
@@ -46,6 +53,10 @@ export function LetterFrame({
   isDuplicateEmail = false,
   senderEmail,
   isGmailConnected = true,
+  usage,
+  regenerationCount = 0,
+  maxRegenerations = 2,
+  isCapped = false,
   onRegenerate,
   isRegenerating,
   onBack,
@@ -65,6 +76,17 @@ export function LetterFrame({
   const [companyName, setCompanyName] = useState(initialData.companyName || "");
   const [roleTitle, setRoleTitle] = useState(initialData.roleTitle || "");
   const [copied, setCopied] = useState(false);
+
+  const isFreePlan = usage ? usage.plan === "free" : true;
+  const monthlyLimit = usage?.monthlyLimit ?? 5;
+  const monthlySends = usage?.monthlySends ?? 0;
+  const reachedSendCap = isCapped || (isFreePlan && monthlySends >= monthlyLimit);
+
+  const reachedRegenCap =
+    isFreePlan &&
+    typeof regenerationCount === "number" &&
+    typeof maxRegenerations === "number" &&
+    regenerationCount >= maxRegenerations;
 
   // Sync initial duplicate state if props change
   useEffect(() => {
@@ -208,24 +230,63 @@ export function LetterFrame({
         )}
       </div>
 
-      {/* 2. Letter Frame: The Actual Correspondence Sheet */}
+      {/* 2. Monthly Quota Alert Banner when send cap is reached */}
+      {reachedSendCap && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-sm border border-seal/30 bg-[#FAF9F5] p-3.5 sm:p-4 text-xs">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
+            <div>
+              <p className="font-medium text-ink">
+                Monthly send limit reached ({monthlySends}/{monthlyLimit})
+              </p>
+              <p className="text-muted-ink mt-0.5">
+                Free accounts include 5 sent letters per calendar month. Upgrade to Pro for unlimited correspondence.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/#pricing"
+            className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto transition-colors"
+          >
+            <span>Upgrade to Pro</span>
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      )}
+
+      {/* 3. Letter Frame: The Actual Correspondence Sheet */}
       <div className="relative border border-hairline bg-paper p-4 sm:p-7 md:p-10 rounded-sm shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         {/* Recipient Metadata Header & Quick Copy */}
         <div className="border-b border-hairline pb-4 sm:pb-5 mb-5 sm:mb-6 text-xs text-muted-ink space-y-2.5">
-          {senderEmail ? (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-ink/70 shrink-0 font-medium">From:</span>
-              <span className="font-mono text-ink font-medium">{senderEmail}</span>
-              <span className="text-[10px] text-confirmed bg-confirmed/5 px-1.5 py-0.5 rounded-sm border border-confirmed/20">
-                Personal Gmail
-              </span>
-            </div>
-          ) : !isGmailConnected ? (
-            <div className="flex items-center gap-2 text-amber-700 bg-amber-50/60 border border-amber-200/70 px-2.5 py-1.5 rounded-sm">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              <span>No Gmail connected. Connect in Settings before sending.</span>
-            </div>
-          ) : null}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            {senderEmail ? (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-ink/70 shrink-0 font-medium">From:</span>
+                <span className="font-mono text-ink font-medium">{senderEmail}</span>
+                <span className="text-[10px] text-confirmed bg-confirmed/5 px-1.5 py-0.5 rounded-sm border border-confirmed/20">
+                  Personal Gmail
+                </span>
+              </div>
+            ) : !isGmailConnected ? (
+              <div className="flex items-center gap-2 text-amber-700 bg-amber-50/60 border border-amber-200/70 px-2.5 py-1.5 rounded-sm">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>No Gmail connected. Connect in Settings before sending.</span>
+              </div>
+            ) : <div />}
+
+            {usage && (
+              <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-ink self-start sm:self-auto">
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${reachedSendCap ? "bg-amber-700" : "bg-seal"}`}></span>
+                {usage.plan === "pro" ? (
+                  <span className="font-medium text-ink">Pro Plan • Unlimited</span>
+                ) : (
+                  <span>
+                    Monthly quota: <strong className="font-medium text-ink">{monthlySends} of {monthlyLimit}</strong> used
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -340,7 +401,7 @@ export function LetterFrame({
         </div>
       </div>
 
-      {/* 3. Action Bar: Distinct deliberate Send vs. Secondary Regenerate / Back */}
+      {/* 4. Action Bar: Distinct deliberate Send vs. Secondary Regenerate / Back */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
         <button
           type="button"
@@ -356,7 +417,12 @@ export function LetterFrame({
           <button
             type="button"
             onClick={onRegenerate}
-            disabled={isRegenerating || isSending}
+            disabled={isRegenerating || isSending || reachedRegenCap}
+            title={
+              reachedRegenCap
+                ? `Free plan limit reached: ${maxRegenerations} regenerations per draft. Edit text directly or upgrade to Pro.`
+                : "Generate a new variation"
+            }
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-sm border border-hairline px-3.5 py-2.5 sm:py-2 text-xs font-medium text-ink hover:bg-[#ECE9E1] transition-colors disabled:opacity-50 cursor-pointer min-h-[40px] sm:min-h-0"
           >
             {isRegenerating ? (
@@ -364,21 +430,53 @@ export function LetterFrame({
             ) : (
               <RotateCcw className="h-3.5 w-3.5 text-muted-ink" />
             )}
-            <span>{isRegenerating ? "Regenerating..." : "Regenerate"}</span>
+            <span>
+              {isRegenerating
+                ? "Regenerating..."
+                : reachedRegenCap
+                ? `Regenerate (${maxRegenerations}/${maxRegenerations} used)`
+                : isFreePlan && typeof regenerationCount === "number" && regenerationCount > 0
+                ? `Regenerate (${regenerationCount}/${maxRegenerations})`
+                : "Regenerate"}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={handleSend}
-            disabled={isSending || isRegenerating || !subject.trim() || !body.trim() || !recipientEmail.trim()}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-5 py-2.5 sm:py-2 text-xs font-medium text-paper hover:bg-seal/90 shadow-xs transition-all disabled:opacity-50 cursor-pointer min-h-[40px] sm:min-h-0"
+            disabled={
+              isSending ||
+              isRegenerating ||
+              reachedSendCap ||
+              !subject.trim() ||
+              !body.trim() ||
+              !recipientEmail.trim()
+            }
+            title={
+              reachedSendCap
+                ? "Monthly free send limit reached. Upgrade to Pro to send."
+                : "Send letter directly via Gmail"
+            }
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-sm px-5 py-2.5 sm:py-2 text-xs font-medium shadow-xs transition-all disabled:opacity-50 min-h-[40px] sm:min-h-0 ${
+              reachedSendCap
+                ? "bg-muted-ink/30 text-paper cursor-not-allowed"
+                : "bg-seal text-paper hover:bg-seal/90 cursor-pointer"
+            }`}
           >
             {isSending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : reachedSendCap ? (
+              <Lock className="h-3.5 w-3.5" />
             ) : (
               <Send className="h-3.5 w-3.5" />
             )}
-            <span>{isSending ? "Sending..." : "Send letter"}</span>
+            <span>
+              {isSending
+                ? "Sending..."
+                : reachedSendCap
+                ? `Limit reached (${monthlyLimit}/${monthlyLimit})`
+                : "Send letter"}
+            </span>
           </button>
         </div>
       </div>

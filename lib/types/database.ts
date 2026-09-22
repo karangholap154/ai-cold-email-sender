@@ -1,6 +1,12 @@
 export type EmailStatus = "sent" | "failed" | "draft";
 export type UserPlan = "free" | "pro";
 
+export interface UserUsage {
+  monthlySends: number;
+  monthlyLimit: number | null; // null for unlimited (Pro)
+  plan: UserPlan;
+}
+
 export interface Profile {
   id: string;
   plan: UserPlan;

@@ -19,6 +19,14 @@ export async function GET() {
       .eq("id", user.id)
       .maybeSingle();
 
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    const { count: monthlySends } = await supabase
+      .from("sent_emails")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "sent")
+      .gte("created_at", startOfMonth);
+
     if (error) {
       // If columns don't exist yet in the database, return graceful fallback
       if (error.code === "42703" || error.message?.includes("column")) {
@@ -32,12 +40,20 @@ export async function GET() {
             linkedin_url: "",
             phone: "",
             custom_signature: "",
+            plan: "free",
+          },
+          usage: {
+            monthlySends: monthlySends ?? 0,
+            monthlyLimit: 5,
+            plan: "free",
           },
           migrationRequired: true,
         });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    const plan = (data?.plan || "free") as "free" | "pro";
 
     return NextResponse.json({
       profile: data || {
@@ -49,6 +65,12 @@ export async function GET() {
         linkedin_url: "",
         phone: "",
         custom_signature: "",
+        plan: "free",
+      },
+      usage: {
+        monthlySends: monthlySends ?? 0,
+        monthlyLimit: plan === "pro" ? null : 5,
+        plan,
       },
       migrationRequired: false,
     });

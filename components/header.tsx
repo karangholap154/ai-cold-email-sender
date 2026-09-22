@@ -11,14 +11,32 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [plan, setPlan] = useState<"free" | "pro">("free");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
 
+    const fetchUserPlan = async () => {
+      try {
+        const res = await fetch("/api/profile");
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.profile?.plan) {
+            setPlan(data.profile.plan);
+          }
+        }
+      } catch {
+        // Fallback to default
+      }
+    };
+
     // Check active session
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
+      if (user) {
+        fetchUserPlan();
+      }
       setIsLoading(false);
     });
 
@@ -26,7 +44,13 @@ export function Header() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchUserPlan();
+      } else {
+        setPlan("free");
+      }
       setIsLoading(false);
     });
 
@@ -88,9 +112,15 @@ export function Header() {
                 <span className="truncate max-w-[110px] md:max-w-[160px] text-ink font-medium">
                   {user.email}
                 </span>
-                <span className="rounded-sm border border-hairline px-1.5 py-0.5 text-[10px] text-muted-ink uppercase tracking-wider">
-                  Free
-                </span>
+                {plan === "pro" ? (
+                  <span className="rounded-sm border border-seal/40 bg-seal/10 text-seal px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider">
+                    Pro
+                  </span>
+                ) : (
+                  <span className="rounded-sm border border-hairline px-1.5 py-0.5 text-[10px] text-muted-ink uppercase tracking-wider">
+                    Free
+                  </span>
+                )}
               </div>
               <button
                 onClick={handleSignOut}
