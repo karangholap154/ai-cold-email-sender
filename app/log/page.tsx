@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import {
   Search,
   CheckCircle2,
@@ -11,6 +12,10 @@ import {
   Mail,
   FileText,
   AlertCircle,
+  Clock,
+  Sparkles,
+  Lock,
+  ArrowRight,
 } from "lucide-react";
 import type { SentEmail } from "@/lib/types/database";
 
@@ -19,6 +24,9 @@ export default function LogPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmail, setSelectedEmail] = useState<SentEmail | null>(null);
+  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [hasOlderEmails, setHasOlderEmails] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     async function loadEmails() {
@@ -27,6 +35,9 @@ export default function LogPage() {
         if (res.ok) {
           const data = await res.json();
           setEmails(data.emails || []);
+          if (data.plan) setPlan(data.plan);
+          if (data.hasOlderEmails !== undefined) setHasOlderEmails(data.hasOlderEmails);
+          if (data.totalCount !== undefined) setTotalCount(data.totalCount);
         }
       } catch (err) {
         console.error("Error loading email logs:", err);
@@ -73,6 +84,39 @@ export default function LogPage() {
             />
           </div>
         </div>
+
+        {/* Retention Window Indicator */}
+        {!isLoading && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-paper px-3.5 py-2.5 rounded-sm text-xs">
+            <div className="flex items-center gap-2 text-muted-ink">
+              {plan === "pro" ? (
+                <>
+                  <Sparkles className="h-3.5 w-3.5 text-seal shrink-0" />
+                  <span>
+                    <strong className="text-ink font-medium">Pro Plan</strong> • Full lifetime archive active ({emails.length} total letters)
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Clock className="h-3.5 w-3.5 text-muted-ink shrink-0" />
+                  <span>
+                    Showing correspondence from the <strong className="text-ink font-medium">last 30 days</strong> (Free tier)
+                  </span>
+                </>
+              )}
+            </div>
+
+            {plan === "free" && (
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-seal hover:text-seal/80 transition-colors self-start sm:self-auto shrink-0"
+              >
+                <span>Upgrade to Pro for full lifetime archive</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Content */}
         {isLoading ? (
@@ -179,6 +223,23 @@ export default function LogPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Notice for archived older emails outside 30-day window on Free tier */}
+        {!isLoading && hasOlderEmails && plan === "free" && (
+          <div className="border border-dashed border-hairline bg-[#FAF9F5] p-4 text-center rounded-sm text-xs text-muted-ink space-y-1">
+            <div className="flex items-center justify-center gap-1.5 text-ink font-medium">
+              <Lock className="h-3.5 w-3.5 text-seal" />
+              <span>Older correspondence archived ({totalCount - emails.length} earlier sends)</span>
+            </div>
+            <p>
+              Free accounts only display correspondence from the last 30 days.{" "}
+              <Link href="/settings" className="text-seal underline underline-offset-4 hover:opacity-80">
+                Upgrade to Pro
+              </Link>{" "}
+              to unlock and search your complete lifetime correspondence archive.
+            </p>
           </div>
         )}
       </div>

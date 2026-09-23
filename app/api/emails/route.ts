@@ -37,19 +37,54 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. Otherwise return past send logs for this user
-    const { data: emails, error } = await supabase
+    // 2. Fetch user's plan to determine log retention window
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const plan = (profile?.plan || "free") as "free" | "pro";
+
+    let emailQuery = supabase
       .from("sent_emails")
       .select("*")
       .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
+      .order("created_at", { ascending: false });
+
+    // Free plan: enforce 30-day retention window
+    if (plan === "free") {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      emailQuery = emailQuery.gte("created_at", thirtyDaysAgo.toISOString());
+    }
+
+    const { data: emails, error } = await emailQuery;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ emails: emails || [] });
+    // Check if there are older lifetime emails that were filtered out
+    let hasOlderEmails = false;
+    let totalLifetimeCount = emails?.length ?? 0;
+
+    if (plan === "free") {
+      const { count: totalCount } = await supabase
+        .from("sent_emails")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      totalLifetimeCount = totalCount ?? (emails?.length ?? 0);
+      hasOlderEmails = totalLifetimeCount > (emails?.length ?? 0);
+    }
+
+    return NextResponse.json({
+      emails: emails || [],
+      plan,
+      hasOlderEmails,
+      totalCount: totalLifetimeCount,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to fetch emails";
     return NextResponse.json({ error: message }, { status: 500 });
