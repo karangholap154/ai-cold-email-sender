@@ -34,8 +34,13 @@ export async function POST(req: NextRequest) {
           profile.dodo_customer_id,
           { return_url: returnUrl }
         );
-        if (portal && (portal as any).url) {
-          return NextResponse.json({ url: (portal as any).url });
+        const portalUrl =
+          (portal as any)?.url ||
+          (portal as any)?.portal_url ||
+          (portal as any)?.session_url ||
+          (portal as any)?.link;
+        if (portalUrl) {
+          return NextResponse.json({ url: portalUrl });
         }
       } catch (portalErr) {
         console.warn("Could not create specific customer portal session:", portalErr);
