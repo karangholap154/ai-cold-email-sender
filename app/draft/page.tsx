@@ -40,6 +40,7 @@ export default function DraftPage() {
   // Sending state
   const [isSending, setIsSending] = useState(false);
   const [isDuplicateEmail, setIsDuplicateEmail] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
 
   // Load active resume, user usage & Gmail connection status
   useEffect(() => {
@@ -295,13 +296,31 @@ export default function DraftPage() {
                     </p>
                   </div>
                 </div>
-                <Link
-                  href="/#pricing"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3.5 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto transition-colors"
+                <button
+                  type="button"
+                  disabled={isUpgrading}
+                  onClick={async () => {
+                    setIsUpgrading(true);
+                    try {
+                      const res = await fetch("/api/billing/checkout", { method: "POST" });
+                      const data = await res.json();
+                      if (data.url) {
+                        window.location.href = data.url;
+                      } else {
+                        window.location.href = "/settings";
+                      }
+                    } catch {
+                      window.location.href = "/settings";
+                    } finally {
+                      setIsUpgrading(false);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3.5 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto transition-colors cursor-pointer disabled:opacity-50"
                 >
+                  {isUpgrading && <Loader2 className="h-3 w-3 animate-spin" />}
                   <span>Upgrade to Pro</span>
                   <ArrowRight className="h-3 w-3" />
-                </Link>
+                </button>
               </div>
             )}
 

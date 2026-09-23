@@ -15,7 +15,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature, plan")
+      .select("id, full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature, plan, dodo_customer_id, dodo_subscription_id")
       .eq("id", user.id)
       .maybeSingle();
 

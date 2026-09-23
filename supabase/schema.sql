@@ -278,5 +278,7 @@ alter table public.profiles
   add column if not exists github_url text,
   add column if not exists linkedin_url text,
   add column if not exists phone text,
-  add column if not exists custom_signature text;
+  add column if not exists custom_signature text,
+  add column if not exists dodo_customer_id text,
+  add column if not exists dodo_subscription_id text;
 

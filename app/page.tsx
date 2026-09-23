@@ -432,7 +432,7 @@ Qualifications:
       </section>
 
       {/* 6. TRANSPARENT PRICING */}
-      <section className="border-b border-hairline bg-[#FAF9F5] px-4 py-12 sm:px-6 sm:py-20 md:py-24">
+      <section id="pricing" className="border-b border-hairline bg-[#FAF9F5] px-4 py-12 sm:px-6 sm:py-20 md:py-24">
         <div className="mx-auto max-w-4xl space-y-8 sm:space-y-12">
           <div className="text-center max-w-xl mx-auto space-y-2">
             <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-muted-ink">
@@ -504,7 +504,7 @@ Qualifications:
                   <h3 className="font-heading text-lg sm:text-xl text-ink">Pro</h3>
                   <div className="text-right">
                     <span className="font-heading text-xl sm:text-2xl text-ink">$9</span>
-                    <span className="text-xs text-muted-ink"> / month</span>
+                    <span className="text-xs text-muted-ink"> (₹499) / mo</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-ink leading-relaxed">
@@ -532,11 +532,15 @@ Qualifications:
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
                     <span>Priority generation model & fast support</span>
                   </div>
+                  <div className="pt-1 text-[11px] text-muted-ink flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-confirmed"></span>
+                    <span>Supports UPI in India & Cards / Apple Pay globally</span>
+                  </div>
                 </div>
               </div>
 
               <Link
-                href="/signup"
+                href="/settings"
                 className="w-full text-center rounded-sm bg-seal py-2.5 text-xs font-medium text-paper hover:bg-seal/90 shadow-xs transition-all min-h-[40px] flex items-center justify-center"
               >
                 Upgrade to Pro

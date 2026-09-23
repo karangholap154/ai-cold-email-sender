@@ -18,8 +18,11 @@ import {
   Phone,
   Mail,
   Unlink,
+  CreditCard,
+  Zap,
+  ExternalLink,
 } from "lucide-react";
-import type { Resume, GmailConnectionStatus } from "@/lib/types/database";
+import type { Resume, GmailConnectionStatus, UserUsage } from "@/lib/types/database";
 import { generateFormattedSignature } from "@/lib/signature";
 
 const MIGRATION_SQL = `alter table public.profiles
@@ -29,7 +32,9 @@ const MIGRATION_SQL = `alter table public.profiles
   add column if not exists github_url text,
   add column if not exists linkedin_url text,
   add column if not exists phone text,
-  add column if not exists custom_signature text;`;
+  add column if not exists custom_signature text,
+  add column if not exists dodo_customer_id text,
+  add column if not exists dodo_subscription_id text;`;
 
 export default function SettingsPage() {
   const [resume, setResume] = useState<Resume | null>(null);
@@ -38,6 +43,11 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // User Plan & Usage State
+  const [usage, setUsage] = useState<UserUsage | null>(null);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   // Gmail OAuth Connection State
   const [gmailStatus, setGmailStatus] = useState<GmailConnectionStatus>({ connected: false });
@@ -55,11 +65,14 @@ export default function SettingsPage() {
   const [isCustomDirty, setIsCustomDirty] = useState(false);
   const [migrationRequired, setMigrationRequired] = useState(false);
 
-  // Handle URL query feedback from OAuth redirect
+  // Handle URL query feedback from OAuth redirect & Billing return
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("gmail") === "connected") {
+      if (params.get("billing") === "success") {
+        toast.success("Welcome to Pro! Your account now has unlimited email sends.");
+        window.history.replaceState({}, "", "/settings");
+      } else if (params.get("gmail") === "connected") {
         toast.success("Gmail account connected! Emails will now be sent directly from your account.");
         window.history.replaceState({}, "", "/settings");
       } else if (params.get("error")) {
@@ -94,6 +107,9 @@ export default function SettingsPage() {
 
         if (profileRes.ok) {
           const pData = await profileRes.json();
+          if (pData.usage) {
+            setUsage(pData.usage);
+          }
           if (pData.profile) {
             const fn = pData.profile.full_name || "";
             const so = pData.profile.sign_off || "Best regards,";
@@ -288,6 +304,39 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUpgrade = async () => {
+    setIsUpgrading(true);
+    try {
+      const res = await fetch("/api/billing/checkout", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to initiate checkout");
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error initiating checkout";
+      toast.error(message);
+      setIsUpgrading(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    setIsOpeningPortal(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch {
+      window.open("https://customer.dodopayments.com/login", "_blank");
+    } finally {
+      setIsOpeningPortal(false);
+    }
+  };
+
   return (
     <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
@@ -374,7 +423,104 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            {/* 2. Resume File Section */}
+            {/* 2. Membership & Billing Section */}
+            <section className="space-y-2.5 sm:space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs sm:text-sm font-medium text-ink">
+                  Membership & Usage
+                </label>
+                {usage?.plan === "pro" ? (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-seal bg-[#FAF6EE] px-2 py-0.5 rounded-sm border border-seal/30">
+                    <Zap className="h-3 w-3 fill-seal text-seal" />
+                    <span>Pro Member</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-ink bg-paper px-2 py-0.5 rounded-sm border border-hairline">
+                    <span>Free Tier</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="border border-hairline bg-paper p-3.5 sm:p-5 rounded-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-ink">
+                        {usage?.plan === "pro"
+                          ? "Pro Plan • Unlimited Correspondence"
+                          : `Monthly Quota: ${usage?.monthlySends ?? 0} of ${usage?.monthlyLimit ?? 5} letters sent`}
+                      </p>
+                      <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5 leading-relaxed">
+                        {usage?.plan === "pro"
+                          ? "You have unrestricted AI drafts, automated Gmail attachments, and full log history."
+                          : "Free accounts include 5 tailored letters per calendar month. Upgrade for unlimited sending."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {usage?.plan === "pro" ? (
+                    <button
+                      type="button"
+                      disabled={isOpeningPortal}
+                      onClick={handleManageBilling}
+                      className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-ink hover:text-ink border border-hairline px-3.5 py-2 rounded-sm self-start sm:self-auto min-h-[38px] cursor-pointer hover:bg-[#FAF9F5] transition-colors"
+                    >
+                      {isOpeningPortal ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      )}
+                      <span>Manage Subscription</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isUpgrading}
+                      onClick={handleUpgrade}
+                      className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-4 py-2 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto min-h-[38px] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      {isUpgrading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Zap className="h-3.5 w-3.5 fill-paper" />
+                      )}
+                      <span>Upgrade to Pro ($9 / ₹499)</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Free quota progress bar */}
+                {usage?.plan !== "pro" && (
+                  <div className="space-y-1.5 pt-2 border-t border-hairline">
+                    <div className="flex justify-between text-[11px] text-muted-ink">
+                      <span>Monthly quota usage</span>
+                      <span>
+                        {Math.min(usage?.monthlySends ?? 0, 5)} / 5 sends
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-[#EDEAE2] rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          (usage?.monthlySends ?? 0) >= 5 ? "bg-amber-700" : "bg-seal"
+                        }`}
+                        style={{
+                          width: `${Math.min(
+                            ((usage?.monthlySends ?? 0) / 5) * 100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-ink">
+                      Payment methods accepted: UPI (PhonePe, GPay, Paytm) in India • Credit/Debit Cards, Apple Pay, Google Pay globally.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* 3. Resume File Section */}
             <section className="space-y-2.5 sm:space-y-3">
               <label className="block text-xs sm:text-sm font-medium text-ink">
                 Resume PDF
