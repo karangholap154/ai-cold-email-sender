@@ -46,6 +46,13 @@ export interface LetterFrameProps {
     hrEmail?: string;
   }) => void;
   onEmailChange?: (email: string) => void;
+  onDraftChange?: (data: {
+    subject: string;
+    body: string;
+    companyName?: string;
+    roleTitle?: string;
+    hrEmail?: string;
+  }) => void;
   isSending?: boolean;
 }
 
@@ -66,6 +73,7 @@ export function LetterFrame({
   onBack,
   onSend,
   onEmailChange,
+  onDraftChange,
   isSending = false,
 }: LetterFrameProps) {
   const [recipientEmail, setRecipientEmail] = useState(hrEmail);
@@ -80,6 +88,29 @@ export function LetterFrame({
   const [companyName, setCompanyName] = useState(initialData.companyName || "");
   const [roleTitle, setRoleTitle] = useState(initialData.roleTitle || "");
   const [copied, setCopied] = useState(false);
+
+  // Sync state if initialData changes (e.g. from regeneration or restore)
+  useEffect(() => {
+    setSubject(initialData.subject);
+    setBody(initialData.body);
+    setCompanyName(initialData.companyName || "");
+    setRoleTitle(initialData.roleTitle || "");
+  }, [initialData]);
+
+  // Debounce notification of draft changes to parent for sessionStorage persistence
+  useEffect(() => {
+    if (!onDraftChange) return;
+    const timer = setTimeout(() => {
+      onDraftChange({
+        subject,
+        body,
+        companyName: companyName.trim() || undefined,
+        roleTitle: roleTitle.trim() || undefined,
+        hrEmail: recipientEmail.trim() || undefined,
+      });
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [subject, body, companyName, roleTitle, recipientEmail, onDraftChange]);
 
   const isFreePlan = usage ? usage.plan === "free" : true;
   const monthlyLimit = usage?.monthlyLimit ?? 5;
@@ -544,9 +575,16 @@ export function LetterFrame({
               );
             })()}
           </div>
-          <span className="italic text-muted-ink/80 text-[10px] sm:text-[11px]">
-            {isFollowUp ? "High-signal follow-up standard" : "Executive correspondence standard"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-ink">
+              <span className="h-1.5 w-1.5 rounded-full bg-confirmed/80"></span>
+              <span>Draft autosaved</span>
+            </span>
+            <span className="text-muted-ink/40 hidden sm:inline">•</span>
+            <span className="italic text-muted-ink/80 text-[10px] sm:text-[11px] hidden sm:inline">
+              {isFollowUp ? "High-signal follow-up standard" : "Executive correspondence standard"}
+            </span>
+          </div>
         </div>
       </div>
 

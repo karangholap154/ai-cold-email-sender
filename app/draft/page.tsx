@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
@@ -11,9 +11,12 @@ import {
   ExternalLink,
   Mail,
   ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
+
+const DRAFT_STORAGE_KEY = "cold_email_draft_session";
 
 export default function DraftPage() {
   const [step, setStep] = useState<"input" | "review">("input");
@@ -21,6 +24,10 @@ export default function DraftPage() {
   const [hrEmail, setHrEmail] = useState("");
   const [resume, setResume] = useState<Resume | null>(null);
   const [isResumeLoading, setIsResumeLoading] = useState(true);
+
+  // Autosave and restore notice state
+  const [restoredNotice, setRestoredNotice] = useState<string | null>(null);
+  const isHydratedRef = useRef(false);
 
   // User Plan & Monthly Quota state
   const [usage, setUsage] = useState<UserUsage | null>(null);
@@ -93,6 +100,100 @@ export default function DraftPage() {
     }
     loadStatus();
   }, []);
+
+  // Restore unsaved draft session on initial load (unless arriving via follow-up deep-link)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const fId = params.get("followUpId");
+
+    if (!fId) {
+      try {
+        const saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.jdText?.trim() || parsed.hrEmail?.trim() || parsed.analyzedData)) {
+            if (parsed.jdText) setJdText(parsed.jdText);
+            if (parsed.hrEmail) setHrEmail(parsed.hrEmail);
+            if (parsed.step === "review" && parsed.analyzedData) {
+              setAnalyzedData(parsed.analyzedData);
+              setStep("review");
+              setRestoredNotice("Unsaved draft restored from your current session.");
+            } else if (parsed.jdText?.trim()) {
+              setRestoredNotice("Unsaved job description restored from your current session.");
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Could not read draft session from sessionStorage:", err);
+      }
+    }
+    isHydratedRef.current = true;
+  }, []);
+
+  // Autosave active draft to sessionStorage on changes
+  useEffect(() => {
+    if (!isHydratedRef.current || typeof window === "undefined") return;
+
+    // In follow-up mode, do not overwrite regular draft session
+    if (followUpContext) return;
+
+    if (!jdText.trim() && !hrEmail.trim() && !analyzedData) {
+      try {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {}
+      return;
+    }
+
+    try {
+      const sessionPayload = {
+        step,
+        jdText,
+        hrEmail,
+        analyzedData,
+        savedAt: Date.now(),
+      };
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(sessionPayload));
+    } catch (err) {
+      console.warn("Could not save draft session to sessionStorage:", err);
+    }
+  }, [step, jdText, hrEmail, analyzedData, followUpContext]);
+
+  const handleDiscardDraft = () => {
+    setJdText("");
+    setHrEmail("");
+    setAnalyzedData(null);
+    setFollowUpContext(null);
+    setStep("input");
+    setRestoredNotice(null);
+    setRegenerationCount(0);
+    try {
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch {}
+    toast.info("Draft discarded.");
+  };
+
+  const handleDraftChange = useCallback((updated: {
+    subject: string;
+    body: string;
+    companyName?: string;
+    roleTitle?: string;
+    hrEmail?: string;
+  }) => {
+    if (updated.hrEmail && updated.hrEmail !== hrEmail) {
+      setHrEmail(updated.hrEmail);
+    }
+    setAnalyzedData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        subject: updated.subject,
+        body: updated.body,
+        companyName: updated.companyName ?? prev.companyName,
+        roleTitle: updated.roleTitle ?? prev.roleTitle,
+      };
+    });
+  }, [hrEmail]);
 
   // Check URL for followUpId to trigger One-Click Follow-Up generation
   useEffect(() => {
@@ -334,6 +435,12 @@ export default function DraftPage() {
       setUsage((prev) =>
         prev ? { ...prev, monthlySends: prev.monthlySends + 1 } : null
       );
+      // Clear session storage on successful send
+      try {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {}
+      setRestoredNotice(null);
+
       // Return to fresh input state
       setStep("input");
       setJdText("");
@@ -380,6 +487,23 @@ export default function DraftPage() {
                 Paste a Job Description and recipient email. The AI will extract the key requirements, match them against your background, and draft a concise, tailored letter for your review.
               </p>
             </div>
+
+            {/* Restored draft notice banner */}
+            {restoredNotice && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
+                <div className="flex items-center gap-2 text-ink min-w-0">
+                  <CheckCircle2 className="h-4 w-4 text-confirmed shrink-0" />
+                  <span className="font-medium text-ink">{restoredNotice}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="text-muted-ink hover:text-ink underline underline-offset-4 text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  Discard & start fresh
+                </button>
+              </div>
+            )}
 
             {/* Quota reached callout banner if capped on free tier */}
             {usage?.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? 5) && (
@@ -498,7 +622,7 @@ export default function DraftPage() {
                     {jdText.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => setJdText("")}
+                        onClick={handleDiscardDraft}
                         className="hover:text-ink underline underline-offset-2 cursor-pointer"
                       >
                         Clear
@@ -545,36 +669,55 @@ export default function DraftPage() {
         )}
 
         {step === "review" && analyzedData && (
-          <LetterFrame
-            initialData={analyzedData}
-            hrEmail={hrEmail}
-            isDuplicateEmail={isDuplicateEmail}
-            senderEmail={gmailAddress}
-            isGmailConnected={isGmailConnected}
-            usage={usage ?? undefined}
-            regenerationCount={regenerationCount}
-            maxRegenerations={usage?.plan === "pro" ? Infinity : 2}
-            isCapped={isCapped}
-            isFollowUp={Boolean(followUpContext)}
-            originalSentDate={followUpContext?.originalSentDate}
-            onRegenerate={handleRegenerate}
-            isRegenerating={isRegenerating}
-            onBack={() => {
-              if (followUpContext) {
-                setFollowUpContext(null);
-                setAnalyzedData(null);
-                setStep("input");
-                if (typeof window !== "undefined") {
-                  window.history.replaceState({}, "", "/draft");
+          <div className="space-y-4">
+            {restoredNotice && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
+                <div className="flex items-center gap-2 text-ink min-w-0">
+                  <CheckCircle2 className="h-4 w-4 text-confirmed shrink-0" />
+                  <span className="font-medium text-ink">{restoredNotice}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="text-muted-ink hover:text-ink underline underline-offset-4 text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  Discard & start fresh
+                </button>
+              </div>
+            )}
+            <LetterFrame
+              key={followUpContext ? `followup-${followUpContext.parentEmailId}` : "main-draft"}
+              initialData={analyzedData}
+              hrEmail={hrEmail}
+              isDuplicateEmail={isDuplicateEmail}
+              senderEmail={gmailAddress}
+              isGmailConnected={isGmailConnected}
+              usage={usage ?? undefined}
+              regenerationCount={regenerationCount}
+              maxRegenerations={usage?.plan === "pro" ? Infinity : 2}
+              isCapped={isCapped}
+              isFollowUp={Boolean(followUpContext)}
+              originalSentDate={followUpContext?.originalSentDate}
+              onRegenerate={handleRegenerate}
+              isRegenerating={isRegenerating}
+              onBack={() => {
+                if (followUpContext) {
+                  setFollowUpContext(null);
+                  setAnalyzedData(null);
+                  setStep("input");
+                  if (typeof window !== "undefined") {
+                    window.history.replaceState({}, "", "/draft");
+                  }
+                } else {
+                  setStep("input");
                 }
-              } else {
-                setStep("input");
-              }
-            }}
-            onSend={handleSend}
-            onEmailChange={setHrEmail}
-            isSending={isSending}
-          />
+              }}
+              onSend={handleSend}
+              onEmailChange={setHrEmail}
+              onDraftChange={handleDraftChange}
+              isSending={isSending}
+            />
+          </div>
         )}
       </div>
     </main>
