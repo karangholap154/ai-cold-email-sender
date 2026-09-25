@@ -36,7 +36,7 @@ const SYSTEM_PROMPT = `You are an expert career correspondence writer specializi
      - Reference 2-3 specific technical skills or problem areas from the JD that match your experience.
      - Note that your resume is attached for their convenience.
      - End with a low-pressure, polite call to action (e.g., "I've attached my resume. Happy to share relevant work or chat briefly if this looks like a fit.").
-     - Close with the provided Applicant Signature Block exactly as provided, or a clean sign-off like "Best regards," if none provided.
+     - Sign-off: Do NOT append a signature or personal sign-off block at the end (do NOT write "Best regards", names, or links). End the body text immediately after the call to action. The applicant's official signature is attached automatically.
    - Prohibited clichés: Do NOT use "I am writing to express my interest...", "I hope this email finds you well", "I was thrilled to see...", "I believe I am the perfect candidate", or inflated flattery.
 
 You must respond ONLY with valid JSON in this exact structure:
@@ -62,7 +62,7 @@ Key Rules:
    - Core Value: Reiterate genuine interest with 1 concise, specific sentence about how your background directly addresses a core challenge or strength needed for the role.
    - Attachment: Note that your resume remains attached for their convenience.
    - Low-friction Call to Action: e.g., "Happy to share relevant project links or chat briefly if this aligns with your team's needs."
-   - Closing: Close with the provided Applicant Signature Block exactly as provided, or "Best regards," if none provided.
+   - Closing: Do NOT append a signature or personal sign-off block at the end (do NOT write "Best regards", names, or links). End the email text immediately after the call to action. The applicant's official signature is attached automatically.
 4. Subject line: Always provide a clear, recognized subject line like "Re: [Original Subject]" or "Following up: [Role Title] at [Company Name]".
 5. Prohibited clichés: Do NOT use "Just following up", "Just checking in", "Per my previous email", "I know you're busy", "Did you get a chance to see my last email?", or guilt-tripping language. Keep it strictly value-focused and professional.
 
@@ -75,56 +75,147 @@ You must respond ONLY with valid JSON in this exact structure:
 }`;
 
 /**
- * Universal JSON LLM caller supporting Gemini (with fallback), Anthropic, and OpenAI.
+ * Groq LLM caller using ultra-fast LPU inference (100% free tier).
  */
-async function callAiJson(systemPrompt: string, userPrompt: string): Promise<string> {
-  const provider = (process.env.AI_PROVIDER || "gemini").toLowerCase();
+async function callGroqJson(systemPrompt: string, userPrompt: string): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is not configured in environment variables.");
+  }
 
-  if (provider === "gemini") {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+  const groq = new OpenAI({
+    apiKey,
+    baseURL: "https://api.groq.com/openai/v1",
+  });
+
+  const candidateModels = [
+    process.env.GROQ_MODEL,
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.8-27b",
+    "llama-3.3-70b-versatile",
+  ].filter(Boolean) as string[];
+
+  let lastError: unknown = null;
+  for (const model of candidateModels) {
+    try {
+      const completion = await groq.chat.completions.create({
+        model,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (content) {
+        return content;
+      }
+    } catch (err: unknown) {
+      lastError = err;
+      console.warn(`Groq model ${model} failed, trying next candidate:`, err instanceof Error ? err.message : err);
     }
+  }
 
-    const ai = new GoogleGenAI({ apiKey });
-    const models = ["gemini-3.6-flash", "gemini-3.5-flash"];
-    let lastError: unknown = null;
+  throw lastError || new Error("Failed to generate content with Groq.");
+}
 
-    for (const model of models) {
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          const response = await ai.models.generateContent({
-            model,
-            contents: `${systemPrompt}\n\n${userPrompt}`,
-            config: {
-              responseMimeType: "application/json",
-            },
-          });
+/**
+ * Google Gemini caller with automatic model fallback and retry logic.
+ */
+async function callGeminiJson(systemPrompt: string, userPrompt: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+  }
 
-          return response.text || "";
-        } catch (err: unknown) {
-          lastError = err;
-          const errMsg = err instanceof Error ? err.message : String(err);
-          const isDemandError =
-            errMsg.includes("503") ||
-            errMsg.includes("high demand") ||
-            errMsg.includes("UNAVAILABLE");
+  const ai = new GoogleGenAI({ apiKey });
+  const models = [
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-flash-latest",
+  ];
+  let lastError: unknown = null;
 
-          if (isDemandError && attempt < 2) {
-            await new Promise((resolve) => setTimeout(resolve, 1200));
-            continue;
-          }
+  for (const model of models) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: `${systemPrompt}\n\n${userPrompt}`,
+          config: {
+            responseMimeType: "application/json",
+          },
+        });
 
-          if (isDemandError) {
-            break;
-          }
+        return response.text || "";
+      } catch (err: unknown) {
+        lastError = err;
+        const errMsg = err instanceof Error ? err.message : String(err);
+        const isRetryable =
+          errMsg.includes("503") ||
+          errMsg.includes("500") ||
+          errMsg.includes("429") ||
+          errMsg.includes("high demand") ||
+          errMsg.includes("UNAVAILABLE") ||
+          errMsg.includes("RESOURCE_EXHAUSTED");
 
-          throw err;
+        if (isRetryable && attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+          continue;
         }
+
+        if (isRetryable || errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
+          // Move to next model in the fallback array
+          break;
+        }
+
+        throw err;
       }
     }
+  }
 
-    throw lastError || new Error("Failed to generate content with Gemini.");
+  throw lastError || new Error("Failed to generate content with Gemini.");
+}
+
+/**
+ * Universal JSON LLM caller supporting Groq (primary), Gemini (fallback), Anthropic, and OpenAI.
+ */
+async function callAiJson(systemPrompt: string, userPrompt: string): Promise<string> {
+  const provider = (process.env.AI_PROVIDER || "groq").toLowerCase();
+
+  // Primary: Groq with automatic Gemini fallback
+  if (provider === "groq") {
+    try {
+      if (!process.env.GROQ_API_KEY) {
+        console.warn("GROQ_API_KEY is missing. Falling back to Gemini...");
+        return await callGeminiJson(systemPrompt, userPrompt);
+      }
+      return await callGroqJson(systemPrompt, userPrompt);
+    } catch (groqErr) {
+      console.warn("Groq encountered an error. Seamlessly falling back to Gemini:", groqErr);
+      if (process.env.GEMINI_API_KEY) {
+        return await callGeminiJson(systemPrompt, userPrompt);
+      }
+      throw groqErr;
+    }
+  }
+
+  // Gemini primary (with Groq fallback if configured)
+  if (provider === "gemini") {
+    try {
+      return await callGeminiJson(systemPrompt, userPrompt);
+    } catch (geminiErr) {
+      if (process.env.GROQ_API_KEY) {
+        console.warn("Gemini overloaded. Seamlessly falling back to Groq:", geminiErr);
+        return await callGroqJson(systemPrompt, userPrompt);
+      }
+      throw geminiErr;
+    }
   }
 
   if (provider === "anthropic") {
@@ -166,7 +257,7 @@ async function callAiJson(systemPrompt: string, userPrompt: string): Promise<str
     return completion.choices[0]?.message?.content || "";
   }
 
-  throw new Error(`Unsupported AI_PROVIDER: "${provider}". Must be "gemini", "anthropic", or "openai".`);
+  throw new Error(`Unsupported AI_PROVIDER: "${provider}". Must be "groq", "gemini", "anthropic", or "openai".`);
 }
 
 export async function analyzeJdAndDraftEmail({
@@ -174,6 +265,12 @@ export async function analyzeJdAndDraftEmail({
   skillsSummary = "",
   senderSignature = "",
 }: GenerateEmailParams): Promise<AnalyzeResponse> {
+  // Truncate excessively long JD text to ~3500 chars to avoid burning tokens on repetitive legal/benefit boilerplate
+  const trimmedJd =
+    jdText.length > 3500
+      ? `${jdText.slice(0, 3500)}\n\n[...Job description truncated for length...]`
+      : jdText;
+
   const userPrompt = `Applicant Background & Skills Summary:
 ${skillsSummary ? skillsSummary.trim() : "(No specific background provided; write a sharp, capable engineering cold email highlighting relevant strengths from the JD)"}
 
@@ -181,7 +278,7 @@ ${senderSignature ? `Applicant Signature Block (attach this exact block at the b
 ---
 
 Job Description:
-${jdText.trim()}`;
+${trimmedJd.trim()}`;
 
   const responseText = await callAiJson(SYSTEM_PROMPT, userPrompt);
   return parseAiJson(responseText, senderSignature);
@@ -225,21 +322,27 @@ ${senderSignature ? `Applicant Signature Block (attach this exact block at the b
 }
 
 function applySignature(body: string, signature?: string): string {
-  if (!signature || !signature.trim()) return body;
+  if (!signature || !signature.trim()) {
+    const hasSignoff = /(?:Best regards|Warm regards|Kind regards|With appreciation|Best|Sincerely|Cheers|Thanks|Thank you|Regards),?\s*(?:\n+[^\n]+){0,2}\s*$/i.test(body);
+    if (!hasSignoff) {
+      return `${body.trim()}\n\nBest regards,`;
+    }
+    return body.trim();
+  }
+
   const cleanSig = signature.trim();
 
-  // If the body already contains the signature, keep it
-  if (body.includes(cleanSig)) {
+  // If the body already ends with the exact full signature block, keep it as is
+  if (body.endsWith(cleanSig)) {
     return body;
   }
 
-  // If body ends with a generic sign-off like "Best,\n[Your Name]" or "Best regards,", replace it cleanly
-  const signoffPattern = /(?:Best regards|Best|Sincerely|Warm regards|Thanks),?\s*(?:\n+\[?(?:Your Name|Candidate|Applicant)\]?)?\s*$/i;
-  if (signoffPattern.test(body)) {
-    return `${body.replace(signoffPattern, "").trim()}\n\n${cleanSig}`;
-  }
+  // Robustly strip any trailing sign-off the AI model might have generated at the end
+  // Matches e.g. "Best regards,\nKaran Gholap", "Best regards,\n[Your Name]", "Sincerely,", "Cheers,\nKaran", etc.
+  const trailingSignoffRegex = /(?:\n\s*)*(?:Best regards|Warm regards|Kind regards|With appreciation|Best|Sincerely|Cheers|Thanks|Thank you|Regards),?\s*(?:\n+[^\n]+){0,2}\s*$/i;
+  const cleanedBody = body.replace(trailingSignoffRegex, "").trim();
 
-  return `${body.trim()}\n\n${cleanSig}`;
+  return `${cleanedBody}\n\n${cleanSig}`;
 }
 
 function parseAiJson(rawText: string, senderSignature?: string): AnalyzeResponse {
