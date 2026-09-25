@@ -15,8 +15,38 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const email = searchParams.get("email");
+    const id = searchParams.get("id");
 
-    // 1. Check duplicate email query for this user
+    // 1. Fetch single email by ID (for follow-up context)
+    if (id) {
+      const { data: emailRecord, error: idError } = await supabase
+        .from("sent_emails")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("id", id)
+        .maybeSingle();
+
+      if (idError) {
+        return NextResponse.json({ error: idError.message }, { status: 500 });
+      }
+
+      if (!emailRecord) {
+        return NextResponse.json({ error: "Email record not found" }, { status: 404 });
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      return NextResponse.json({
+        email: emailRecord,
+        plan: (profile?.plan || "free") as "free" | "pro",
+      });
+    }
+
+    // 2. Check duplicate email query for this user
     if (email) {
       const { data, error } = await supabase
         .from("sent_emails")
@@ -37,7 +67,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. Fetch user's plan to determine log retention window
+    // 3. Fetch user's plan to determine log retention window
     const { data: profile } = await supabase
       .from("profiles")
       .select("plan")

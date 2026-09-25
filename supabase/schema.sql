@@ -282,3 +282,14 @@ alter table public.profiles
   add column if not exists dodo_customer_id text,
   add column if not exists dodo_subscription_id text;
 
+-- ==============================================================================
+-- 9. Follow-Up Correspondence Tracking on public.sent_emails
+-- ==============================================================================
+alter table public.sent_emails
+  add column if not exists email_type text default 'initial' check (email_type in ('initial', 'followup')),
+  add column if not exists parent_email_id uuid references public.sent_emails(id) on delete set null;
+
+create index if not exists idx_sent_emails_parent_email_id on public.sent_emails(user_id, parent_email_id);
+create index if not exists idx_sent_emails_email_type on public.sent_emails(user_id, email_type);
+
+

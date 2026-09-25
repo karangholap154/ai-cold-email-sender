@@ -49,11 +49,20 @@ export interface SentEmail {
   final_body: string;
   status: EmailStatus;
   error_message: string | null;
+  email_type?: "initial" | "followup";
+  parent_email_id?: string | null;
   created_at: string;
 }
 
 export interface AnalyzeRequest {
-  jdText: string;
+  type?: "initial" | "followup";
+  jdText?: string;
+  parentEmailId?: string;
+  companyName?: string;
+  roleTitle?: string;
+  originalSubject?: string;
+  originalBody?: string;
+  originalSentDate?: string;
 }
 
 export interface AnalyzeResponse {
@@ -63,15 +72,20 @@ export interface AnalyzeResponse {
   roleTitle?: string;
   skills?: string[];
   seniority?: string;
+  isFollowUp?: boolean;
+  parentEmailId?: string;
+  originalSentDate?: string;
 }
 
 export interface SendEmailRequest {
   hrEmail: string;
   subject: string;
   body: string;
-  jdText: string;
+  jdText?: string;
   companyName?: string;
   roleTitle?: string;
+  emailType?: "initial" | "followup";
+  parentEmailId?: string;
 }
 
 export interface SendEmailResponse {

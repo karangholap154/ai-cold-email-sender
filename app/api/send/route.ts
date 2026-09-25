@@ -75,7 +75,16 @@ export async function POST(req: NextRequest) {
     }
 
     bodyData = await req.json();
-    const { hrEmail, subject, body, jdText, companyName, roleTitle } = bodyData;
+    const {
+      hrEmail,
+      subject,
+      body,
+      jdText,
+      companyName,
+      roleTitle,
+      emailType = "initial",
+      parentEmailId = null,
+    } = bodyData;
 
     if (!hrEmail || !hrEmail.includes("@")) {
       return NextResponse.json(
@@ -91,7 +100,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Enforce Free-Tier Monthly Send Cap (5 sends/calendar month)
+    // 1. Fetch user's profile and plan
     const { data: profile } = await supabase
       .from("profiles")
       .select("plan")
@@ -99,6 +108,19 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     const plan = profile?.plan || "free";
+
+    // Enforce Pro exclusivity for follow-up emails
+    if (emailType === "followup" && plan !== "pro") {
+      return NextResponse.json(
+        {
+          error: "Follow-up correspondence is exclusive to Pro members. Upgrade your account to unlock one-click follow-ups.",
+          code: "PRO_FEATURE_REQUIRED",
+        },
+        { status: 403 }
+      );
+    }
+
+    // Enforce Free-Tier Monthly Send Cap (5 sends/calendar month)
     if (plan === "free") {
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
       const { count, error: countError } = await supabase
@@ -279,7 +301,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Log successful send to sent_emails table scoped to user
-    await supabase.from("sent_emails").insert({
+    const insertPayload: Record<string, any> = {
       user_id: user.id,
       jd_text: jdText || "",
       hr_email: hrEmail.trim(),
@@ -291,7 +313,17 @@ export async function POST(req: NextRequest) {
       final_body: body,
       status: "sent",
       error_message: null,
-    });
+      email_type: emailType,
+      parent_email_id: parentEmailId || null,
+    };
+
+    const { error: insertErr } = await supabase.from("sent_emails").insert(insertPayload);
+    if (insertErr) {
+      // Graceful fallback if columns email_type or parent_email_id don't exist yet
+      delete insertPayload.email_type;
+      delete insertPayload.parent_email_id;
+      await supabase.from("sent_emails").insert(insertPayload);
+    }
 
     return NextResponse.json({
       success: true,

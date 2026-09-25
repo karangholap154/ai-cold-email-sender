@@ -33,6 +33,8 @@ export interface LetterFrameProps {
   regenerationCount?: number;
   maxRegenerations?: number;
   isCapped?: boolean;
+  isFollowUp?: boolean;
+  originalSentDate?: string;
   onRegenerate: () => void;
   isRegenerating: boolean;
   onBack: () => void;
@@ -57,6 +59,8 @@ export function LetterFrame({
   regenerationCount = 0,
   maxRegenerations = 2,
   isCapped = false,
+  isFollowUp = false,
+  originalSentDate,
   onRegenerate,
   isRegenerating,
   onBack,
@@ -219,8 +223,22 @@ export function LetterFrame({
           </div>
         )}
 
+        {/* Follow-up Indicator */}
+        {isFollowUp && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-hairline/60 text-xs">
+            <span className="rounded-sm border border-seal/40 bg-seal/10 text-seal px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+              Follow-up Correspondence
+            </span>
+            {originalSentDate && (
+              <span className="text-[11px] text-muted-ink">
+                Original outreach sent: <strong className="text-ink font-medium">{originalSentDate}</strong>
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Dynamic Duplicate Outreach Warning */}
-        {isDuplicate && (
+        {isDuplicate && !isFollowUp && (
           <div className="flex items-start sm:items-center gap-2 border-t border-hairline pt-3 text-xs text-amber-700">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 sm:mt-0" />
             <span className="leading-snug">
@@ -328,7 +346,7 @@ export function LetterFrame({
             </div>
           </div>
 
-          {isDuplicate && (
+          {isDuplicate && !isFollowUp && (
             <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-amber-700 font-sans">
               <AlertTriangle className="h-3 w-3 shrink-0" />
               <span>Prior outreach sent to <strong className="break-all">{duplicateEmailMatched || recipientEmail}</strong>.</span>
@@ -371,32 +389,41 @@ export function LetterFrame({
             <span className="text-muted-ink/40">•</span>
             <span>~{readTimeSeconds}s read</span>
             <span className="text-muted-ink/40">•</span>
-            <span
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs border text-[10px] ${
-                wordCount >= 70 && wordCount <= 130
-                  ? "border-confirmed/30 bg-confirmed/5 text-confirmed font-medium"
-                  : wordCount > 130
-                  ? "border-amber-700/30 bg-amber-700/5 text-amber-800"
-                  : "border-hairline bg-[#EDEAE2] text-muted-ink"
-              }`}
-            >
-              {wordCount >= 70 && wordCount <= 130 ? (
-                <>
-                  <CheckCircle2 className="h-3 w-3 text-confirmed" />
-                  <span>Optimal response zone (75–125w)</span>
-                </>
-              ) : wordCount > 130 ? (
-                <>
-                  <AlertCircle className="h-3 w-3 text-amber-700" />
-                  <span>On the longer side ({">"}130w)</span>
-                </>
-              ) : (
-                <span>Concise note</span>
-              )}
-            </span>
+            {(() => {
+              const isOptimal = isFollowUp
+                ? wordCount >= 45 && wordCount <= 85
+                : wordCount >= 70 && wordCount <= 130;
+              const isTooLong = wordCount > (isFollowUp ? 85 : 130);
+
+              return (
+                <span
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs border text-[10px] ${
+                    isOptimal
+                      ? "border-confirmed/30 bg-confirmed/5 text-confirmed font-medium"
+                      : isTooLong
+                      ? "border-amber-700/30 bg-amber-700/5 text-amber-800"
+                      : "border-hairline bg-[#EDEAE2] text-muted-ink"
+                  }`}
+                >
+                  {isOptimal ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3 text-confirmed" />
+                      <span>{isFollowUp ? "Optimal follow-up length (50–85w)" : "Optimal response zone (75–125w)"}</span>
+                    </>
+                  ) : isTooLong ? (
+                    <>
+                      <AlertCircle className="h-3 w-3 text-amber-700" />
+                      <span>On the longer side ({`>${isFollowUp ? 85 : 130}w`})</span>
+                    </>
+                  ) : (
+                    <span>Concise note</span>
+                  )}
+                </span>
+              );
+            })()}
           </div>
           <span className="italic text-muted-ink/80 text-[10px] sm:text-[11px]">
-            Executive correspondence standard
+            {isFollowUp ? "High-signal follow-up standard" : "Executive correspondence standard"}
           </span>
         </div>
       </div>
@@ -410,7 +437,7 @@ export function LetterFrame({
           className="inline-flex items-center justify-center sm:justify-start gap-1.5 py-2 text-xs text-muted-ink hover:text-ink transition-colors disabled:opacity-50 cursor-pointer order-2 sm:order-1"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Edit Job Description</span>
+          <span>{isFollowUp ? "Exit follow-up" : "Edit Job Description"}</span>
         </button>
 
         <div className="flex items-center gap-2 sm:gap-3 order-1 sm:order-2">
@@ -455,6 +482,8 @@ export function LetterFrame({
             title={
               reachedSendCap
                 ? "Monthly free send limit reached. Upgrade to Pro to send."
+                : isFollowUp
+                ? "Send follow-up letter directly via Gmail"
                 : "Send letter directly via Gmail"
             }
             className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-sm px-5 py-2.5 sm:py-2 text-xs font-medium shadow-xs transition-all disabled:opacity-50 min-h-[40px] sm:min-h-0 ${
@@ -475,6 +504,8 @@ export function LetterFrame({
                 ? "Sending..."
                 : reachedSendCap
                 ? `Limit reached (${monthlyLimit}/${monthlyLimit})`
+                : isFollowUp
+                ? "Send follow-up"
                 : "Send letter"}
             </span>
           </button>

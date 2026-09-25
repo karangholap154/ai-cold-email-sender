@@ -9,6 +9,16 @@ export interface GenerateEmailParams {
   senderSignature?: string;
 }
 
+export interface GenerateFollowUpParams {
+  companyName?: string;
+  roleTitle?: string;
+  originalSubject: string;
+  originalBody?: string;
+  originalSentDate?: string;
+  skillsSummary?: string;
+  senderSignature?: string;
+}
+
 const SYSTEM_PROMPT = `You are an expert career correspondence writer specializing in high-response, authentic cold outreach. Your task is to analyze a job description (JD) and the applicant's background/skills summary, and:
 
 1. Extract key details about the role:
@@ -39,21 +49,36 @@ You must respond ONLY with valid JSON in this exact structure:
   "body": string
 }`;
 
-export async function analyzeJdAndDraftEmail({
-  jdText,
-  skillsSummary = "",
-  senderSignature = "",
-}: GenerateEmailParams): Promise<AnalyzeResponse> {
+const FOLLOWUP_SYSTEM_PROMPT = `You are an expert career correspondence writer specializing in high-response, respectful follow-up outreach for job applications.
+
+Your task is to write a polite, concise, and high-signal follow-up email to the recruiter or hiring team regarding a previously sent application.
+
+Key Rules:
+1. Tone: Polite, confident, brief, and respectful of the recruiter's schedule. Never sound passive-aggressive, needy, or entitled.
+2. Length: Strictly between 50 and 85 words. A follow-up must be readable in 20 seconds.
+3. Content:
+   - Greeting: "Hi [Company Name] Hiring Team," or "Hi [Company Name] Team," (or "Hi there," if company unknown), followed by a blank line.
+   - Opening: Mention that you reached out previously regarding the [roleTitle] position (referencing the previous note/date naturally).
+   - Core Value: Reiterate genuine interest with 1 concise, specific sentence about how your background directly addresses a core challenge or strength needed for the role.
+   - Attachment: Note that your resume remains attached for their convenience.
+   - Low-friction Call to Action: e.g., "Happy to share relevant project links or chat briefly if this aligns with your team's needs."
+   - Closing: Close with the provided Applicant Signature Block exactly as provided, or "Best regards," if none provided.
+4. Subject line: Always provide a clear, recognized subject line like "Re: [Original Subject]" or "Following up: [Role Title] at [Company Name]".
+5. Prohibited clichés: Do NOT use "Just following up", "Just checking in", "Per my previous email", "I know you're busy", "Did you get a chance to see my last email?", or guilt-tripping language. Keep it strictly value-focused and professional.
+
+You must respond ONLY with valid JSON in this exact structure:
+{
+  "subject": string,
+  "body": string,
+  "companyName": string | null,
+  "roleTitle": string | null
+}`;
+
+/**
+ * Universal JSON LLM caller supporting Gemini (with fallback), Anthropic, and OpenAI.
+ */
+async function callAiJson(systemPrompt: string, userPrompt: string): Promise<string> {
   const provider = (process.env.AI_PROVIDER || "gemini").toLowerCase();
-
-  const userPrompt = `Applicant Background & Skills Summary:
-${skillsSummary ? skillsSummary.trim() : "(No specific background provided; write a sharp, capable engineering cold email highlighting relevant strengths from the JD)"}
-
-${senderSignature ? `Applicant Signature Block (attach this exact block at the bottom of the email):\n${senderSignature.trim()}\n` : ""}
----
-
-Job Description:
-${jdText.trim()}`;
 
   if (provider === "gemini") {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -70,14 +95,13 @@ ${jdText.trim()}`;
         try {
           const response = await ai.models.generateContent({
             model,
-            contents: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
+            contents: `${systemPrompt}\n\n${userPrompt}`,
             config: {
               responseMimeType: "application/json",
             },
           });
 
-          const responseText = response.text || "";
-          return parseAiJson(responseText, senderSignature);
+          return response.text || "";
         } catch (err: unknown) {
           lastError = err;
           const errMsg = err instanceof Error ? err.message : String(err);
@@ -87,12 +111,10 @@ ${jdText.trim()}`;
             errMsg.includes("UNAVAILABLE");
 
           if (isDemandError && attempt < 2) {
-            // Short backoff before retrying
             await new Promise((resolve) => setTimeout(resolve, 1200));
             continue;
           }
 
-          // If demand error continues, break to next fallback model
           if (isDemandError) {
             break;
           }
@@ -115,16 +137,14 @@ ${jdText.trim()}`;
     const message = await anthropic.messages.create({
       model: "claude-3-5-haiku-latest",
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     });
 
-    const text = message.content
+    return message.content
       .filter((block) => block.type === "text")
       .map((block) => (block as { type: "text"; text: string }).text)
       .join("\n");
-
-    return parseAiJson(text, senderSignature);
   }
 
   if (provider === "openai") {
@@ -138,16 +158,70 @@ ${jdText.trim()}`;
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
     });
 
-    const text = completion.choices[0]?.message?.content || "";
-    return parseAiJson(text, senderSignature);
+    return completion.choices[0]?.message?.content || "";
   }
 
   throw new Error(`Unsupported AI_PROVIDER: "${provider}". Must be "gemini", "anthropic", or "openai".`);
+}
+
+export async function analyzeJdAndDraftEmail({
+  jdText,
+  skillsSummary = "",
+  senderSignature = "",
+}: GenerateEmailParams): Promise<AnalyzeResponse> {
+  const userPrompt = `Applicant Background & Skills Summary:
+${skillsSummary ? skillsSummary.trim() : "(No specific background provided; write a sharp, capable engineering cold email highlighting relevant strengths from the JD)"}
+
+${senderSignature ? `Applicant Signature Block (attach this exact block at the bottom of the email):\n${senderSignature.trim()}\n` : ""}
+---
+
+Job Description:
+${jdText.trim()}`;
+
+  const responseText = await callAiJson(SYSTEM_PROMPT, userPrompt);
+  return parseAiJson(responseText, senderSignature);
+}
+
+export async function generateFollowUpEmail({
+  companyName,
+  roleTitle,
+  originalSubject,
+  originalBody,
+  originalSentDate,
+  skillsSummary = "",
+  senderSignature = "",
+}: GenerateFollowUpParams): Promise<AnalyzeResponse> {
+  const cleanSubject = originalSubject.startsWith("Re:") || originalSubject.startsWith("re:")
+    ? originalSubject
+    : `Re: ${originalSubject}`;
+
+  const userPrompt = `Context of Previous Outreach:
+- Target Company: ${companyName || "Unknown / Not specified"}
+- Target Role: ${roleTitle || "Not specified"}
+- Original Subject Line: ${originalSubject}
+- Original Outreach Date: ${originalSentDate || "A few days ago"}
+${originalBody ? `- Original Email Sent:\n"${originalBody.slice(0, 500)}..."\n` : ""}
+
+Applicant Background & Skills Summary:
+${skillsSummary ? skillsSummary.trim() : "(No specific background provided; emphasize genuine interest and capability for the role)"}
+
+${senderSignature ? `Applicant Signature Block (attach this exact block at the bottom of the email):\n${senderSignature.trim()}\n` : ""}`;
+
+  const responseText = await callAiJson(FOLLOWUP_SYSTEM_PROMPT, userPrompt);
+  const parsed = parseAiJson(responseText, senderSignature);
+
+  return {
+    ...parsed,
+    subject: parsed.subject && parsed.subject.length > 5 ? parsed.subject : cleanSubject,
+    companyName: companyName || parsed.companyName,
+    roleTitle: roleTitle || parsed.roleTitle,
+    isFollowUp: true,
+  };
 }
 
 function applySignature(body: string, signature?: string): string {

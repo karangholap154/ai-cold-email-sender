@@ -37,6 +37,16 @@ export default function DraftPage() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [analyzedData, setAnalyzedData] = useState<AnalyzeResponse | null>(null);
 
+  // Follow-up context state
+  const [followUpContext, setFollowUpContext] = useState<{
+    parentEmailId: string;
+    companyName?: string;
+    roleTitle?: string;
+    originalSubject: string;
+    originalSentDate?: string;
+    originalBody?: string;
+  } | null>(null);
+
   // Sending state
   const [isSending, setIsSending] = useState(false);
   const [isDuplicateEmail, setIsDuplicateEmail] = useState(false);
@@ -84,8 +94,83 @@ export default function DraftPage() {
     loadStatus();
   }, []);
 
+  // Check URL for followUpId to trigger One-Click Follow-Up generation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const fId = params.get("followUpId");
+    if (!fId) return;
+
+    async function loadFollowUp(id: string) {
+      setIsAnalyzing(true);
+      try {
+        const res = await fetch(`/api/emails?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load previous email.");
+        }
+
+        if (data.plan !== "pro") {
+          toast.error("Follow-up correspondence is exclusive to Pro members. Upgrade your account to unlock.");
+          window.location.href = "/settings";
+          return;
+        }
+
+        const email = data.email;
+        setHrEmail(email.hr_email);
+        const formattedDate = new Date(email.created_at).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+
+        const ctx = {
+          parentEmailId: email.id,
+          companyName: email.company_name || undefined,
+          roleTitle: email.role_title || undefined,
+          originalSubject: email.final_subject || email.generated_subject,
+          originalBody: email.final_body || email.generated_body,
+          originalSentDate: formattedDate,
+        };
+        setFollowUpContext(ctx);
+
+        // Trigger follow-up generation
+        const analyzeRes = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "followup",
+            parentEmailId: email.id,
+          }),
+        });
+
+        const analyzeData = await analyzeRes.json();
+        if (!analyzeRes.ok) {
+          throw new Error(analyzeData.error || "Failed to generate follow-up.");
+        }
+
+        setAnalyzedData(analyzeData);
+        setStep("review");
+        toast.success("Follow-up draft prepared.");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Error generating follow-up.";
+        toast.error(msg);
+      } finally {
+        setIsAnalyzing(false);
+      }
+    }
+
+    loadFollowUp(fId);
+  }, []);
+
   // Check duplicate email when hrEmail changes
   useEffect(() => {
+    if (followUpContext) {
+      // In follow-up mode, duplicate check against previous email is intended
+      setIsDuplicateEmail(false);
+      return;
+    }
+
     if (!hrEmail || !hrEmail.includes("@")) {
       setIsDuplicateEmail(false);
       return;
@@ -109,7 +194,7 @@ export default function DraftPage() {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [hrEmail]);
+  }, [hrEmail, followUpContext]);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +214,7 @@ export default function DraftPage() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jdText }),
+        body: JSON.stringify({ jdText, type: "initial" }),
       });
 
       const data = await res.json();
@@ -138,6 +223,7 @@ export default function DraftPage() {
       }
 
       setAnalyzedData(data);
+      setFollowUpContext(null);
       setRegenerationCount(0);
       setStep("review");
       toast.success("Draft prepared. Review the letter before sending.");
@@ -150,7 +236,6 @@ export default function DraftPage() {
   };
 
   const handleRegenerate = async () => {
-    if (!jdText) return;
     const isFreePlan = usage ? usage.plan === "free" : true;
     const maxRegens = isFreePlan ? 2 : Infinity;
 
@@ -161,10 +246,14 @@ export default function DraftPage() {
 
     setIsRegenerating(true);
     try {
+      const payload = followUpContext
+        ? { type: "followup", parentEmailId: followUpContext.parentEmailId }
+        : { type: "initial", jdText };
+
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jdText }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -217,9 +306,11 @@ export default function DraftPage() {
           hrEmail: targetEmail,
           subject: finalData.subject,
           body: finalData.body,
-          jdText,
+          jdText: jdText || (followUpContext ? `Follow-up regarding ${followUpContext.originalSubject}` : ""),
           companyName: finalData.companyName,
           roleTitle: finalData.roleTitle,
+          emailType: followUpContext ? "followup" : "initial",
+          parentEmailId: followUpContext?.parentEmailId,
         }),
       });
 
@@ -234,7 +325,11 @@ export default function DraftPage() {
         throw new Error(data.error || "Failed to send email.");
       }
 
-      toast.success(`Letter sent successfully to ${targetEmail}`);
+      toast.success(
+        followUpContext
+          ? `Follow-up sent successfully to ${targetEmail}`
+          : `Letter sent successfully to ${targetEmail}`
+      );
       // Increment local monthly sends count
       setUsage((prev) =>
         prev ? { ...prev, monthlySends: prev.monthlySends + 1 } : null
@@ -244,7 +339,11 @@ export default function DraftPage() {
       setJdText("");
       setHrEmail("");
       setAnalyzedData(null);
+      setFollowUpContext(null);
       setRegenerationCount(0);
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", "/draft");
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error sending email.";
       toast.error(msg);
@@ -456,9 +555,22 @@ export default function DraftPage() {
             regenerationCount={regenerationCount}
             maxRegenerations={usage?.plan === "pro" ? Infinity : 2}
             isCapped={isCapped}
+            isFollowUp={Boolean(followUpContext)}
+            originalSentDate={followUpContext?.originalSentDate}
             onRegenerate={handleRegenerate}
             isRegenerating={isRegenerating}
-            onBack={() => setStep("input")}
+            onBack={() => {
+              if (followUpContext) {
+                setFollowUpContext(null);
+                setAnalyzedData(null);
+                setStep("input");
+                if (typeof window !== "undefined") {
+                  window.history.replaceState({}, "", "/draft");
+                }
+              } else {
+                setStep("input");
+              }
+            }}
             onSend={handleSend}
             onEmailChange={setHrEmail}
             isSending={isSending}
