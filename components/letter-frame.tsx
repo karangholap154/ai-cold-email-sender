@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { motion } from "motion/react";
 import { toast } from "sonner";
@@ -160,7 +160,37 @@ export function LetterFrame({
     }
   };
 
-  const handleSend = () => {
+  // 5-Second Undo Send grace period state
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cancelSend = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setCountdown(null);
+    toast.dismiss("undo-send-toast");
+    toast.info("Sending cancelled. Your letter draft has been preserved.");
+  }, []);
+
+  const dispatchNow = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearTimeout(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setCountdown(null);
+    toast.dismiss("undo-send-toast");
+
     onSend({
       subject,
       body,
@@ -168,7 +198,99 @@ export function LetterFrame({
       roleTitle: roleTitle.trim() || undefined,
       hrEmail: recipientEmail.trim() || undefined,
     });
-  };
+  }, [onSend, subject, body, companyName, roleTitle, recipientEmail]);
+
+  const handleInitiateSend = useCallback(() => {
+    if (isSending || isRegenerating || reachedSendCap || countdown !== null) return;
+
+    const targetEmail = recipientEmail.trim();
+    if (!targetEmail || !targetEmail.includes("@")) {
+      toast.error("Please provide a valid recipient email address.");
+      return;
+    }
+
+    if (!isGmailConnected) {
+      toast.error("Please connect your Gmail account in Settings before sending.", {
+        action: {
+          label: "Connect",
+          onClick: () => {
+            window.location.href = "/settings";
+          },
+        },
+      });
+      return;
+    }
+
+    if (!subject.trim() || !body.trim()) {
+      toast.error("Subject and letter body cannot be empty.");
+      return;
+    }
+
+    // Start 5-second countdown grace period
+    setCountdown(5);
+
+    toast(
+      `Dispatching letter to ${targetEmail} in 5s...`,
+      {
+        id: "undo-send-toast",
+        duration: 5500,
+        action: {
+          label: "Undo",
+          onClick: () => cancelSend(),
+        },
+      }
+    );
+
+    let remaining = 5;
+    intervalRef.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining > 0) {
+        setCountdown(remaining);
+        toast(
+          `Dispatching letter to ${targetEmail} in ${remaining}s...`,
+          {
+            id: "undo-send-toast",
+            duration: 5500,
+            action: {
+              label: "Undo",
+              onClick: () => cancelSend(),
+            },
+          }
+        );
+      } else {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }
+    }, 1000);
+
+    countdownTimerRef.current = setTimeout(() => {
+      dispatchNow();
+    }, 5000);
+  }, [
+    isSending,
+    isRegenerating,
+    reachedSendCap,
+    countdown,
+    recipientEmail,
+    isGmailConnected,
+    subject,
+    body,
+    cancelSend,
+    dispatchNow,
+  ]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      toast.dismiss("undo-send-toast");
+    };
+  }, []);
+
+
 
   return (
     <motion.div
@@ -428,12 +550,51 @@ export function LetterFrame({
         </div>
       </div>
 
+      {/* Countdown Grace Period Active Banner */}
+      {countdown !== null && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-sm border border-amber-300/80 bg-amber-50/90 p-3 sm:p-3.5 text-xs text-amber-950 shadow-xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-600"></span>
+            </span>
+            <div className="min-w-0">
+              <p className="font-medium text-amber-900 leading-snug">
+                Dispatching in <span className="font-mono font-bold text-sm text-amber-950">{countdown}s</span> to{" "}
+                <span className="font-mono underline underline-offset-2 break-all">{recipientEmail}</span>
+              </p>
+              <p className="text-[11px] text-amber-800/80 mt-0.5">
+                Click &ldquo;Cancel & keep draft&rdquo; to stop sending, or &ldquo;Send now&rdquo; to dispatch immediately.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto pt-1 sm:pt-0">
+            <button
+              type="button"
+              onClick={cancelSend}
+              className="inline-flex items-center gap-1 rounded-sm border border-amber-700/50 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span>Cancel & keep draft</span>
+            </button>
+            <button
+              type="button"
+              onClick={dispatchNow}
+              className="inline-flex items-center gap-1 rounded-sm bg-seal px-3 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 transition-colors cursor-pointer shadow-2xs"
+            >
+              <Send className="h-3 w-3" />
+              <span>Send now</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 4. Action Bar: Distinct deliberate Send vs. Secondary Regenerate / Back */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
         <button
           type="button"
           onClick={onBack}
-          disabled={isRegenerating || isSending}
+          disabled={isRegenerating || isSending || countdown !== null}
           className="inline-flex items-center justify-center sm:justify-start gap-1.5 py-2 text-xs text-muted-ink hover:text-ink transition-colors disabled:opacity-50 cursor-pointer order-2 sm:order-1"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
@@ -444,7 +605,7 @@ export function LetterFrame({
           <button
             type="button"
             onClick={onRegenerate}
-            disabled={isRegenerating || isSending || reachedRegenCap}
+            disabled={isRegenerating || isSending || reachedRegenCap || countdown !== null}
             title={
               reachedRegenCap
                 ? `Free plan limit reached: ${maxRegenerations} regenerations per draft. Edit text directly or upgrade to Pro.`
@@ -468,47 +629,70 @@ export function LetterFrame({
             </span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={
-              isSending ||
-              isRegenerating ||
-              reachedSendCap ||
-              !subject.trim() ||
-              !body.trim() ||
-              !recipientEmail.trim()
-            }
-            title={
-              reachedSendCap
-                ? "Monthly free send limit reached. Upgrade to Pro to send."
-                : isFollowUp
-                ? "Send follow-up letter directly via Gmail"
-                : "Send letter directly via Gmail"
-            }
-            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-sm px-5 py-2.5 sm:py-2 text-xs font-medium shadow-xs transition-all disabled:opacity-50 min-h-[40px] sm:min-h-0 ${
-              reachedSendCap
-                ? "bg-muted-ink/30 text-paper cursor-not-allowed"
-                : "bg-seal text-paper hover:bg-seal/90 cursor-pointer"
-            }`}
-          >
-            {isSending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : reachedSendCap ? (
-              <Lock className="h-3.5 w-3.5" />
-            ) : (
-              <Send className="h-3.5 w-3.5" />
-            )}
-            <span>
-              {isSending
-                ? "Sending..."
-                : reachedSendCap
-                ? `Limit reached (${monthlyLimit}/${monthlyLimit})`
-                : isFollowUp
-                ? "Send follow-up"
-                : "Send letter"}
-            </span>
-          </button>
+          {countdown !== null ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={cancelSend}
+                className="inline-flex items-center justify-center gap-1.5 rounded-sm border-2 border-amber-700/60 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors cursor-pointer shadow-xs min-h-[40px] sm:min-h-0"
+                title="Cancel dispatch and keep draft"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Undo Send ({countdown}s)</span>
+              </button>
+              <button
+                type="button"
+                onClick={dispatchNow}
+                className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3.5 py-2 text-xs font-medium text-paper hover:bg-seal/90 transition-colors cursor-pointer shadow-xs min-h-[40px] sm:min-h-0"
+                title="Send immediately without waiting"
+              >
+                <Send className="h-3 w-3" />
+                <span>Send now</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleInitiateSend}
+              disabled={
+                isSending ||
+                isRegenerating ||
+                reachedSendCap ||
+                !subject.trim() ||
+                !body.trim() ||
+                !recipientEmail.trim()
+              }
+              title={
+                reachedSendCap
+                  ? "Monthly free send limit reached. Upgrade to Pro to send."
+                  : isFollowUp
+                  ? "Send follow-up letter directly via Gmail"
+                  : "Send letter directly via Gmail"
+              }
+              className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-sm px-5 py-2.5 sm:py-2 text-xs font-medium shadow-xs transition-all disabled:opacity-50 min-h-[40px] sm:min-h-0 ${
+                reachedSendCap
+                  ? "bg-muted-ink/30 text-paper cursor-not-allowed"
+                  : "bg-seal text-paper hover:bg-seal/90 cursor-pointer"
+              }`}
+            >
+              {isSending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : reachedSendCap ? (
+                <Lock className="h-3.5 w-3.5" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              <span>
+                {isSending
+                  ? "Sending..."
+                  : reachedSendCap
+                  ? `Limit reached (${monthlyLimit}/${monthlyLimit})`
+                  : isFollowUp
+                  ? "Send follow-up"
+                  : "Send letter"}
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </motion.div>
