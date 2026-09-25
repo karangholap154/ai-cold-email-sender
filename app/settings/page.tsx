@@ -21,9 +21,28 @@ import {
   CreditCard,
   Zap,
   ExternalLink,
+  Save,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import type { Resume, GmailConnectionStatus, UserUsage } from "@/lib/types/database";
 import { generateFormattedSignature } from "@/lib/signature";
+
+interface SettingsBaseline {
+  skillsSummary: string;
+  fullName: string;
+  signOff: string;
+  portfolioUrl: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  phone: string;
+  customSignature: string;
+}
 
 const MIGRATION_SQL = `alter table public.profiles
   add column if not exists full_name text,
@@ -43,6 +62,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const baselineRef = useRef<SettingsBaseline | null>(null);
 
   // User Plan & Usage State
   const [usage, setUsage] = useState<UserUsage | null>(null);
@@ -52,6 +72,7 @@ export default function SettingsPage() {
   // Gmail OAuth Connection State
   const [gmailStatus, setGmailStatus] = useState<GmailConnectionStatus>({ connected: false });
   const [isDisconnectingGmail, setIsDisconnectingGmail] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   // Profile & Sender Signature State
   const [fullName, setFullName] = useState("");
@@ -97,11 +118,13 @@ export default function SettingsPage() {
           setGmailStatus(gData);
         }
 
+        let loadedSkillsSummary = "";
         if (resumeRes.ok) {
           const rData = await resumeRes.json();
           if (rData.resume) {
             setResume(rData.resume);
-            setSkillsSummary(rData.resume.skills_summary || "");
+            loadedSkillsSummary = rData.resume.skills_summary || "";
+            setSkillsSummary(loadedSkillsSummary);
           }
         }
 
@@ -140,6 +163,26 @@ export default function SettingsPage() {
               }, "stack");
               setCustomSignature(gen);
             }
+
+            const initialSig = cs || generateFormattedSignature({
+              full_name: fn,
+              sign_off: so,
+              portfolio_url: po,
+              github_url: gh,
+              linkedin_url: li,
+              phone: ph,
+            }, "stack");
+
+            baselineRef.current = {
+              skillsSummary: loadedSkillsSummary,
+              fullName: fn,
+              signOff: so,
+              portfolioUrl: po,
+              githubUrl: gh,
+              linkedinUrl: li,
+              phone: ph,
+              customSignature: initialSig,
+            };
           }
           if (pData.migrationRequired) {
             setMigrationRequired(true);
@@ -153,6 +196,36 @@ export default function SettingsPage() {
     }
     loadData();
   }, []);
+
+  // Compute dirty (unsaved) modifications
+  const isDirty = Boolean(
+    selectedFile !== null ||
+    (baselineRef.current && (
+      skillsSummary !== baselineRef.current.skillsSummary ||
+      fullName !== baselineRef.current.fullName ||
+      signOff !== baselineRef.current.signOff ||
+      portfolioUrl !== baselineRef.current.portfolioUrl ||
+      githubUrl !== baselineRef.current.githubUrl ||
+      linkedinUrl !== baselineRef.current.linkedinUrl ||
+      phone !== baselineRef.current.phone ||
+      customSignature !== baselineRef.current.customSignature
+    ))
+  );
+
+  const handleResetChanges = () => {
+    if (!baselineRef.current) return;
+    setSkillsSummary(baselineRef.current.skillsSummary);
+    setFullName(baselineRef.current.fullName);
+    setSignOff(baselineRef.current.signOff);
+    setPortfolioUrl(baselineRef.current.portfolioUrl);
+    setGithubUrl(baselineRef.current.githubUrl);
+    setLinkedinUrl(baselineRef.current.linkedinUrl);
+    setPhone(baselineRef.current.phone);
+    setCustomSignature(baselineRef.current.customSignature);
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    toast.info("Unsaved modifications reverted.");
+  };
 
   // Update signature when fields change if user hasn't manually customized textarea
   const updateGeneratedSignature = (
@@ -274,6 +347,17 @@ export default function SettingsPage() {
       }
 
       setMigrationRequired(false);
+      baselineRef.current = {
+        skillsSummary,
+        fullName,
+        signOff,
+        portfolioUrl,
+        githubUrl,
+        linkedinUrl,
+        phone,
+        customSignature,
+      };
+      setSelectedFile(null);
       toast.success("Settings and sender signature saved successfully.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error saving settings";
@@ -283,16 +367,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDisconnectGmail = async () => {
-    if (!confirm("Are you sure you want to disconnect your Gmail account? You won't be able to send letters until you reconnect.")) {
-      return;
-    }
+  const executeDisconnectGmail = async () => {
     setIsDisconnectingGmail(true);
     try {
       const res = await fetch("/api/gmail/disconnect", { method: "POST" });
       const data = await res.json();
       if (res.ok && data.success) {
         setGmailStatus({ connected: false });
+        setShowDisconnectModal(false);
         toast.success("Gmail account disconnected.");
       } else {
         throw new Error(data.error || "Failed to disconnect Gmail.");
@@ -338,7 +420,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
+    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-24 sm:pb-28">
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-6 sm:mb-8">
           <h1 className="font-heading text-xl sm:text-2xl text-ink">Settings & Profile</h1>
@@ -386,7 +468,7 @@ export default function SettingsPage() {
                     <button
                       type="button"
                       disabled={isDisconnectingGmail}
-                      onClick={handleDisconnectGmail}
+                      onClick={() => setShowDisconnectModal(true)}
                       className="inline-flex items-center gap-1.5 text-xs text-muted-ink hover:text-red-700 underline underline-offset-4 self-start sm:self-auto py-1 cursor-pointer disabled:opacity-50 transition-colors"
                     >
                       {isDisconnectingGmail ? (
@@ -869,8 +951,101 @@ export default function SettingsPage() {
                 <span>{isSaving ? "Saving..." : "Save settings"}</span>
               </button>
             </div>
+
+            {/* Sticky Floating Save Bar when settings have unsaved modifications */}
+            {isDirty && (
+              <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-hairline bg-paper/95 backdrop-blur-md px-4 py-3 sm:px-6 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] animate-in slide-in-from-bottom duration-200">
+                <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-ink truncate">
+                        Unsaved modifications
+                      </p>
+                      <p className="text-[10px] text-muted-ink hidden sm:block">
+                        Remember to save your settings before leaving this page
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleResetChanges}
+                      disabled={isSaving}
+                      className="text-xs text-muted-ink hover:text-ink underline underline-offset-4 px-2 py-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      Discard
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-ink px-4 py-2 text-xs font-medium text-paper hover:bg-ink/90 shadow-xs transition-colors cursor-pointer disabled:opacity-50 min-h-[36px]"
+                    >
+                      {isSaving ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" />
+                      )}
+                      <span>{isSaving ? "Saving..." : "Save settings"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </form>
         )}
+
+        {/* In-App Styled Gmail Disconnect Modal */}
+        <Dialog open={showDisconnectModal} onOpenChange={setShowDisconnectModal}>
+          <DialogContent className="border border-hairline bg-paper text-ink sm:max-w-md p-5 sm:p-6">
+            <DialogHeader className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 text-amber-800 text-xs font-semibold uppercase tracking-wider">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span>Disconnect Gmail</span>
+              </div>
+              <DialogTitle className="font-heading text-lg sm:text-xl text-ink">
+                Disconnect sending account?
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-ink leading-relaxed">
+                You will no longer be able to send tailored letters directly from your personal address until you reconnect Google OAuth in Settings.
+              </DialogDescription>
+            </DialogHeader>
+
+            {gmailStatus.email && (
+              <div className="my-2 rounded-sm border border-hairline bg-[#FAF9F5] p-3 text-xs flex items-center gap-2.5">
+                <Mail className="h-4 w-4 text-muted-ink shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-mono text-ink font-medium truncate">{gmailStatus.email}</p>
+                  <p className="text-[11px] text-muted-ink mt-0.5">Direct personal OAuth dispatch</p>
+                </div>
+              </div>
+            )}
+
+            <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isDisconnectingGmail}
+                onClick={() => setShowDisconnectModal(false)}
+                className="px-4 py-2 rounded-sm border border-hairline text-xs font-medium text-muted-ink hover:text-ink transition-colors cursor-pointer"
+              >
+                Keep connected
+              </button>
+              <button
+                type="button"
+                disabled={isDisconnectingGmail}
+                onClick={executeDisconnectGmail}
+                className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-red-800 hover:bg-red-900 px-4 py-2 text-xs font-medium text-paper shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isDisconnectingGmail && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <span>Disconnect account</span>
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );
