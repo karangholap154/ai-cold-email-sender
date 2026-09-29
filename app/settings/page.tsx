@@ -103,10 +103,10 @@ export default function SettingsPage() {
       }
 
       if (params.get("billing") === "success") {
-        toast.success("Welcome to Pro! Your account now has unlimited email sends.");
+        toast.success("Welcome to Pro. You now have unlimited letters.");
         window.history.replaceState({}, "", "/settings");
       } else if (params.get("gmail") === "connected") {
-        toast.success("Gmail account connected! Emails will now be sent directly from your account.");
+        toast.success("Gmail connected. Letters will now send directly from your account.");
         window.history.replaceState({}, "", "/settings");
       } else if (params.get("error")) {
         toast.error(`Could not connect Gmail: ${params.get("error")}`);
@@ -611,7 +611,7 @@ export default function SettingsPage() {
                           setPortfolioUrl(val);
                           updateGeneratedSignature(fullName, signOff, val, githubUrl, linkedinUrl, phone);
                         }}
-                        placeholder="https://www.karangholap.com/"
+                        placeholder="https://yourwebsite.com"
                         className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
                       />
                     </div>
@@ -630,7 +630,7 @@ export default function SettingsPage() {
                           setPhone(val);
                           updateGeneratedSignature(fullName, signOff, portfolioUrl, githubUrl, linkedinUrl, val);
                         }}
-                        placeholder="8421955664"
+                        placeholder="+1 (555) 000-0000"
                         className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
                       />
                     </div>
@@ -652,7 +652,7 @@ export default function SettingsPage() {
                           setGithubUrl(val);
                           updateGeneratedSignature(fullName, signOff, portfolioUrl, val, linkedinUrl, phone);
                         }}
-                        placeholder="https://github.com/karangholap154/"
+                        placeholder="https://github.com/yourhandle"
                         className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
                       />
                     </div>
@@ -671,7 +671,7 @@ export default function SettingsPage() {
                           setLinkedinUrl(val);
                           updateGeneratedSignature(fullName, signOff, portfolioUrl, githubUrl, val, phone);
                         }}
-                        placeholder="https://www.linkedin.com/in/karangholap/"
+                        placeholder="https://linkedin.com/in/yourhandle"
                         className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
                       />
                     </div>

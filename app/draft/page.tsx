@@ -212,7 +212,7 @@ export default function DraftPage() {
         }
 
         if (data.plan !== "pro") {
-          toast.error("Follow-up correspondence is exclusive to Pro members. Upgrade your account to unlock.");
+          toast.error("Follow-ups are a Pro feature.");
           window.location.href = "/settings";
           return;
         }
@@ -364,7 +364,7 @@ export default function DraftPage() {
 
       setAnalyzedData(data);
       setRegenerationCount((prev) => prev + 1);
-      toast.success("New draft generated.");
+      toast.success("New draft ready.");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error regenerating letter.";
       toast.error(msg);
