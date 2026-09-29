@@ -191,7 +191,7 @@ export default function LandingPage() {
                   </div>
                   <div className="inline-flex items-center gap-1.5 text-[11px] text-confirmed bg-confirmed/5 px-2 py-0.5 rounded-sm border border-confirmed/20 self-start sm:self-auto shrink-0">
                     <FileText className="h-3 w-3" />
-                    <span>Resume attached (CV_2026.pdf)</span>
+                    <span>Résumé attached (Resume_2026.pdf)</span>
                   </div>
                 </div>
 
@@ -419,10 +419,10 @@ Qualifications:
             <div className="border border-hairline bg-paper p-4 sm:p-5 rounded-sm space-y-2">
               <div className="flex items-center gap-2 text-ink">
                 <Building2 className="h-4 w-4 text-seal shrink-0" />
-                <h3 className="text-sm font-medium">Comprehensive Send Log</h3>
+                <h3 className="text-sm font-medium">Sent letters archive</h3>
               </div>
               <p className="text-xs text-muted-ink leading-relaxed">
-                Full chronological ledger searchable by company, recipient, or subject line, complete with delivery statuses and exact sent timestamps.
+                Chronological ledger searchable by company, recipient, or subject line, complete with delivery statuses and sent timestamps.
               </p>
             </div>
 
