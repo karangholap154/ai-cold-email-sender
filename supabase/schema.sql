@@ -292,4 +292,13 @@ alter table public.sent_emails
 create index if not exists idx_sent_emails_parent_email_id on public.sent_emails(user_id, parent_email_id);
 create index if not exists idx_sent_emails_email_type on public.sent_emails(user_id, email_type);
 
+-- ==============================================================================
+-- 10. Native Gmail Thread & Message Tracking on public.sent_emails
+-- ==============================================================================
+alter table public.sent_emails
+  add column if not exists gmail_message_id text,
+  add column if not exists gmail_thread_id text;
+
+create index if not exists idx_sent_emails_gmail_thread_id on public.sent_emails(user_id, gmail_thread_id);
+
 

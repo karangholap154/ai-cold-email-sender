@@ -51,6 +51,8 @@ export interface SentEmail {
   error_message: string | null;
   email_type?: "initial" | "followup";
   parent_email_id?: string | null;
+  gmail_message_id?: string | null;
+  gmail_thread_id?: string | null;
   created_at: string;
 }
 

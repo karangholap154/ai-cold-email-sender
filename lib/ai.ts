@@ -314,7 +314,7 @@ ${senderSignature ? `Applicant Signature Block (attach this exact block at the b
 
   return {
     ...parsed,
-    subject: parsed.subject && parsed.subject.length > 5 ? parsed.subject : cleanSubject,
+    subject: cleanSubject,
     companyName: companyName || parsed.companyName,
     roleTitle: roleTitle || parsed.roleTitle,
     isFollowUp: true,
