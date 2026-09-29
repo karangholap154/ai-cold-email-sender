@@ -2,8 +2,8 @@ import Link from "next/link";
 import { FileText, ArrowLeft, AlertCircle } from "lucide-react";
 
 export const metadata = {
-  title: "Terms of Service | Cold Email",
-  description: "Terms and acceptable use policy for Cold Email Sender.",
+  title: "Terms of Service | Vina",
+  description: "Terms and acceptable use policy for Vina (meetvina.com).",
 };
 
 export default function TermsOfServicePage() {
@@ -29,7 +29,7 @@ export default function TermsOfServicePage() {
             Terms of Service
           </h1>
           <p className="text-xs sm:text-sm text-muted-ink">
-            Last updated: September 23, 2026 • Effective immediately
+            Last updated: September 30, 2026 • Effective immediately
           </p>
         </div>
 
@@ -40,7 +40,7 @@ export default function TermsOfServicePage() {
             <span>Executive Correspondence Standard</span>
           </div>
           <p className="text-xs text-muted-ink leading-relaxed">
-            Cold Email is strictly intended as a deliberate 1-to-1 correspondence instrument for individual candidates contacting hiring managers. It may not be used for mass automated marketing, spam, scraping, or bulk message dissemination.
+            Vina is strictly intended as a deliberate 1-to-1 correspondence instrument for individual candidates contacting hiring managers. It may not be used for mass automated marketing, spam, scraping, or bulk message dissemination.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export default function TermsOfServicePage() {
               1. Agreement to Terms
             </h2>
             <p className="text-muted-ink">
-              By accessing or using Cold Email (&quot;the Service&quot;), you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any portion of these terms, you may not access or use the Service.
+              By accessing or using Vina (&quot;the Service&quot;), you agree to be bound by these Terms of Service and our Privacy Policy. If you disagree with any portion of these terms, you may not access or use the Service.
             </p>
           </section>
 
@@ -60,11 +60,11 @@ export default function TermsOfServicePage() {
               2. Acceptable Use Policy
             </h2>
             <p className="text-muted-ink">
-              You agree to use Cold Email solely for lawful, bona fide job search, networking, and professional correspondence. You specifically represent and warrant that you will not:
+              You agree to use Vina solely for lawful, bona fide job search, networking, and professional correspondence. You specifically represent and warrant that you will not:
             </p>
             <ul className="list-disc list-inside space-y-1.5 text-muted-ink pl-1">
               <li>Use the Service to transmit unsolicited commercial advertisements or spam in violation of the CAN-SPAM Act, CASL, GDPR, or applicable regional electronic communications laws.</li>
-              <li>Impersonate any person or entity or misrepresent your qualifications, employment history, or identity in drafted correspondence or uploaded resumes.</li>
+              <li>Impersonate any person or entity or misrepresent your qualifications, employment history, or identity in drafted correspondence or uploaded résumés.</li>
               <li>Harass, stalk, threaten, or abuse recruiters, hiring managers, or any recipient.</li>
               <li>Attempt to reverse engineer, decompile, or exploit our software, API endpoints, or database infrastructure.</li>
               <li>Use automated scripts or bots to bypass application rate limits or monthly plan quotas.</li>
@@ -76,7 +76,7 @@ export default function TermsOfServicePage() {
               3. User Editorial Responsibility
             </h2>
             <p className="text-muted-ink">
-              Cold Email provides AI-assisted synthesis and draft preparation. However, <strong>you retain sole and ultimate responsibility</strong> for reviewing, editing, verifying, and approving every email, subject line, and attachment before clicking &quot;Send letter.&quot;
+              Vina provides AI-assisted synthesis and draft preparation. However, <strong>you retain sole and ultimate responsibility</strong> for reviewing, editing, verifying, and approving every letter, subject line, and attachment before clicking &quot;Send this letter.&quot;
             </p>
             <p className="text-muted-ink">
               We make no guarantee regarding interview invitations, hiring outcomes, or response rates. You acknowledge that correspondence is dispatched under your authentic personal identity and that you are solely responsible for all communications sent from your connected accounts.
@@ -88,7 +88,7 @@ export default function TermsOfServicePage() {
               4. Accounts & Google Connection
             </h2>
             <p className="text-muted-ink">
-              When connecting your Gmail account via Google OAuth 2.0, you authorize the Service to dispatch individual emails as directed by you. You may revoke this access at any time through your account Settings or via Google’s account security panel. We reserve the right to suspend or terminate accounts that violate Google’s Acceptable Use Policies or our anti-spam standards.
+              When connecting your Gmail account via Google OAuth 2.0, you authorize the Service to dispatch individual letters as directed by you. You may revoke this access at any time through your account Settings or via Google’s account security panel. We reserve the right to suspend or terminate accounts that violate Google’s Acceptable Use Policies or our anti-spam standards.
             </p>
           </section>
 
@@ -97,7 +97,7 @@ export default function TermsOfServicePage() {
               5. Intellectual Property
             </h2>
             <p className="text-muted-ink">
-              You retain all ownership rights to your uploaded resume documents, personal skill summaries, and finalized correspondence text. We retain all rights, title, and interest in and to the Cold Email software, design tokens, interfaces, and branding.
+              You retain all ownership rights to your uploaded résumé documents, personal background summaries, and finalized correspondence text. We retain all rights, title, and interest in and to the Vina software, design tokens, interfaces, and branding.
             </p>
           </section>
 
@@ -106,7 +106,7 @@ export default function TermsOfServicePage() {
               6. Limitation of Liability & Disclaimers
             </h2>
             <p className="text-muted-ink">
-              The Service is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis without warranties of any kind, whether express or implied. Under no circumstances shall Cold Email, its owners, or affiliates be liable for any indirect, incidental, consequential, or punitive damages arising from the use or inability to use the Service.
+              The Service is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis without warranties of any kind, whether express or implied. Under no circumstances shall Vina, its owners, or affiliates be liable for any indirect, incidental, consequential, or punitive damages arising from the use or inability to use the Service.
             </p>
           </section>
 
@@ -135,7 +135,7 @@ export default function TermsOfServicePage() {
 
         {/* Footer info */}
         <div className="border-t border-hairline pt-6 text-xs text-muted-ink flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} Cold Email. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Vina (meetvina.com). All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-ink underline underline-offset-4">
               Privacy Policy

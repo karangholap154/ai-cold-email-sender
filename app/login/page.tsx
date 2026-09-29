@@ -50,9 +50,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="mb-6 sm:mb-8 text-center">
-          <h1 className="font-heading text-xl sm:text-2xl text-ink">Sign in</h1>
+          <h1 className="font-heading text-xl sm:text-2xl text-ink">Welcome back</h1>
           <p className="mt-1.5 text-xs text-muted-ink">
-            Access your cold outreach drafts, resume, and correspondence history.
+            Sign in to review your drafts and sent letters.
           </p>
         </div>
 

@@ -71,9 +71,9 @@ export default function SignupPage() {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="mb-6 sm:mb-8 text-center">
-          <h1 className="font-heading text-xl sm:text-2xl text-ink">Create an account</h1>
+          <h1 className="font-heading text-xl sm:text-2xl text-ink">Create your account</h1>
           <p className="mt-1.5 text-xs text-muted-ink">
-            Start drafting tailored, genuine cold applications in seconds.
+            Turn a job description into a letter worth sending.
           </p>
         </div>
 
@@ -81,9 +81,9 @@ export default function SignupPage() {
         {isSuccess ? (
           <div className="border border-hairline bg-paper p-5 sm:p-6 rounded-sm text-center">
             <CheckCircle2 className="mx-auto h-8 w-8 text-confirmed mb-3" />
-            <h2 className="text-sm font-medium text-ink">Check your inbox</h2>
+            <h2 className="text-sm font-medium text-ink">Check your inbox to confirm your email before you continue.</h2>
             <p className="mt-1.5 text-xs text-muted-ink leading-relaxed">
-              We&apos;ve sent a confirmation link to <strong className="font-medium text-ink break-all">{email}</strong>. Click the link in that email to confirm your account and sign in.
+              We&apos;ve sent a confirmation link to <strong className="font-medium text-ink break-all">{email}</strong>.
             </p>
             <div className="mt-5 border-t border-hairline pt-4">
               <Link
@@ -115,6 +115,9 @@ export default function SignupPage() {
                   placeholder="you@domain.com"
                   className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 sm:py-2 text-sm sm:text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors min-h-[40px]"
                 />
+                <p className="text-[11px] text-muted-ink">
+                  We'll only use this to sign you in — no marketing emails.
+                </p>
               </div>
 
               <div className="space-y-1.5">

@@ -243,7 +243,7 @@ export default function LogPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="font-heading text-xl sm:text-2xl text-ink">Send log</h1>
+            <h1 className="font-heading text-xl sm:text-2xl text-ink">Sent letters</h1>
             <p className="mt-1 text-xs sm:text-sm text-muted-ink">
               All correspondence attempts, threaded conversation histories, and delivery outcomes.
             </p>
@@ -256,7 +256,7 @@ export default function LogPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search company, email, or role..."
+              placeholder="Search by company or email"
               className="w-full rounded-sm border border-hairline bg-paper py-2.5 sm:py-2 pl-9 pr-3 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors min-h-[40px] sm:min-h-0"
             />
           </div>
@@ -270,7 +270,7 @@ export default function LogPage() {
               <p className="font-heading text-lg sm:text-xl text-ink mt-0.5">{stats.total}</p>
             </div>
             <div className="border border-hairline bg-paper p-3 rounded-sm">
-              <span className="text-[10px] uppercase tracking-wider text-muted-ink font-medium">Initial Outreach</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-ink font-medium">Initial Letters</span>
               <p className="font-heading text-lg sm:text-xl text-ink mt-0.5">{stats.initialCount}</p>
             </div>
             <div className="border border-hairline bg-paper p-3 rounded-sm">
@@ -324,13 +324,13 @@ export default function LogPage() {
         {isLoading ? (
           <div className="flex items-center gap-2 py-16 text-xs sm:text-sm text-muted-ink justify-center">
             <Loader2 className="h-4 w-4 animate-spin text-muted-ink" />
-            <span>Loading correspondence log...</span>
+            <span>Loading sent letters...</span>
           </div>
         ) : conversations.length === 0 ? (
           <div className="border border-hairline bg-paper p-8 sm:p-12 text-center rounded-sm">
             <FileText className="mx-auto h-6 w-6 text-muted-ink/60 mb-3" />
             <p className="text-sm font-medium text-ink">
-              {searchQuery ? "No matches found" : "No correspondence sent yet"}
+              {searchQuery ? "No matches found" : "Nothing sent yet. Your first letter will show up here."}
             </p>
             <p className="text-xs text-muted-ink mt-1">
               {searchQuery
@@ -536,30 +536,29 @@ export default function LogPage() {
                                     )}
                                   </div>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (plan === "pro") {
-                                        router.push(`/draft?followUpId=${item.id}`);
-                                      } else {
-                                        setShowUpgradeModal(true);
-                                      }
-                                    }}
-                                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-all cursor-pointer ${
-                                      plan === "pro"
-                                        ? "bg-seal text-paper hover:bg-seal/90 shadow-xs"
-                                        : "border border-hairline bg-[#FAF9F5] text-ink hover:bg-[#EDEAE2]"
-                                    }`}
-                                  >
-                                    <RotateCcw className="h-3 w-3" />
-                                    <span>Draft follow-up</span>
-                                    {plan !== "pro" && (
-                                      <span className="inline-flex items-center gap-0.5 rounded-xs bg-seal/10 border border-seal/30 text-seal px-1 py-0.2 text-[9px] uppercase font-bold tracking-wider ml-1">
-                                        <Lock className="h-2.5 w-2.5" />
-                                        PRO
+                                  {plan === "pro" ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => router.push(`/draft?followUpId=${item.id}`)}
+                                      className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium bg-seal text-paper hover:bg-seal/90 shadow-xs transition-all cursor-pointer"
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                      <span>Write a follow-up</span>
+                                    </button>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[11px] text-muted-ink">
+                                        Follow-ups are a Pro feature.
                                       </span>
-                                    )}
-                                  </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowUpgradeModal(true)}
+                                        className="text-xs font-medium text-seal hover:text-seal/80 underline underline-offset-4 cursor-pointer"
+                                      >
+                                        Upgrade
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

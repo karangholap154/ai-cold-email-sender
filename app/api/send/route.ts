@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     if (emailType === "followup" && plan !== "pro") {
       return NextResponse.json(
         {
-          error: "Follow-up correspondence is exclusive to Pro members. Upgrade your account to unlock one-click follow-ups.",
+          error: "Follow-ups are a Pro feature.",
           code: "PRO_FEATURE_REQUIRED",
         },
         { status: 403 }
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
       if (!countError && sentCount >= FREE_TIER_LIMIT) {
         return NextResponse.json(
           {
-            error: `Monthly quota reached: Free accounts include ${FREE_TIER_LIMIT} sent letters per calendar month. Upgrade to Pro for unlimited correspondence.`,
+            error: "You've sent 5 letters this month on the free plan.",
             code: "PLAN_LIMIT_REACHED",
             sentCount,
             limit: FREE_TIER_LIMIT,
@@ -199,12 +199,12 @@ export async function POST(req: NextRequest) {
         final_subject: subject,
         final_body: body,
         status: "failed",
-        error_message: "No Gmail account connected. Connect your Gmail in Settings before sending.",
+        error_message: "Connect your Gmail to start sending.",
       });
 
       return NextResponse.json(
         {
-          error: "No Gmail account connected. Please connect your Gmail in Settings before sending.",
+          error: "Connect your Gmail to start sending.",
           code: "GMAIL_NOT_CONNECTED",
         },
         { status: 400 }

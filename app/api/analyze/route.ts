@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       if (plan !== "pro") {
         return NextResponse.json(
           {
-            error: "Follow-up correspondence is exclusive to Pro members. Upgrade your account to unlock one-click follow-ups.",
+            error: "Follow-ups are a Pro feature.",
             code: "PRO_FEATURE_REQUIRED",
           },
           { status: 403 }

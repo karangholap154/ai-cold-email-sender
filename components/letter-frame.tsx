@@ -332,6 +332,13 @@ export function LetterFrame({
     >
       {/* 1. Confirmation Strip: Extracted Entity Review */}
       <div className="border border-hairline bg-paper/60 p-3.5 sm:p-4 rounded-sm space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+          <p className="text-ink font-medium">
+            Applying to: <span className="font-heading text-sm text-ink">{roleTitle || "the role"}</span> at <span className="font-heading text-sm text-ink">{companyName || "the company"}</span>
+          </p>
+          <span className="text-[11px] text-muted-ink">Not right? Edit below.</span>
+        </div>
+
         {/* Company & Role Fields */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 text-xs">
           <div className="flex items-center gap-2 text-ink min-w-0">
@@ -395,7 +402,7 @@ export function LetterFrame({
           <div className="flex items-start sm:items-center gap-2 border-t border-hairline pt-3 text-xs text-amber-700">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 sm:mt-0" />
             <span className="leading-snug">
-              You have previously sent outreach to <strong className="break-all">{duplicateEmailMatched || recipientEmail}</strong>. Proceed only if following up.
+              You've already written to this address (<strong className="break-all">{duplicateEmailMatched || recipientEmail}</strong>). Sending again?
             </span>
           </div>
         )}
@@ -408,10 +415,10 @@ export function LetterFrame({
             <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
             <div>
               <p className="font-medium text-ink">
-                Monthly send limit reached ({monthlySends}/{monthlyLimit})
+                You've sent 5 letters this month on the free plan.
               </p>
               <p className="text-muted-ink mt-0.5">
-                Free accounts include 5 sent letters per calendar month. Upgrade to Pro for unlimited correspondence.
+                Upgrade to Pro to send more letters and unlock follow-ups.
               </p>
             </div>
           </div>
@@ -419,7 +426,7 @@ export function LetterFrame({
             href="/#pricing"
             className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto transition-colors"
           >
-            <span>Upgrade to Pro</span>
+            <span>Upgrade to send more</span>
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
@@ -646,8 +653,8 @@ export function LetterFrame({
             disabled={isRegenerating || isSending || reachedRegenCap || countdown !== null}
             title={
               reachedRegenCap
-                ? `Free plan limit reached: ${maxRegenerations} regenerations per draft. Edit text directly or upgrade to Pro.`
-                : "Generate a new variation"
+                ? "You've used both free rewrites for this draft. Send this version, or upgrade for unlimited rewrites."
+                : "Try again"
             }
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-sm border border-hairline px-3.5 py-2.5 sm:py-2 text-xs font-medium text-ink hover:bg-[#ECE9E1] transition-colors disabled:opacity-50 cursor-pointer min-h-[40px] sm:min-h-0"
           >
@@ -658,12 +665,10 @@ export function LetterFrame({
             )}
             <span>
               {isRegenerating
-                ? "Regenerating..."
+                ? "Drafting..."
                 : reachedRegenCap
-                ? `Regenerate (${maxRegenerations}/${maxRegenerations} used)`
-                : isFreePlan && typeof regenerationCount === "number" && regenerationCount > 0
-                ? `Regenerate (${regenerationCount}/${maxRegenerations})`
-                : "Regenerate"}
+                ? "Rewrites used"
+                : "Try again"}
             </span>
           </button>
 
@@ -724,10 +729,10 @@ export function LetterFrame({
                 {isSending
                   ? "Sending..."
                   : reachedSendCap
-                  ? `Limit reached (${monthlyLimit}/${monthlyLimit})`
+                  ? "Limit reached"
                   : isFollowUp
                   ? "Send follow-up"
-                  : "Send letter"}
+                  : "Send this letter"}
               </span>
             </button>
           )}

@@ -434,23 +434,23 @@ export default function SettingsPage() {
   const tabs = [
     {
       id: "profile" as SettingsTab,
-      label: "Profile & Signature",
+      label: "Signature",
       icon: User,
       badge: null,
     },
     {
       id: "resume" as SettingsTab,
-      label: "Resume & Skills",
+      label: "Résumé",
       icon: FileText,
       badge: resume?.file_url ? (
-        <span className="h-1.5 w-1.5 rounded-full bg-confirmed shrink-0" title="Active resume uploaded"></span>
+        <span className="h-1.5 w-1.5 rounded-full bg-confirmed shrink-0" title="Active résumé uploaded"></span>
       ) : (
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-600 shrink-0" title="No resume uploaded"></span>
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-600 shrink-0" title="No résumé uploaded"></span>
       ),
     },
     {
       id: "gmail" as SettingsTab,
-      label: "Sending Gmail",
+      label: "Gmail",
       icon: Mail,
       badge: gmailStatus.connected ? (
         <span className="h-1.5 w-1.5 rounded-full bg-confirmed shrink-0" title="Connected"></span>
@@ -460,7 +460,7 @@ export default function SettingsPage() {
     },
     {
       id: "billing" as SettingsTab,
-      label: "Plan & Usage",
+      label: "Billing",
       icon: CreditCard,
       badge:
         usage?.plan === "pro" ? (
@@ -522,10 +522,10 @@ export default function SettingsPage() {
               <div className="space-y-6 animate-in fade-in-50 duration-150">
                 <div>
                   <h2 className="font-heading text-lg sm:text-xl text-ink">
-                    Profile & Sender Signature
+                    How you sign off
                   </h2>
                   <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                    Set your professional sign-off, portfolio, and contact links. Choose a layout preset or directly edit the signature box below.
+                    Added to the end of every letter automatically.
                   </p>
                 </div>
 
@@ -765,17 +765,17 @@ export default function SettingsPage() {
               <div className="space-y-6 animate-in fade-in-50 duration-150">
                 <div>
                   <h2 className="font-heading text-lg sm:text-xl text-ink">
-                    Resume & Candidate Context
+                    Résumé & Background
                   </h2>
                   <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                    Upload your active resume PDF (attached to outgoing emails) and provide background skills referenced during letter generation.
+                    Upload your résumé (PDF) so Vina can reference it in your letters.
                   </p>
                 </div>
 
                 {/* Resume PDF File Section */}
                 <section className="space-y-2.5 sm:space-y-3">
                   <label className="block text-xs sm:text-sm font-medium text-ink">
-                    Active Resume PDF
+                    Résumé PDF
                   </label>
 
                   <div className="border border-hairline bg-paper p-3.5 sm:p-5 rounded-sm">
@@ -785,10 +785,7 @@ export default function SettingsPage() {
                           <FileText className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
                           <div className="min-w-0">
                             <p className="text-xs sm:text-sm font-medium text-ink truncate">
-                              {resume.file_name || "resume.pdf"}
-                            </p>
-                            <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
-                              Active resume • Updated{" "}
+                              {resume.file_name || "resume.pdf"} — uploaded{" "}
                               {new Date(resume.updated_at).toLocaleDateString(undefined, {
                                 month: "short",
                                 day: "numeric",
@@ -803,16 +800,15 @@ export default function SettingsPage() {
                           onClick={() => fileInputRef.current?.click()}
                           className="text-xs text-muted-ink hover:text-ink underline underline-offset-4 self-start sm:self-auto py-1 cursor-pointer"
                         >
-                          Replace PDF
+                          Replace
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-start sm:items-center gap-3">
                         <AlertCircle className="mt-0.5 sm:mt-0 h-5 w-5 shrink-0 text-muted-ink" />
                         <div>
-                          <p className="text-xs sm:text-sm font-medium text-ink">No resume uploaded yet</p>
-                          <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
-                            Outgoing emails require an attached PDF.
+                          <p className="text-xs sm:text-sm font-medium text-ink">
+                            Upload your résumé (PDF) so Vina can reference it in your letters.
                           </p>
                         </div>
                       </div>
@@ -853,7 +849,7 @@ export default function SettingsPage() {
                         className="mt-3 sm:mt-4 inline-flex items-center gap-2 border border-hairline px-3 py-2 text-xs text-ink hover:bg-[#ece9e1] transition-colors rounded-sm cursor-pointer min-h-[38px]"
                       >
                         <Upload className="h-3.5 w-3.5" />
-                        <span>Choose PDF file</span>
+                        <span>Upload résumé (PDF)</span>
                       </button>
                     )}
                   </div>
@@ -863,12 +859,11 @@ export default function SettingsPage() {
                 <section className="space-y-2">
                   <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
                     <label htmlFor="skills-summary" className="block text-xs sm:text-sm font-medium text-ink">
-                      Skills & Background Summary
+                      A few lines about your background
                     </label>
-                    <span className="text-[11px] text-muted-ink">Passed into AI prompt</span>
                   </div>
                   <p className="text-xs text-muted-ink leading-relaxed">
-                    Provide 3–6 sentences or bullet points highlighting your years of experience, core technologies, notable achievements, and primary domains.
+                    Vina uses this to connect your experience to what the job actually asks for.
                   </p>
                   <TextareaAutosize
                     id="skills-summary"
@@ -899,10 +894,10 @@ export default function SettingsPage() {
               <div className="space-y-6 animate-in fade-in-50 duration-150">
                 <div>
                   <h2 className="font-heading text-lg sm:text-xl text-ink">
-                    Sending Account (Gmail)
+                    Gmail
                   </h2>
                   <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                    Connect your Google account so correspondence sends directly from your personal address with verified deliverability.
+                    Connect your Gmail to start sending letters directly from your personal address.
                   </p>
                 </div>
 
@@ -913,10 +908,10 @@ export default function SettingsPage() {
                         <Mail className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
                         <div className="min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-ink truncate font-mono">
-                            {gmailStatus.email}
+                            Sending as {gmailStatus.email}
                           </p>
                           <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
-                            Direct personal OAuth dispatch • Connected {gmailStatus.connectedAt ? new Date(gmailStatus.connectedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : ""}
+                            Connected {gmailStatus.connectedAt ? new Date(gmailStatus.connectedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : ""}
                           </p>
                         </div>
                       </div>
@@ -941,10 +936,10 @@ export default function SettingsPage() {
                         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
                         <div>
                           <p className="text-xs sm:text-sm font-medium text-ink">
-                            No Gmail account connected
+                            Connect your Gmail to start sending.
                           </p>
                           <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
-                            Connect your Google account so correspondence sends directly from your personal address. We only request permission to send approved drafts (<span className="font-mono">gmail.send</span>).
+                            Vina asks for permission to send messages on your behalf and to find your own sent messages so follow-ups land in the same conversation. It never reads your incoming mail.
                           </p>
                         </div>
                       </div>
@@ -954,21 +949,20 @@ export default function SettingsPage() {
                         className="inline-flex items-center justify-center gap-2 rounded-sm border border-hairline bg-[#EDEAE2] hover:bg-[#E4DFD3] text-ink px-4 py-2 text-xs font-medium transition-colors shrink-0 self-start sm:self-auto min-h-[38px]"
                       >
                         <Mail className="h-3.5 w-3.5 text-seal" />
-                        <span>Connect with Google</span>
+                        <span>Connect Gmail</span>
                       </a>
                     </div>
                   )}
                 </div>
 
-                {/* Transparency and security guarantee */}
+                {/* Scope disclosure banner */}
                 <div className="border border-hairline bg-[#FAF9F5] p-4 sm:p-5 rounded-sm space-y-2 text-xs text-muted-ink leading-relaxed">
                   <div className="flex items-center gap-2 font-medium text-ink text-xs">
                     <CheckCircle2 className="h-4 w-4 text-confirmed shrink-0" />
-                    <span>Strict Google API Least-Privilege Scope</span>
+                    <span>Scope disclosure</span>
                   </div>
                   <p>
-                    We request Google&apos;s narrowest sending permission (<span className="font-mono text-ink bg-paper px-1 py-0.5 rounded-xs border border-hairline">gmail.send</span>).
-                    We never read your inbox, access your incoming emails, or inspect your contacts. Your account is used strictly to dispatch correspondence you have manually approved.
+                    Vina asks for permission to send messages on your behalf and to find your own sent messages so follow-ups land in the same conversation. It never reads your incoming mail.
                   </p>
                 </div>
               </div>
@@ -979,10 +973,10 @@ export default function SettingsPage() {
               <div className="space-y-6 animate-in fade-in-50 duration-150">
                 <div>
                   <h2 className="font-heading text-lg sm:text-xl text-ink">
-                    Membership & Usage
+                    Billing
                   </h2>
                   <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                    View your monthly sending allowance, upgrade to Pro, or manage your active subscription.
+                    View your monthly sending allowance or manage your subscription.
                   </p>
                 </div>
 
@@ -995,8 +989,8 @@ export default function SettingsPage() {
                         <div className="flex items-center gap-2">
                           <p className="text-xs sm:text-sm font-medium text-ink">
                             {usage?.plan === "pro"
-                              ? "Pro Plan • Unlimited Correspondence"
-                              : `Monthly Quota: ${usage?.monthlySends ?? 0} of ${usage?.monthlyLimit ?? 5} letters sent`}
+                              ? "You're on Pro."
+                              : "You're on the free plan — 5 letters this month."}
                           </p>
                           {usage?.plan === "pro" ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-seal bg-[#FAF6EE] px-1.5 py-0.5 rounded-sm border border-seal/30">
@@ -1011,8 +1005,8 @@ export default function SettingsPage() {
                         </div>
                         <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5 leading-relaxed">
                           {usage?.plan === "pro"
-                            ? "You have unrestricted AI drafts, automated Gmail attachments, 1-click follow-ups, and full log history."
-                            : "Free accounts include 5 tailored letters per calendar month. Upgrade for unlimited sending."}
+                            ? "Unlimited tailored letters, automated attachments, and follow-ups."
+                            : `${usage?.monthlySends ?? 0} of ${usage?.monthlyLimit ?? 5} letters sent this month.`}
                         </p>
                       </div>
                     </div>
@@ -1022,14 +1016,10 @@ export default function SettingsPage() {
                         type="button"
                         disabled={isOpeningPortal}
                         onClick={handleManageBilling}
-                        className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-ink hover:text-ink border border-hairline px-3.5 py-2 rounded-sm self-start sm:self-auto min-h-[38px] cursor-pointer hover:bg-[#FAF9F5] transition-colors"
+                        className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-ink hover:text-ink underline underline-offset-4 self-start sm:self-auto py-1 cursor-pointer"
                       >
-                        {isOpeningPortal ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        )}
-                        <span>Manage Subscription</span>
+                        {isOpeningPortal && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        <span>Manage billing</span>
                       </button>
                     ) : (
                       <button
@@ -1043,7 +1033,7 @@ export default function SettingsPage() {
                         ) : (
                           <Zap className="h-3.5 w-3.5 fill-paper" />
                         )}
-                        <span>Upgrade to Pro ($9 / ₹499)</span>
+                        <span>Upgrade to Pro</span>
                       </button>
                     )}
                   </div>

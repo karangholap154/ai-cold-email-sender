@@ -341,7 +341,7 @@ export default function DraftPage() {
     const maxRegens = isFreePlan ? 2 : Infinity;
 
     if (regenerationCount >= maxRegens) {
-      toast.error(`Free plan limit reached: up to ${maxRegens} AI regenerations allowed per draft. Edit the text directly or upgrade to Pro.`);
+      toast.error("You've used both free rewrites for this draft. Send this version, or upgrade for unlimited rewrites.");
       return;
     }
 
@@ -426,11 +426,7 @@ export default function DraftPage() {
         throw new Error(data.error || "Failed to send email.");
       }
 
-      toast.success(
-        followUpContext
-          ? `Follow-up sent successfully to ${targetEmail}`
-          : `Letter sent successfully to ${targetEmail}`
-      );
+      toast.success(`Sent. It's on its way to ${targetEmail}.`);
       // Increment local monthly sends count
       setUsage((prev) =>
         prev ? { ...prev, monthlySends: prev.monthlySends + 1 } : null
@@ -452,8 +448,7 @@ export default function DraftPage() {
         window.history.replaceState({}, "", "/draft");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error sending email.";
-      toast.error(msg);
+      toast.error("That didn't go through. Nothing was sent — try again.");
     } finally {
       setIsSending(false);
     }
@@ -468,7 +463,7 @@ export default function DraftPage() {
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <h1 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink">
-                  Draft correspondence
+                  New letter
                 </h1>
                 {usage && (
                   <div className="inline-flex items-center gap-1.5 text-xs text-muted-ink">
@@ -477,14 +472,14 @@ export default function DraftPage() {
                       <span className="font-medium text-ink">Pro Plan • Unlimited</span>
                     ) : (
                       <span>
-                        Monthly quota: <strong className="font-medium text-ink">{usage.monthlySends} of {usage.monthlyLimit ?? 5}</strong> sends used
+                        <strong className="font-medium text-ink">{usage.monthlySends} of {usage.monthlyLimit ?? 5}</strong> letters sent this month
                       </span>
                     )}
                   </div>
                 )}
               </div>
               <p className="mt-1 text-xs sm:text-sm text-muted-ink leading-relaxed">
-                Paste a Job Description and recipient email. The AI will extract the key requirements, match them against your background, and draft a concise, tailored letter for your review.
+                Paste the job description and recipient email. Vina drafts a tailored letter for you to review before anything is sent.
               </p>
             </div>
 
@@ -512,10 +507,10 @@ export default function DraftPage() {
                   <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
                   <div>
                     <p className="font-medium text-ink">
-                      Monthly send limit reached ({usage.monthlySends}/{usage.monthlyLimit ?? 5})
+                      You've sent 5 letters this month on the free plan.
                     </p>
                     <p className="text-muted-ink mt-0.5">
-                      Free accounts include 5 sent letters per calendar month. Upgrade to Pro for unlimited correspondence.
+                      Upgrade to Pro to send more letters and unlock follow-ups.
                     </p>
                   </div>
                 </div>
@@ -541,7 +536,7 @@ export default function DraftPage() {
                   className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3.5 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isUpgrading && <Loader2 className="h-3 w-3 animate-spin" />}
-                  <span>Upgrade to Pro</span>
+                  <span>Upgrade to send more</span>
                   <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
@@ -553,9 +548,9 @@ export default function DraftPage() {
                 <div className="flex items-start gap-3 min-w-0">
                   <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" />
                   <div className="text-xs">
-                    <p className="font-medium text-ink">Gmail not connected</p>
+                    <p className="font-medium text-ink">Connect your Gmail to start sending.</p>
                     <p className="text-muted-ink mt-0.5">
-                      Connect your Google account in Settings to dispatch letters directly from your personal address.
+                      Vina asks for permission to send messages on your behalf and never reads your incoming mail.
                     </p>
                   </div>
                 </div>
@@ -575,9 +570,9 @@ export default function DraftPage() {
                 <div className="flex items-start gap-3 min-w-0">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" />
                   <div className="text-xs">
-                    <p className="font-medium text-ink">No resume active yet</p>
+                    <p className="font-medium text-ink">No résumé uploaded yet</p>
                     <p className="text-muted-ink mt-0.5">
-                      Uploaded PDFs are automatically attached to outgoing emails.
+                      Upload your résumé (PDF) so Vina can reference it in your letters.
                     </p>
                   </div>
                 </div>
@@ -585,7 +580,7 @@ export default function DraftPage() {
                   href="/settings"
                   className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0 self-start sm:self-auto py-1"
                 >
-                  <span>Configure resume</span>
+                  <span>Upload résumé</span>
                   <ExternalLink className="h-3 w-3" />
                 </Link>
               </div>
@@ -597,9 +592,9 @@ export default function DraftPage() {
               <div className="space-y-1.5 sm:space-y-2">
                 <div className="flex items-baseline justify-between gap-2">
                   <label htmlFor="hr-email" className="block text-xs font-medium uppercase tracking-wider text-muted-ink">
-                    Recipient Email
+                    Send to
                   </label>
-                  <span className="text-[11px] text-muted-ink shrink-0">HR or hiring manager</span>
+                  <span className="text-[11px] text-muted-ink shrink-0">HR or hiring manager email</span>
                 </div>
                 <input
                   id="hr-email"
@@ -629,7 +624,7 @@ export default function DraftPage() {
                       </button>
                     )}
                     <span>
-                      {jdText.length > 0 ? `${jdText.length} characters` : "Raw text from posting"}
+                      {jdText.length > 0 ? `${jdText.length} characters` : "Full posting"}
                     </span>
                   </div>
                 </div>
@@ -638,7 +633,7 @@ export default function DraftPage() {
                   minRows={8}
                   value={jdText}
                   onChange={(e) => setJdText(e.target.value)}
-                  placeholder="Paste the full job posting text here (roles, responsibilities, required qualifications)..."
+                  placeholder="Paste the full job description here."
                   required
                   className="w-full resize-none rounded-sm border border-hairline bg-paper px-3.5 py-3 text-sm text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors leading-relaxed"
                 />
@@ -654,12 +649,12 @@ export default function DraftPage() {
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>Analyzing & drafting letter...</span>
+                      <span>Reading the job description...</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-3.5 w-3.5" />
-                      <span>Draft letter</span>
+                      <span>Draft this letter</span>
                     </>
                   )}
                 </button>

@@ -28,24 +28,24 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: "Does this application read or access my private Gmail inbox?",
-      a: "Never. We request Google's narrowest possible sending permission (gmail.send) strictly to dispatch outgoing letters you have manually reviewed and approved. We do not read your inbox, access your contacts, or inspect your incoming mail.",
+      q: "Does Vina read or access my private Gmail inbox?",
+      a: "Never. Vina only ever sends what you approve, from your own Gmail account. We don't read your inbox, and we don't send anything automatically.",
     },
     {
-      q: "Can I inspect and edit every email before it is sent?",
-      a: "Yes, absolutely. We designed Cold Email specifically as a deliberate correspondence tool, not an automated spam blaster. Every drafted letter is presented in an editable letter frame where you can adjust every single word, regenerate alternatives, or cancel before anything leaves your account.",
+      q: "Can I inspect and edit every letter before it is sent?",
+      a: "Yes. Vina is built for people applying to real roles at real companies — not for blasting the same message to a hundred inboxes. Every letter is editable before anything goes out.",
     },
     {
-      q: "How does the resume attachment work?",
-      a: "Upload your resume PDF once in your Settings. When drafting, our AI extracts the key requirements from the job posting and highlights genuine parallels from your background. When you click send, your PDF is automatically attached to the outgoing MIME email.",
+      q: "How does the résumé attachment work?",
+      a: "Upload your résumé (PDF) once in Settings so Vina can reference it in your letters. When you send, your résumé is attached automatically.",
     },
     {
       q: "What prevents me from emailing the same recruiter twice?",
-      a: "The tool includes built-in duplicate contact detection. When you enter an HR email address you have previously reached out to, an inline warning immediately appears on the review screen to prevent embarrassing double-outreach.",
+      a: "Vina includes built-in duplicate contact detection. When you enter an HR email address you have previously written to, an inline warning reminds you before sending.",
     },
     {
       q: "Why is sending from my personal Gmail better than an email automation tool?",
-      a: "Cold recruitment outreach sent through automated third-party SMTP servers often gets relegated to Spam or Promotions. Sending directly from your authentic Gmail account preserves your sender reputation, passes SPF/DKIM verification, and arrives where hiring managers actually read it: in the primary inbox.",
+      a: "Outreach sent through third-party marketing servers often lands in Spam or Promotions. Sending directly from your authentic Gmail account preserves your sender reputation and reaches the primary inbox.",
     },
   ];
 
@@ -57,50 +57,50 @@ export default function LandingPage() {
           {/* Eyebrow badge */}
           <div className="inline-flex items-center gap-2 rounded-sm border border-hairline bg-[#EDEAE2] px-3 py-1 text-[10px] sm:text-[11px] font-medium tracking-wide uppercase text-muted-ink">
             <span className="h-1.5 w-1.5 rounded-full bg-seal shrink-0"></span>
-            <span>Executive correspondence tool for candidates</span>
+            <span>Correspondence for real roles at real companies</span>
           </div>
 
           {/* Main Title */}
           <h1 className="font-heading mt-5 sm:mt-6 text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-ink tracking-tight leading-[1.12]">
-            Cold outreach that reads like you took the time.
+            Turn a job description into a letter worth sending.
           </h1>
 
           {/* Subheading */}
           <p className="mt-4 sm:mt-6 max-w-2xl text-sm sm:text-base md:text-lg text-muted-ink leading-relaxed">
-            Paste any job description and the hiring manager’s email. We extract the core requirements, highlight genuine parallels with your background, and draft a high-signal letter—dispatched directly from your personal Gmail with your resume attached.
+            Paste the job post. Vina drafts a short, tailored email and attaches your résumé. You review it, then send it from your own Gmail.
           </p>
 
           {/* Primary Action Group */}
           <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
             <Link
-              href="/draft"
+              href="/signup"
               className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-6 py-3 text-xs sm:text-sm font-medium text-paper hover:bg-seal/90 shadow-xs transition-all min-h-[42px]"
             >
-              <span>Start drafting letters</span>
+              <span>Get started free</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
 
-            <Link
-              href="/signup"
+            <a
+              href="#how-it-works"
               className="inline-flex items-center justify-center gap-2 rounded-sm border border-hairline bg-paper px-6 py-3 text-xs sm:text-sm font-medium text-ink hover:bg-[#EDEAE2] transition-colors min-h-[42px]"
             >
-              <span>Create free account</span>
-            </Link>
+              <span>See how it works</span>
+            </a>
           </div>
 
           {/* Value Proof Badges */}
           <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-y-2.5 gap-x-6 md:gap-x-8 text-xs text-muted-ink border-t border-hairline pt-5 sm:pt-6">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-              <span>Direct Google OAuth sending</span>
+              <span>Sent from your own Gmail</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-              <span>Automated PDF resume attachment</span>
+              <span>Résumé attached automatically</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-              <span>Duplicate outreach detection</span>
+              <span>Nothing sent without your approval</span>
             </div>
           </div>
         </div>
@@ -269,14 +269,14 @@ Qualifications:
       </section>
 
       {/* 3. HOW IT WORKS */}
-      <section className="border-b border-hairline px-4 py-12 sm:px-6 sm:py-20 md:py-24">
+      <section id="how-it-works" className="border-b border-hairline px-4 py-12 sm:px-6 sm:py-20 md:py-24">
         <div className="mx-auto max-w-4xl">
           <div className="mb-8 sm:mb-12">
             <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-muted-ink">
-              Three-step cadence
+              How it works
             </span>
             <h2 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink mt-1">
-              From job posting to dispatched letter in 60 seconds
+              Three steps. You review before anything is sent.
             </h2>
           </div>
 
@@ -284,29 +284,37 @@ Qualifications:
             {/* Step 1 */}
             <div className="border-t-2 border-ink pt-3.5 sm:pt-4 space-y-2">
               <span className="font-mono text-xs text-muted-ink">01</span>
-              <h3 className="font-heading text-base sm:text-lg text-ink">Supply posting & contact</h3>
+              <h3 className="font-heading text-base sm:text-lg text-ink">Paste the job description</h3>
               <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-                Paste any raw job posting text and the hiring manager’s or recruiter’s email address. No complicated scraping or profile setup needed.
+                Vina reads it and picks out the role, the company, and what actually matters.
               </p>
             </div>
 
             {/* Step 2 */}
             <div className="border-t-2 border-seal pt-3.5 sm:pt-4 space-y-2">
               <span className="font-mono text-xs text-seal font-medium">02</span>
-              <h3 className="font-heading text-base sm:text-lg text-ink">Inspect in Letter Frame</h3>
+              <h3 className="font-heading text-base sm:text-lg text-ink">Review the draft</h3>
               <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-                The AI synthesizes the posting against your resume, drafting a tailored letter under 150 words. Tweak or regenerate with complete editorial control.
+                A short, specific letter appears — editable, not a template with blanks filled in.
               </p>
             </div>
 
             {/* Step 3 */}
             <div className="border-t-2 border-confirmed pt-3.5 sm:pt-4 space-y-2">
               <span className="font-mono text-xs text-confirmed font-medium">03</span>
-              <h3 className="font-heading text-base sm:text-lg text-ink">Dispatch via your Gmail</h3>
+              <h3 className="font-heading text-base sm:text-lg text-ink">Send it yourself</h3>
               <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-                Send directly through your authenticated Google account with your verified resume PDF automatically attached. Logged to prevent repeat sends.
+                One click sends it from your own Gmail, with your résumé attached. Nothing goes out without you seeing it first.
               </p>
             </div>
+          </div>
+
+          {/* Trust reassurance banner */}
+          <div className="mt-8 sm:mt-12 rounded-sm border border-hairline bg-[#FAF9F5] p-4 sm:p-5 flex items-start sm:items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-confirmed shrink-0 mt-0.5 sm:mt-0" />
+            <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
+              <span className="font-medium text-ink">Our promise:</span> Vina only ever sends what you approve, from your own Gmail account. We don't read your inbox, and we don't send anything automatically.
+            </p>
           </div>
         </div>
       </section>
@@ -319,7 +327,7 @@ Qualifications:
               Our philosophy
             </span>
             <h2 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink mt-1">
-              Why mass outreach tools fail—and why deliberate correspondence succeeds
+              Why mass outreach tools fail — and why deliberate correspondence succeeds
             </h2>
           </div>
 
@@ -331,24 +339,24 @@ Qualifications:
                 <span>The Automated Spam Blaster Approach</span>
               </div>
               <ul className="space-y-2 text-xs text-muted-ink leading-relaxed">
-                <li>• Generic mail-merge templates that recruiters spot in 2 seconds.</li>
+                <li>• Generic mail-merge templates that recruiters spot in two seconds.</li>
                 <li>• Dispatched from third-party SMTP servers that get flagged as Promotions or Spam.</li>
                 <li>• Spray-and-pray volume that ruins candidate credibility and burns company bridges.</li>
-                <li>• No deliberate review step—typos and hallucinations get sent out blindly.</li>
+                <li>• No deliberate review step — typos and hallucinations get sent out blindly.</li>
               </ul>
             </div>
 
-            {/* Cold Email */}
+            {/* Vina */}
             <div className="border border-hairline bg-paper p-5 sm:p-6 rounded-sm space-y-3">
               <div className="flex items-center gap-2 text-xs font-medium text-confirmed">
                 <CheckCircle2 className="h-4 w-4 text-confirmed shrink-0" />
-                <span>The Cold Email Standard</span>
+                <span>The Vina Approach</span>
               </div>
               <ul className="space-y-2 text-xs text-muted-ink leading-relaxed">
-                <li>• 1-to-1 tailored correspondence referencing explicit company requirements.</li>
+                <li>• 1-to-1 tailored letters referencing what the job actually asks for.</li>
                 <li>• Sent straight through your verified personal Gmail account with pristine deliverability.</li>
-                <li>• Built-in duplicate detection ensures you never embarrassingly message someone twice.</li>
-                <li>• Deliberate Letter Frame review step keeps you firmly in command of your reputation.</li>
+                <li>• Built-in duplicate detection ensures you never write to the same contact twice unintentionally.</li>
+                <li>• Deliberate Letter Frame review step keeps you firmly in command of what is sent.</li>
               </ul>
             </div>
           </div>
@@ -436,13 +444,13 @@ Qualifications:
         <div className="mx-auto max-w-4xl space-y-8 sm:space-y-12">
           <div className="text-center max-w-xl mx-auto space-y-2">
             <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-muted-ink">
-              Transparent plans
+              Pricing
             </span>
             <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl text-ink">
-              Simple, accessible pricing
+              Start free. Upgrade when you're applying at volume.
             </h2>
             <p className="text-xs sm:text-sm text-muted-ink">
-              Test with real applications before committing. Upgrade when you’re ready to run an active job search at scale.
+              Test with real applications before committing. Upgrade when you need higher capacity and follow-ups.
             </p>
           </div>
 
@@ -458,7 +466,7 @@ Qualifications:
                   </div>
                 </div>
                 <p className="text-xs text-muted-ink leading-relaxed">
-                  Ideal for trying out the correspondence workflow with your top target positions.
+                  Ideal for testing Vina with your top target positions.
                 </p>
 
                 <div className="border-t border-hairline pt-4 space-y-2.5 text-xs text-ink/90">
@@ -468,7 +476,7 @@ Qualifications:
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>1 active resume PDF</span>
+                    <span>1 active résumé PDF</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
@@ -476,11 +484,11 @@ Qualifications:
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Duplicate contact protection</span>
+                    <span>Duplicate contact warning</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>30-day send log history</span>
+                    <span>30-day sent letters history</span>
                   </div>
                 </div>
               </div>
@@ -508,7 +516,7 @@ Qualifications:
                   </div>
                 </div>
                 <p className="text-xs text-muted-ink leading-relaxed">
-                  For high-cadence job seekers conducting extensive direct outreach.
+                  For job seekers conducting active outreach with one-click follow-ups.
                 </p>
 
                 <div className="border-t border-hairline pt-4 space-y-2.5 text-xs text-ink/90">
@@ -518,7 +526,7 @@ Qualifications:
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Multiple tailored resume versions</span>
+                    <span>One-click follow-up letters in same thread</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
@@ -526,11 +534,11 @@ Qualifications:
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Full lifetime send log history</span>
+                    <span>Full lifetime sent letters history</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Priority generation model & fast support</span>
+                    <span>Fast generation & priority email support</span>
                   </div>
                   <div className="pt-1 text-[11px] text-muted-ink flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-confirmed"></span>
@@ -558,7 +566,7 @@ Qualifications:
               Common questions
             </span>
             <h2 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink mt-1">
-              Everything you need to know about our correspondence tool
+              Everything you need to know about Vina
             </h2>
           </div>
 
@@ -592,17 +600,17 @@ Qualifications:
       <section className="border-b border-hairline bg-[#FAF9F5] px-4 py-12 sm:px-6 sm:py-16 md:py-20 text-center">
         <div className="mx-auto max-w-2xl space-y-5 sm:space-y-6">
           <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl text-ink tracking-tight">
-            Ready to stand out in the recruiter’s inbox?
+            Turn a job description into a letter worth sending.
           </h2>
           <p className="text-xs sm:text-sm text-muted-ink max-w-lg mx-auto leading-relaxed">
-            Stop sending generic spray-and-pray applications. Draft genuine, high-signal correspondence that commands respect.
+            Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.
           </p>
           <div className="pt-2 flex items-center justify-center">
             <Link
               href="/draft"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-6 py-3 text-xs sm:text-sm font-medium text-paper hover:bg-seal/90 shadow-xs transition-all min-h-[42px]"
             >
-              <span>Launch correspondence draft</span>
+              <span>Draft a letter</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -613,9 +621,9 @@ Qualifications:
       <footer className="px-4 py-8 sm:px-6 sm:py-12 text-xs text-muted-ink">
         <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-5 sm:gap-6">
           <div className="space-y-1 text-center sm:text-left">
-            <span className="font-heading text-base text-ink font-medium">Cold email</span>
+            <span className="font-heading text-base text-ink font-medium">Vina — meetvina.com</span>
             <p className="text-[11px] text-muted-ink">
-              Tailored executive correspondence directly from your personal Gmail.
+              Turn a job description into a letter worth sending.
             </p>
           </div>
 
@@ -624,10 +632,10 @@ Qualifications:
               Draft
             </Link>
             <Link href="/log" className="hover:text-ink transition-colors py-1">
-              Send Log
+              Sent letters
             </Link>
             <Link href="/settings" className="hover:text-ink transition-colors py-1">
-              Resume Settings
+              Settings
             </Link>
             <Link href="/privacy" className="hover:text-ink transition-colors py-1">
               Privacy Policy
@@ -640,11 +648,11 @@ Qualifications:
 
         <div className="mx-auto max-w-4xl border-t border-hairline mt-6 sm:mt-8 pt-5 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-[10px] text-muted-ink/80 text-center sm:text-left">
           <div>
-            © {new Date().getFullYear()} Cold Email Sender. All rights reserved.
+            © {new Date().getFullYear()} Vina (meetvina.com). All rights reserved.
           </div>
           <div className="flex items-center justify-center gap-3 sm:gap-4">
             <Link href="/privacy" className="hover:text-ink transition-colors">
-              Google API Verification Compliant
+              Google API Verification Disclosed
             </Link>
             <span>•</span>
             <span>Encrypted at rest</span>

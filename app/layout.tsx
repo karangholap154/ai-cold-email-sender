@@ -17,8 +17,16 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Cold email",
-  description: "Draft and send a tailored cold email from a job description.",
+  title: "Vina — meetvina.com",
+  description:
+    "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
+  openGraph: {
+    title: "Vina — meetvina.com",
+    description: "Vina turns a job description into a letter worth sending.",
+    url: "https://meetvina.com",
+    siteName: "Vina",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

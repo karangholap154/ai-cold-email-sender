@@ -68,8 +68,8 @@ export function Header() {
 
   const navLinks = [
     { href: "/draft", label: "Draft" },
-    { href: "/log", label: "Send Log" },
-    { href: "/settings", label: "Settings & Resume" },
+    { href: "/log", label: "Sent letters" },
+    { href: "/settings", label: "Settings" },
   ];
 
   return (
@@ -79,7 +79,7 @@ export function Header() {
           href="/"
           className="font-heading text-lg sm:text-xl text-ink tracking-tight hover:opacity-90 transition-opacity shrink-0"
         >
-          Cold email
+          Vina
         </Link>
 
         {/* Center Navigation for logged-in users on tablet/desktop */}
