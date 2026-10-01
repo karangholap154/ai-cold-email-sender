@@ -24,6 +24,13 @@ export const metadata: Metadata = {
   title: "Vina — meetvina.com",
   description:
     "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
+  icons: {
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/logo.png", sizes: "512x512", type: "image/png" }],
+  },
   openGraph: {
     title: "Vina — meetvina.com",
     description: "Vina turns a job description into a letter worth sending.",

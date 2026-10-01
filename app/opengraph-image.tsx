@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import fs from "fs";
+import path from "path";
 
 export const alt = "Vina — meetvina.com";
 export const size = {
@@ -8,6 +10,10 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Image() {
+  const logoPath = path.join(process.cwd(), "public", "logo.png");
+  const logoBuffer = fs.readFileSync(logoPath);
+  const logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+
   return new ImageResponse(
     (
       <div
@@ -23,24 +29,15 @@ export default async function Image() {
           fontFamily: "serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              backgroundColor: "#B8823A",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#F6F5F1",
-              fontSize: 26,
-              fontWeight: 700,
-            }}
-          >
-            V
-          </div>
-          <span style={{ fontSize: 36, fontWeight: 600, color: "#1E2530", letterSpacing: "-0.02em" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <img
+            src={logoBase64}
+            alt="Vina Logo"
+            width={56}
+            height={56}
+            style={{ objectFit: "contain" }}
+          />
+          <span style={{ fontSize: 40, fontWeight: 600, color: "#1E2530", letterSpacing: "-0.02em" }}>
             Vina
           </span>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -49,7 +50,17 @@ export default function LoginPage() {
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="w-full max-w-sm">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 text-center">
+        <div className="mb-6 sm:mb-8 text-center flex flex-col items-center">
+          <Link href="/" className="mb-3 hover:opacity-80 transition-opacity">
+            <Image
+              src="/logo.png"
+              alt="Vina logo"
+              width={36}
+              height={36}
+              className="h-9 w-auto"
+              priority
+            />
+          </Link>
           <h1 className="font-heading text-xl sm:text-2xl text-ink">Welcome back</h1>
           <p className="mt-1.5 text-xs text-muted-ink">
             Sign in to review your drafts and sent letters.

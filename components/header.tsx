@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -77,9 +78,17 @@ export function Header() {
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
         <Link
           href="/"
-          className="font-heading text-lg sm:text-xl text-ink tracking-tight hover:opacity-90 transition-opacity shrink-0"
+          className="font-heading text-lg sm:text-xl text-ink tracking-tight hover:opacity-90 transition-opacity shrink-0 flex items-center gap-2"
         >
-          Vina
+          <Image
+            src="/logo.png"
+            alt="Vina logo"
+            width={24}
+            height={24}
+            className="h-6 w-auto"
+            priority
+          />
+          <span>Vina</span>
         </Link>
 
         {/* Center Navigation for logged-in users on tablet/desktop */}

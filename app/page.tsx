@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   CheckCircle2,
@@ -620,7 +621,16 @@ Qualifications:
       <footer className="px-4 py-8 sm:px-6 sm:py-12 text-xs text-muted-ink">
         <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-5 sm:gap-6">
           <div className="space-y-1 text-center sm:text-left">
-            <span className="font-heading text-base text-ink font-medium">Vina — meetvina.com</span>
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <Image
+                src="/logo.png"
+                alt="Vina logo"
+                width={20}
+                height={20}
+                className="h-5 w-auto"
+              />
+              <span className="font-heading text-base text-ink font-medium">Vina — meetvina.com</span>
+            </div>
             <p className="text-[11px] text-muted-ink">
               Turn a job description into a letter worth sending.
             </p>
