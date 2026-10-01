@@ -20,7 +20,6 @@ import {
   Unlink,
   CreditCard,
   Zap,
-  ExternalLink,
   Save,
 } from "lucide-react";
 import {
@@ -58,14 +57,27 @@ const MIGRATION_SQL = `alter table public.profiles
   add column if not exists dodo_subscription_id text;`;
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const requestedTab = params.get("tab") as SettingsTab | null;
+      if (requestedTab && ["profile", "resume", "gmail", "billing"].includes(requestedTab)) {
+        return requestedTab;
+      } else if (params.get("billing")) {
+        return "billing";
+      } else if (params.get("gmail") || params.get("error")) {
+        return "gmail";
+      }
+    }
+    return "profile";
+  });
   const [resume, setResume] = useState<Resume | null>(null);
   const [skillsSummary, setSkillsSummary] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const baselineRef = useRef<SettingsBaseline | null>(null);
+  const [baseline, setBaseline] = useState<SettingsBaseline | null>(null);
 
   // User Plan & Usage State
   const [usage, setUsage] = useState<UserUsage | null>(null);
@@ -89,18 +101,10 @@ export default function SettingsPage() {
   const [isCustomDirty, setIsCustomDirty] = useState(false);
   const [migrationRequired, setMigrationRequired] = useState(false);
 
-  // Handle URL query feedback from OAuth redirect, billing return & tab parameter
+  // Handle URL query feedback from OAuth redirect & billing return
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const requestedTab = params.get("tab") as SettingsTab | null;
-      if (requestedTab && ["profile", "resume", "gmail", "billing"].includes(requestedTab)) {
-        setActiveTab(requestedTab);
-      } else if (params.get("billing")) {
-        setActiveTab("billing");
-      } else if (params.get("gmail") || params.get("error")) {
-        setActiveTab("gmail");
-      }
 
       if (params.get("billing") === "success") {
         toast.success("Welcome to Pro. You now have unlimited letters.");
@@ -185,7 +189,7 @@ export default function SettingsPage() {
               phone: ph,
             }, "stack");
 
-            baselineRef.current = {
+            setBaseline({
               skillsSummary: loadedSkillsSummary,
               fullName: fn,
               signOff: so,
@@ -194,7 +198,7 @@ export default function SettingsPage() {
               linkedinUrl: li,
               phone: ph,
               customSignature: initialSig,
-            };
+            });
           }
           if (pData.migrationRequired) {
             setMigrationRequired(true);
@@ -207,33 +211,33 @@ export default function SettingsPage() {
       }
     }
     loadData();
-  }, []);
+  }, [skillsSummary]);
 
   // Compute dirty (unsaved) modifications
   const isDirty = Boolean(
     selectedFile !== null ||
-    (baselineRef.current && (
-      skillsSummary !== baselineRef.current.skillsSummary ||
-      fullName !== baselineRef.current.fullName ||
-      signOff !== baselineRef.current.signOff ||
-      portfolioUrl !== baselineRef.current.portfolioUrl ||
-      githubUrl !== baselineRef.current.githubUrl ||
-      linkedinUrl !== baselineRef.current.linkedinUrl ||
-      phone !== baselineRef.current.phone ||
-      customSignature !== baselineRef.current.customSignature
+    (baseline && (
+      skillsSummary !== baseline.skillsSummary ||
+      fullName !== baseline.fullName ||
+      signOff !== baseline.signOff ||
+      portfolioUrl !== baseline.portfolioUrl ||
+      githubUrl !== baseline.githubUrl ||
+      linkedinUrl !== baseline.linkedinUrl ||
+      phone !== baseline.phone ||
+      customSignature !== baseline.customSignature
     ))
   );
 
   const handleResetChanges = () => {
-    if (!baselineRef.current) return;
-    setSkillsSummary(baselineRef.current.skillsSummary);
-    setFullName(baselineRef.current.fullName);
-    setSignOff(baselineRef.current.signOff);
-    setPortfolioUrl(baselineRef.current.portfolioUrl);
-    setGithubUrl(baselineRef.current.githubUrl);
-    setLinkedinUrl(baselineRef.current.linkedinUrl);
-    setPhone(baselineRef.current.phone);
-    setCustomSignature(baselineRef.current.customSignature);
+    if (!baseline) return;
+    setSkillsSummary(baseline.skillsSummary);
+    setFullName(baseline.fullName);
+    setSignOff(baseline.signOff);
+    setPortfolioUrl(baseline.portfolioUrl);
+    setGithubUrl(baseline.githubUrl);
+    setLinkedinUrl(baseline.linkedinUrl);
+    setPhone(baseline.phone);
+    setCustomSignature(baseline.customSignature);
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
     toast.info("Unsaved modifications reverted.");
@@ -359,7 +363,7 @@ export default function SettingsPage() {
       }
 
       setMigrationRequired(false);
-      baselineRef.current = {
+      setBaseline({
         skillsSummary,
         fullName,
         signOff,
@@ -368,7 +372,7 @@ export default function SettingsPage() {
         linkedinUrl,
         phone,
         customSignature,
-      };
+      });
       setSelectedFile(null);
       toast.success("Settings and sender signature saved successfully.");
     } catch (err: unknown) {

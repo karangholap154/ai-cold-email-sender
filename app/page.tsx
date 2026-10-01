@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Sparkles,
   ArrowRight,
   CheckCircle2,
   Mail,
@@ -215,7 +214,7 @@ export default function LandingPage() {
                     Over the past four years leading design system architecture at Scale, I led our migration to headless primitives and built our real-time collaborative workspace, decreasing bundle weight by 42% and sustaining 60fps renders on complex graph views.
                   </p>
                   <p>
-                    I’ve attached my resume with further project breakdowns. If you’re open to a brief 10-minute introductory conversation this week, I would welcome the chance to share notes on how we tackled similar rendering bottlenecks.
+                    I’ve attached my résumé with further project breakdowns. If you’re open to a brief 10-minute introductory conversation this week, I would welcome the chance to share notes on how we tackled similar rendering bottlenecks.
                   </p>
                   <p className="pt-2">
                     Best regards,<br />
@@ -313,7 +312,7 @@ Qualifications:
           <div className="mt-8 sm:mt-12 rounded-sm border border-hairline bg-[#FAF9F5] p-4 sm:p-5 flex items-start sm:items-center gap-3">
             <ShieldCheck className="h-5 w-5 text-confirmed shrink-0 mt-0.5 sm:mt-0" />
             <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-              <span className="font-medium text-ink">Our promise:</span> Vina only ever sends what you approve, from your own Gmail account. We don't read your inbox, and we don't send anything automatically.
+              <span className="font-medium text-ink">Our promise:</span> Vina only ever sends what you approve, from your own Gmail account. We don&apos;t read your inbox, and we don&apos;t send anything automatically.
             </p>
           </div>
         </div>
@@ -382,7 +381,7 @@ Qualifications:
                 <h3 className="text-sm font-medium">Google OAuth Sending</h3>
               </div>
               <p className="text-xs text-muted-ink leading-relaxed">
-                Uses the official Gmail API with narrowest scope (gmail.send). Outgoing messages look authentic because they are authentic.
+                Uses the official Gmail API (gmail.send & gmail.readonly for thread metadata). Outgoing messages look authentic because they are authentic.
               </p>
             </div>
 
@@ -392,7 +391,7 @@ Qualifications:
                 <h3 className="text-sm font-medium">Automatic PDF Attachments</h3>
               </div>
               <p className="text-xs text-muted-ink leading-relaxed">
-                Upload your resume once to private encrypted storage. We handle MIME multi-part encoding and attach the file on every send.
+                Upload your résumé once to private encrypted storage. We handle MIME multi-part encoding and attach the file on every send.
               </p>
             </div>
 
@@ -447,7 +446,7 @@ Qualifications:
               Pricing
             </span>
             <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl text-ink">
-              Start free. Upgrade when you're applying at volume.
+              Start free. Upgrade when you&apos;re applying at volume.
             </h2>
             <p className="text-xs sm:text-sm text-muted-ink">
               Test with real applications before committing. Upgrade when you need higher capacity and follow-ups.

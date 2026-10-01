@@ -1,19 +1,22 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from "@/components/header";
 import "./globals.css";
 
-const ibmPlexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
+const ibmPlexSans = localFont({
+  src: "../public/fonts/ibm-plex-sans.woff2",
   variable: "--font-ibm-plex-sans",
-  weight: ["400", "500", "600"],
+  display: "swap",
+  weight: "100 900",
 });
 
-const fraunces = Fraunces({
-  subsets: ["latin"],
+const fraunces = localFont({
+  src: "../public/fonts/fraunces.woff2",
   variable: "--font-fraunces",
+  display: "swap",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {

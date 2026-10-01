@@ -34,11 +34,12 @@ export async function POST(req: NextRequest) {
           profile.dodo_customer_id,
           { return_url: returnUrl }
         );
+        const portalObj = portal as unknown as Record<string, unknown> | null;
         const portalUrl =
-          (portal as any)?.url ||
-          (portal as any)?.portal_url ||
-          (portal as any)?.session_url ||
-          (portal as any)?.link;
+          (typeof portalObj?.url === "string" ? portalObj.url : null) ||
+          (typeof portalObj?.portal_url === "string" ? portalObj.portal_url : null) ||
+          (typeof portalObj?.session_url === "string" ? portalObj.session_url : null) ||
+          (typeof portalObj?.link === "string" ? portalObj.link : null);
         if (portalUrl) {
           return NextResponse.json({ url: portalUrl });
         }

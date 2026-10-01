@@ -116,7 +116,7 @@ export default function SignupPage() {
                   className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 sm:py-2 text-sm sm:text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors min-h-[40px]"
                 />
                 <p className="text-[11px] text-muted-ink">
-                  We'll only use this to sign you in — no marketing emails.
+                  We&apos;ll only use this to sign you in — no marketing emails.
                 </p>
               </div>
 

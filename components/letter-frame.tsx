@@ -5,10 +5,10 @@ import TextareaAutosize from "react-textarea-autosize";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   Briefcase,
-  Sparkles,
   Send,
   RotateCcw,
   ArrowLeft,
@@ -76,6 +76,7 @@ export function LetterFrame({
   onDraftChange,
   isSending = false,
 }: LetterFrameProps) {
+  const router = useRouter();
   const [recipientEmail, setRecipientEmail] = useState(hrEmail);
   const [isDuplicate, setIsDuplicate] = useState(isDuplicateEmail);
   const [duplicateEmailMatched, setDuplicateEmailMatched] = useState(
@@ -90,12 +91,14 @@ export function LetterFrame({
   const [copied, setCopied] = useState(false);
 
   // Sync state if initialData changes (e.g. from regeneration or restore)
-  useEffect(() => {
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
     setSubject(initialData.subject);
     setBody(initialData.body);
     setCompanyName(initialData.companyName || "");
     setRoleTitle(initialData.roleTitle || "");
-  }, [initialData]);
+  }
 
   // Debounce notification of draft changes to parent for sessionStorage persistence
   useEffect(() => {
@@ -124,12 +127,14 @@ export function LetterFrame({
     regenerationCount >= maxRegenerations;
 
   // Sync initial duplicate state if props change
-  useEffect(() => {
+  const [prevDuplicateProp, setPrevDuplicateProp] = useState(isDuplicateEmail);
+  if (isDuplicateEmail !== prevDuplicateProp) {
+    setPrevDuplicateProp(isDuplicateEmail);
     setIsDuplicate(isDuplicateEmail);
     if (isDuplicateEmail) {
       setDuplicateEmailMatched(hrEmail);
     }
-  }, [isDuplicateEmail, hrEmail]);
+  }
 
   // Dynamic server checking when recipient email changes
   useEffect(() => {
@@ -139,9 +144,11 @@ export function LetterFrame({
     }
 
     if (!trimmed || !trimmed.includes("@") || trimmed.length < 5) {
-      setIsDuplicate(false);
-      setDuplicateEmailMatched("");
-      return;
+      const timer = setTimeout(() => {
+        setIsDuplicate(false);
+        setDuplicateEmailMatched("");
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     const timer = setTimeout(async () => {
@@ -245,7 +252,7 @@ export function LetterFrame({
         action: {
           label: "Connect",
           onClick: () => {
-            window.location.href = "/settings";
+            router.push("/settings");
           },
         },
       });
@@ -310,6 +317,7 @@ export function LetterFrame({
     body,
     cancelSend,
     dispatchNow,
+    router,
   ]);
 
   // Clean up timers on unmount
@@ -402,7 +410,7 @@ export function LetterFrame({
           <div className="flex items-start sm:items-center gap-2 border-t border-hairline pt-3 text-xs text-amber-700">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 sm:mt-0" />
             <span className="leading-snug">
-              You've already written to this address (<strong className="break-all">{duplicateEmailMatched || recipientEmail}</strong>). Sending again?
+              You&apos;ve already written to this address (<strong className="break-all">{duplicateEmailMatched || recipientEmail}</strong>). Sending again?
             </span>
           </div>
         )}
@@ -415,7 +423,7 @@ export function LetterFrame({
             <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
             <div>
               <p className="font-medium text-ink">
-                You've sent 5 letters this month on the free plan.
+                You&apos;ve sent 5 letters this month on the free plan.
               </p>
               <p className="text-muted-ink mt-0.5">
                 Upgrade to Pro to send more letters and unlock follow-ups.

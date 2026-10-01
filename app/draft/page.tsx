@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import {
@@ -19,6 +20,7 @@ import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
 const DRAFT_STORAGE_KEY = "cold_email_draft_session";
 
 export default function DraftPage() {
+  const router = useRouter();
   const [step, setStep] = useState<"input" | "review">("input");
   const [jdText, setJdText] = useState("");
   const [hrEmail, setHrEmail] = useState("");
@@ -113,15 +115,17 @@ export default function DraftPage() {
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && (parsed.jdText?.trim() || parsed.hrEmail?.trim() || parsed.analyzedData)) {
-            if (parsed.jdText) setJdText(parsed.jdText);
-            if (parsed.hrEmail) setHrEmail(parsed.hrEmail);
-            if (parsed.step === "review" && parsed.analyzedData) {
-              setAnalyzedData(parsed.analyzedData);
-              setStep("review");
-              setRestoredNotice("Unsaved draft restored from your current session.");
-            } else if (parsed.jdText?.trim()) {
-              setRestoredNotice("Unsaved job description restored from your current session.");
-            }
+            setTimeout(() => {
+              if (parsed.jdText) setJdText(parsed.jdText);
+              if (parsed.hrEmail) setHrEmail(parsed.hrEmail);
+              if (parsed.step === "review" && parsed.analyzedData) {
+                setAnalyzedData(parsed.analyzedData);
+                setStep("review");
+                setRestoredNotice("Unsaved draft restored from your current session.");
+              } else if (parsed.jdText?.trim()) {
+                setRestoredNotice("Unsaved job description restored from your current session.");
+              }
+            }, 0);
           }
         }
       } catch (err) {
@@ -213,7 +217,7 @@ export default function DraftPage() {
 
         if (data.plan !== "pro") {
           toast.error("Follow-ups are a Pro feature.");
-          window.location.href = "/settings";
+          router.push("/settings");
           return;
         }
 
@@ -262,19 +266,19 @@ export default function DraftPage() {
     }
 
     loadFollowUp(fId);
-  }, []);
+  }, [router]);
 
   // Check duplicate email when hrEmail changes
   useEffect(() => {
     if (followUpContext) {
       // In follow-up mode, duplicate check against previous email is intended
-      setIsDuplicateEmail(false);
-      return;
+      const timer = setTimeout(() => setIsDuplicateEmail(false), 0);
+      return () => clearTimeout(timer);
     }
 
     if (!hrEmail || !hrEmail.includes("@")) {
-      setIsDuplicateEmail(false);
-      return;
+      const timer = setTimeout(() => setIsDuplicateEmail(false), 0);
+      return () => clearTimeout(timer);
     }
 
     // Check duplicate against existing sent emails
@@ -391,7 +395,7 @@ export default function DraftPage() {
         action: {
           label: "Connect",
           onClick: () => {
-            window.location.href = "/settings";
+            router.push("/settings");
           },
         },
       });
@@ -447,7 +451,7 @@ export default function DraftPage() {
       if (typeof window !== "undefined") {
         window.history.replaceState({}, "", "/draft");
       }
-    } catch (err: unknown) {
+    } catch {
       toast.error("That didn't go through. Nothing was sent — try again.");
     } finally {
       setIsSending(false);
@@ -507,7 +511,7 @@ export default function DraftPage() {
                   <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
                   <div>
                     <p className="font-medium text-ink">
-                      You've sent 5 letters this month on the free plan.
+                      You&apos;ve sent 5 letters this month on the free plan.
                     </p>
                     <p className="text-muted-ink mt-0.5">
                       Upgrade to Pro to send more letters and unlock follow-ups.
@@ -525,10 +529,10 @@ export default function DraftPage() {
                       if (data.url) {
                         window.location.href = data.url;
                       } else {
-                        window.location.href = "/settings";
+                        router.push("/settings");
                       }
                     } catch {
-                      window.location.href = "/settings";
+                      router.push("/settings");
                     } finally {
                       setIsUpgrading(false);
                     }

@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import nodemailer, { type SendMailOptions } from "nodemailer";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto";
+
+interface SendRequestBody {
+  hrEmail?: string;
+  subject?: string;
+  body?: string;
+  jdText?: string;
+  companyName?: string;
+  roleTitle?: string;
+  emailType?: "initial" | "followup";
+  parentEmailId?: string | null;
+}
 
 /**
  * Builds an RFC 2822 MIME message buffer and returns it base64url encoded
@@ -36,7 +47,7 @@ async function buildRawMimeMessage({
 
   const assignedMessageId = `<${Date.now()}.${crypto.randomUUID()}@${domain}>`;
 
-  const mailOptions: any = {
+  const mailOptions: SendMailOptions = {
     from,
     to,
     subject,
@@ -62,7 +73,7 @@ async function buildRawMimeMessage({
   return new Promise<{ raw: string; rfcMessageId: string }>((resolve, reject) => {
     transporter.sendMail(
       mailOptions,
-      (err, info: any) => {
+      (err, info: { message: Buffer | NodeJS.ReadableStream }) => {
         if (err) return reject(err);
 
         if (Buffer.isBuffer(info.message)) {
@@ -89,7 +100,7 @@ async function buildRawMimeMessage({
 }
 
 export async function POST(req: NextRequest) {
-  let bodyData: any = {};
+  let bodyData: Partial<SendRequestBody> = {};
 
   try {
     const supabase = await createClient();
@@ -283,7 +294,7 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    let attachments: Array<{ filename: string; content: Buffer }> = [];
+    const attachments: Array<{ filename: string; content: Buffer }> = [];
 
     if (resumeRow?.file_url) {
       const { data: fileBlob, error: downloadError } = await supabase.storage
@@ -456,9 +467,9 @@ export async function POST(req: NextRequest) {
         );
         if (getMsgRes.ok) {
           const msgDetails = await getMsgRes.json();
-          const headers = msgDetails.payload?.headers || [];
+          const headers = (msgDetails.payload?.headers || []) as Array<{ name: string; value: string }>;
           const realId = headers.find(
-            (h: any) => h.name.toLowerCase() === "message-id"
+            (h) => h.name.toLowerCase() === "message-id"
           )?.value;
           if (realId) {
             authenticMessageId = realId;
@@ -470,7 +481,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 7. Log successful send to sent_emails table scoped to user
-    const insertPayload: Record<string, any> = {
+    const insertPayload: Record<string, unknown> = {
       user_id: user.id,
       jd_text: jdText || "",
       hr_email: hrEmail.trim(),

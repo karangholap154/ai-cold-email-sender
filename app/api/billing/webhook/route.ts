@@ -24,33 +24,38 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let event: any;
+  let event: Record<string, unknown>;
   try {
     const wh = new Webhook(webhookSecret);
     event = wh.verify(rawBody, {
       "webhook-id": webhookId,
       "webhook-timestamp": webhookTimestamp,
       "webhook-signature": webhookSignature,
-    });
+    }) as Record<string, unknown>;
   } catch (err: unknown) {
     console.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  const eventType = event.type || event.event_type;
-  const data = event.data || {};
+  const eventType = (event.type as string) || (event.event_type as string);
+  const data = (event.data as Record<string, unknown>) || {};
+  const metadata = data.metadata as Record<string, unknown> | undefined;
+  const customer = data.customer as Record<string, unknown> | undefined;
   console.log(`[Dodo Webhook] Received event: ${eventType}`, {
     id: data.subscription_id || data.payment_id || data.id,
-    metadata: data.metadata,
+    metadata,
   });
 
   const supabase = getServiceSupabase();
 
   try {
     // 1. Identify User ID from metadata or customer email
-    let userId: string | null = data.metadata?.user_id || null;
+    let userId: string | null = (metadata?.user_id as string) || null;
     const customerEmail: string | null =
-      data.customer?.email || data.customer_email || data.email || null;
+      (customer?.email as string) ||
+      (data.customer_email as string) ||
+      (data.email as string) ||
+      null;
 
     if (!userId && customerEmail) {
       const { data: userRecord } = await supabase
@@ -88,12 +93,18 @@ export async function POST(req: NextRequest) {
       eventType === "subscription.renewed" ||
       eventType === "subscription.updated"
     ) {
-      const subscriptionId = data.subscription_id || data.id || null;
-      const customerId = data.customer?.customer_id || data.customer_id || null;
+      const subscriptionId =
+        (data.subscription_id as string) || (data.id as string) || null;
+      const customerId =
+        (customer?.customer_id as string) ||
+        (data.customer_id as string) ||
+        null;
       const nextBillingDate =
-        data.next_billing_date || data.expires_at || data.current_period_end;
+        (data.next_billing_date as string | number | undefined) ||
+        (data.expires_at as string | number | undefined) ||
+        (data.current_period_end as string | number | undefined);
 
-      const updatePayload: Record<string, any> = {
+      const updatePayload: Record<string, unknown> = {
         plan: "pro",
       };
 

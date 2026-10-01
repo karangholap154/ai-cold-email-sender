@@ -75,8 +75,8 @@ export async function POST(req: NextRequest) {
 
     // 3. Handle Follow-up generation
     if (type === "followup") {
+      const { parentEmailId } = body;
       let {
-        parentEmailId,
         companyName,
         roleTitle,
         originalSubject,
