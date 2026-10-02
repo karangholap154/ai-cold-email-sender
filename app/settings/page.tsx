@@ -25,8 +25,6 @@ import {
   Trash2,
   Edit2,
   Star,
-  ExternalLink,
-  Check,
 } from "lucide-react";
 import {
   Dialog,
