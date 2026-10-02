@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     if (type === "followup") {
       if (!user) {
         return NextResponse.json(
-          { error: "You must be signed in to generate follow-up letters." },
+          { error: "You must be signed in to draft follow-up letters." },
           { status: 401 }
         );
       }
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     if (message.includes("high demand") || message.includes("503") || message.includes("UNAVAILABLE")) {
-      message = "Google Gemini is currently experiencing a temporary traffic spike. Please try clicking Generate again in a few seconds.";
+      message = "Google Gemini is currently experiencing a temporary traffic spike. Please try drafting again in a few seconds.";
     }
 
     return NextResponse.json({ error: message }, { status: 500 });

@@ -11,7 +11,7 @@ import {
   FileText,
   AlertCircle,
   Clock,
-  Sparkles,
+  PenLine,
   Lock,
   ArrowRight,
   RotateCcw,
@@ -289,7 +289,7 @@ export default function LogPage() {
             <div className="flex items-center gap-2 text-muted-ink">
               {plan === "pro" ? (
                 <>
-                  <Sparkles className="h-3.5 w-3.5 text-seal shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
                   <span>
                     <strong className="text-ink font-medium">Pro Plan</strong> • Full lifetime archive active ({emails.length} total letters)
                   </span>
@@ -591,7 +591,7 @@ export default function LogPage() {
           <DialogContent className="border border-hairline bg-paper text-ink sm:max-w-md p-6">
             <DialogHeader className="space-y-2">
               <div className="inline-flex items-center gap-1.5 text-seal text-xs font-semibold uppercase tracking-wider">
-                <Sparkles className="h-3.5 w-3.5" />
+                <PenLine className="h-3.5 w-3.5" />
                 <span>Pro Feature</span>
               </div>
               <DialogTitle className="font-heading text-xl text-ink">

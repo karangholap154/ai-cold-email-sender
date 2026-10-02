@@ -10,7 +10,7 @@ import {
   AlertCircle,
   Loader2,
   Copy,
-  Sparkles,
+  PenLine,
   User,
   Globe,
   Code2,
@@ -581,7 +581,7 @@ export default function SettingsPage() {
 
                     <div className="space-y-1.5">
                       <label htmlFor="sign-off" className="flex items-center gap-1.5 text-xs font-medium text-ink">
-                        <Sparkles className="h-3.5 w-3.5 text-muted-ink" />
+                        <PenLine className="h-3.5 w-3.5 text-muted-ink" />
                         <span>Sign-off Phrase</span>
                       </label>
                       <input

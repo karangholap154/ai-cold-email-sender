@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import {
-  Sparkles,
+  PenLine,
   Loader2,
   AlertCircle,
   ExternalLink,
@@ -251,14 +251,14 @@ export default function DraftPage() {
 
         const analyzeData = await analyzeRes.json();
         if (!analyzeRes.ok) {
-          throw new Error(analyzeData.error || "Failed to generate follow-up.");
+          throw new Error(analyzeData.error || "Failed to draft follow-up.");
         }
 
         setAnalyzedData(analyzeData);
         setStep("review");
         toast.success("Follow-up draft prepared.");
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Error generating follow-up.";
+        const msg = err instanceof Error ? err.message : "Error drafting follow-up.";
         toast.error(msg);
       } finally {
         setIsAnalyzing(false);
@@ -363,14 +363,14 @@ export default function DraftPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to regenerate letter.");
+        throw new Error(data.error || "Failed to draft a new version.");
       }
 
       setAnalyzedData(data);
       setRegenerationCount((prev) => prev + 1);
       toast.success("New draft ready.");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error regenerating letter.";
+      const msg = err instanceof Error ? err.message : "Error drafting a new version.";
       toast.error(msg);
     } finally {
       setIsRegenerating(false);
@@ -657,7 +657,7 @@ export default function DraftPage() {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-3.5 w-3.5" />
+                      <PenLine className="h-3.5 w-3.5" />
                       <span>Draft this letter</span>
                     </>
                   )}

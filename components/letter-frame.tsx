@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import TextareaAutosize from "react-textarea-autosize";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -77,6 +77,7 @@ export function LetterFrame({
   isSending = false,
 }: LetterFrameProps) {
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const [recipientEmail, setRecipientEmail] = useState(hrEmail);
   const [isDuplicate, setIsDuplicate] = useState(isDuplicateEmail);
   const [duplicateEmailMatched, setDuplicateEmailMatched] = useState(
@@ -333,9 +334,9 @@ export function LetterFrame({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
+      transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeOut" }}
       className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-6"
     >
       {/* 1. Confirmation Strip: Extracted Entity Review */}
