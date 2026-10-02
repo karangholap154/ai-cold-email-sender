@@ -13,6 +13,7 @@ import {
   Mail,
   ArrowRight,
   CheckCircle2,
+  FileText,
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
@@ -25,6 +26,8 @@ export default function DraftPage() {
   const [jdText, setJdText] = useState("");
   const [hrEmail, setHrEmail] = useState("");
   const [resume, setResume] = useState<Resume | null>(null);
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
   const [isResumeLoading, setIsResumeLoading] = useState(true);
 
   // Autosave and restore notice state
@@ -83,9 +86,11 @@ export default function DraftPage() {
 
         if (resumeRes.ok) {
           const data = await resumeRes.json();
-          if (data.resume) {
-            setResume(data.resume);
-          }
+          const list = data.resumes || (data.resume ? [data.resume] : []);
+          setResumes(list);
+          const active = data.activeResume || list[0] || null;
+          setSelectedResume(active);
+          setResume(active);
         }
 
         if (gmailRes.ok) {
@@ -319,7 +324,11 @@ export default function DraftPage() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jdText, type: "initial" }),
+        body: JSON.stringify({
+          jdText,
+          type: "initial",
+          resumeId: selectedResume?.id,
+        }),
       });
 
       const data = await res.json();
@@ -352,8 +361,16 @@ export default function DraftPage() {
     setIsRegenerating(true);
     try {
       const payload = followUpContext
-        ? { type: "followup", parentEmailId: followUpContext.parentEmailId }
-        : { type: "initial", jdText };
+        ? {
+            type: "followup",
+            parentEmailId: followUpContext.parentEmailId,
+            resumeId: selectedResume?.id,
+          }
+        : {
+            type: "initial",
+            jdText,
+            resumeId: selectedResume?.id,
+          };
 
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -416,6 +433,7 @@ export default function DraftPage() {
           roleTitle: finalData.roleTitle,
           emailType: followUpContext ? "followup" : "initial",
           parentEmailId: followUpContext?.parentEmailId,
+          resumeId: selectedResume?.id,
         }),
       });
 
@@ -590,6 +608,57 @@ export default function DraftPage() {
               </div>
             )}
 
+            {/* Active Résumé Indicator / Selector */}
+            {!isResumeLoading && resumes.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border border-hairline bg-[#FAF9F5] px-3.5 py-2.5 rounded-sm text-xs">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <FileText className="h-4 w-4 text-muted-ink shrink-0" />
+                  <span className="text-muted-ink shrink-0">Attached résumé:</span>
+                  {resumes.length > 1 ? (
+                    <select
+                      value={selectedResume?.id || ""}
+                      onChange={(e) => {
+                        const target = resumes.find((r) => r.id === e.target.value);
+                        if (target) {
+                          setSelectedResume(target);
+                          setResume(target);
+                        }
+                      }}
+                      className="bg-paper border border-hairline rounded-sm px-2 py-1 text-xs font-medium text-ink focus:border-seal focus:outline-none cursor-pointer max-w-full truncate"
+                    >
+                      {resumes.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.label || "Primary Résumé"} {r.is_default ? "• Default" : ""} ({r.file_name || "PDF"})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-medium text-ink truncate">
+                      {selectedResume?.label || "Primary Résumé"} ({selectedResume?.file_name || "PDF"})
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto text-[11px]">
+                  {usage?.plan === "pro" ? (
+                    <Link
+                      href="/settings?tab=resume"
+                      className="text-muted-ink hover:text-ink underline underline-offset-2"
+                    >
+                      Manage résumés
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/settings?tab=billing"
+                      className="text-seal hover:underline underline-offset-2 font-medium"
+                    >
+                      Upgrade for role-specific résumés
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Input Form */}
             <form onSubmit={handleGenerate} className="space-y-5 sm:space-y-6">
               {/* Recipient HR Email */}
@@ -715,6 +784,11 @@ export default function DraftPage() {
               onEmailChange={setHrEmail}
               onDraftChange={handleDraftChange}
               isSending={isSending}
+              resumeLabel={
+                selectedResume?.label
+                  ? `${selectedResume.label}`
+                  : selectedResume?.file_name || undefined
+              }
             />
           </div>
         )}

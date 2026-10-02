@@ -86,8 +86,83 @@ create trigger set_resume_updated_at
   for each row
   execute function public.handle_updated_at();
 
--- Unique index to guarantee one active resume per user in v1
-create unique index if not exists idx_resume_user_id on public.resume(user_id);
+-- Multi-resume support columns
+do $$ begin
+  if not exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'resume' and column_name = 'label'
+  ) then
+    alter table public.resume add column label text default 'Primary Résumé';
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'resume' and column_name = 'is_default'
+  ) then
+    alter table public.resume add column is_default boolean default true;
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'resume' and column_name = 'file_size'
+  ) then
+    alter table public.resume add column file_size integer;
+  end if;
+end $$;
+
+-- Keep exactly one default resume per user, including existing migrated data.
+with ranked_defaults as (
+  select id,
+         row_number() over (
+           partition by user_id
+           order by updated_at desc, created_at desc, id desc
+         ) as row_number
+  from public.resume
+  where is_default = true
+)
+update public.resume
+set is_default = false
+where id in (
+  select id from ranked_defaults where row_number > 1
+);
+
+create unique index if not exists idx_one_default_resume_per_user
+  on public.resume(user_id)
+  where is_default = true;
+
+create or replace function public.enforce_resume_limit()
+returns trigger as $$
+declare
+  user_plan text;
+  resume_count integer;
+begin
+  select plan into user_plan
+  from public.profiles
+  where id = new.user_id;
+
+  select count(*) into resume_count
+  from public.resume
+  where user_id = new.user_id;
+
+  if user_plan = 'pro' and resume_count >= 3 then
+    raise exception 'Pro accounts can have up to 3 resume versions';
+  elsif coalesce(user_plan, 'free') <> 'pro' and resume_count >= 1 then
+    raise exception 'Free accounts can have only 1 resume version';
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists enforce_resume_limit_before_insert on public.resume;
+create trigger enforce_resume_limit_before_insert
+  before insert on public.resume
+  for each row
+  execute function public.enforce_resume_limit();
+
+-- Drop legacy unique index if present and create standard index on user_id
+drop index if exists public.idx_resume_user_id;
+create index if not exists idx_resume_user_id on public.resume(user_id);
 
 -- 4. Create or migrate sent_emails table
 create table if not exists public.sent_emails (
@@ -113,6 +188,13 @@ do $$ begin
     where table_schema = 'public' and table_name = 'sent_emails' and column_name = 'user_id'
   ) then
     alter table public.sent_emails add column user_id uuid references public.profiles(id) on delete cascade;
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'sent_emails' and column_name = 'resume_id'
+  ) then
+    alter table public.sent_emails add column resume_id uuid references public.resume(id) on delete set null;
   end if;
 end $$;
 

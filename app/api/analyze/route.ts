@@ -45,13 +45,21 @@ export async function POST(req: NextRequest) {
     let senderSignature = "";
     if (user) {
       try {
-        // Fetch resume skills summary
-        const { data: resumeData } = await supabase
+        // Fetch resume skills summary (specific resumeId if provided, or default)
+        let resumeQuery = supabase
           .from("resume")
-          .select("skills_summary")
-          .eq("user_id", user.id)
-          .limit(1)
-          .maybeSingle();
+          .select("id, skills_summary")
+          .eq("user_id", user.id);
+
+        if (body.resumeId) {
+          resumeQuery = resumeQuery.eq("id", body.resumeId);
+        } else {
+          resumeQuery = resumeQuery
+            .order("is_default", { ascending: false })
+            .order("updated_at", { ascending: false });
+        }
+
+        const { data: resumeData } = await resumeQuery.limit(1).maybeSingle();
 
         if (resumeData?.skills_summary) {
           skillsSummary = resumeData.skills_summary;

@@ -54,6 +54,7 @@ export interface LetterFrameProps {
     hrEmail?: string;
   }) => void;
   isSending?: boolean;
+  resumeLabel?: string;
 }
 
 export function LetterFrame({
@@ -75,6 +76,7 @@ export function LetterFrame({
   onEmailChange,
   onDraftChange,
   isSending = false,
+  resumeLabel,
 }: LetterFrameProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
@@ -492,7 +494,7 @@ export function LetterFrame({
             </div>
             <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
               <span className="text-[11px] text-muted-ink hidden sm:inline">
-                Resume attached
+                {resumeLabel ? `${resumeLabel} attached` : "Résumé attached"}
               </span>
               <button
                 type="button"

@@ -13,6 +13,7 @@ interface SendRequestBody {
   roleTitle?: string;
   emailType?: "initial" | "followup";
   parentEmailId?: string | null;
+  resumeId?: string | null;
 }
 
 /**
@@ -126,6 +127,7 @@ export async function POST(req: NextRequest) {
       roleTitle,
       emailType = "initial",
       parentEmailId = null,
+      resumeId = null,
     } = bodyData;
 
     if (!hrEmail || !hrEmail.includes("@")) {
@@ -286,13 +288,21 @@ export async function POST(req: NextRequest) {
 
     const accessToken = tokenRefreshData.access_token;
 
-    // 3. Fetch user's latest resume PDF from Supabase Storage
-    const { data: resumeRow } = await supabase
+    // 3. Fetch user's specified or default resume PDF from Supabase Storage
+    let resumeQuery = supabase
       .from("resume")
       .select("*")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+      .eq("user_id", user.id);
+
+    if (resumeId) {
+      resumeQuery = resumeQuery.eq("id", resumeId);
+    } else {
+      resumeQuery = resumeQuery
+        .order("is_default", { ascending: false })
+        .order("updated_at", { ascending: false });
+    }
+
+    const { data: resumeRow } = await resumeQuery.limit(1).maybeSingle();
 
     const attachments: Array<{ filename: string; content: Buffer }> = [];
 
@@ -495,6 +505,7 @@ export async function POST(req: NextRequest) {
       error_message: null,
       email_type: emailType,
       parent_email_id: resolvedParentEmailId || null,
+      resume_id: resumeRow?.id || null,
       gmail_message_id: authenticMessageId,
       gmail_thread_id: gmailSendData.threadId || parentThreadId || null,
     };
@@ -507,6 +518,7 @@ export async function POST(req: NextRequest) {
       delete insertPayload.gmail_thread_id;
       delete insertPayload.email_type;
       delete insertPayload.parent_email_id;
+      delete insertPayload.resume_id;
       await supabase.from("sent_emails").insert(insertPayload);
     }
 

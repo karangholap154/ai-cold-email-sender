@@ -31,6 +31,9 @@ export interface Resume {
   user_id?: string;
   file_url: string;
   file_name?: string | null;
+  label?: string;
+  is_default?: boolean;
+  file_size?: number | null;
   skills_summary: string;
   created_at: string;
   updated_at: string;
@@ -51,6 +54,7 @@ export interface SentEmail {
   error_message: string | null;
   email_type?: "initial" | "followup";
   parent_email_id?: string | null;
+  resume_id?: string | null;
   gmail_message_id?: string | null;
   gmail_thread_id?: string | null;
   created_at: string;
@@ -65,6 +69,7 @@ export interface AnalyzeRequest {
   originalSubject?: string;
   originalBody?: string;
   originalSentDate?: string;
+  resumeId?: string;
 }
 
 export interface AnalyzeResponse {
@@ -77,6 +82,7 @@ export interface AnalyzeResponse {
   isFollowUp?: boolean;
   parentEmailId?: string;
   originalSentDate?: string;
+  resumeId?: string;
 }
 
 export interface SendEmailRequest {
@@ -88,6 +94,7 @@ export interface SendEmailRequest {
   roleTitle?: string;
   emailType?: "initial" | "followup";
   parentEmailId?: string;
+  resumeId?: string;
 }
 
 export interface SendEmailResponse {
