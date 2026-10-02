@@ -19,7 +19,8 @@ export async function GET() {
       .eq("id", user.id)
       .maybeSingle();
 
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    const now = new Date();
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
     const { count: monthlySends } = await supabase
       .from("sent_emails")
       .select("id", { count: "exact", head: true })
