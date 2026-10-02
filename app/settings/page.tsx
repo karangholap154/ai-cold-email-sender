@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Resume, GmailConnectionStatus, UserUsage } from "@/lib/types/database";
 import { generateFormattedSignature } from "@/lib/signature";
+import { initiateCheckout } from "@/lib/billing";
 
 type SettingsTab = "profile" | "resume" | "gmail" | "billing";
 
@@ -650,17 +651,8 @@ export default function SettingsPage() {
   const handleUpgrade = async () => {
     setIsUpgrading(true);
     try {
-      const res = await fetch("/api/billing/checkout", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to initiate checkout");
-      }
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Error initiating checkout";
-      toast.error(message);
+      await initiateCheckout();
+    } catch {
       setIsUpgrading(false);
     }
   };

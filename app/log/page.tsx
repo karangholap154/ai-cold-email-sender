@@ -31,6 +31,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { initiateCheckout } from "@/lib/billing";
 
 function formatRelativeDays(dateString: string): string {
   const diffMs = Date.now() - new Date(dateString).getTime();
@@ -84,15 +85,7 @@ export default function LogPage() {
   const handleUpgrade = async () => {
     setIsUpgrading(true);
     try {
-      const res = await fetch("/api/billing/checkout", { method: "POST" });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        router.push("/settings");
-      }
-    } catch {
-      router.push("/settings");
+      await initiateCheckout({ onFallback: () => router.push("/settings") });
     } finally {
       setIsUpgrading(false);
     }

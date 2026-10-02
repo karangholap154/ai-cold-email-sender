@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
+import { initiateCheckout } from "@/lib/billing";
 
 const DRAFT_STORAGE_KEY = "cold_email_draft_session";
 
@@ -542,15 +543,7 @@ export default function DraftPage() {
                   onClick={async () => {
                     setIsUpgrading(true);
                     try {
-                      const res = await fetch("/api/billing/checkout", { method: "POST" });
-                      const data = await res.json();
-                      if (data.url) {
-                        window.location.href = data.url;
-                      } else {
-                        router.push("/settings");
-                      }
-                    } catch {
-                      router.push("/settings");
+                      await initiateCheckout({ onFallback: () => router.push("/settings") });
                     } finally {
                       setIsUpgrading(false);
                     }
