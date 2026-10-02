@@ -137,6 +137,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const normalizedEmail = hrEmail.trim().toLowerCase();
+
     if (!subject || !body) {
       return NextResponse.json(
         { error: "Subject and email body are required." },
@@ -204,7 +206,7 @@ export async function POST(req: NextRequest) {
       await supabase.from("sent_emails").insert({
         user_id: user.id,
         jd_text: jdText || "",
-        hr_email: hrEmail.trim(),
+        hr_email: normalizedEmail,
         company_name: companyName || null,
         role_title: roleTitle || null,
         generated_subject: subject,
@@ -339,7 +341,7 @@ export async function POST(req: NextRequest) {
             .from("sent_emails")
             .select("id, gmail_thread_id, gmail_message_id, final_subject")
             .eq("user_id", user.id)
-            .ilike("hr_email", hrEmail.trim())
+            .ilike("hr_email", normalizedEmail)
             .eq("status", "sent")
             .order("created_at", { ascending: false })
             .limit(1)
@@ -385,7 +387,7 @@ export async function POST(req: NextRequest) {
       if (!parentThreadId || !parentMessageId) {
         try {
           const listRes = await fetch(
-            `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=to:${encodeURIComponent(hrEmail.trim())}&maxResults=1`,
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=to:${encodeURIComponent(normalizedEmail)}&maxResults=1`,
             {
               headers: { Authorization: `Bearer ${accessToken}` },
             }
@@ -428,7 +430,7 @@ export async function POST(req: NextRequest) {
 
     const { raw: rawMime, rfcMessageId: currentRfcMessageId } = await buildRawMimeMessage({
       from: fromAddress,
-      to: hrEmail.trim(),
+      to: normalizedEmail,
       subject: finalSubjectToSend,
       body: body.trim(),
       attachments,
@@ -494,7 +496,7 @@ export async function POST(req: NextRequest) {
     const insertPayload: Record<string, unknown> = {
       user_id: user.id,
       jd_text: jdText || "",
-      hr_email: hrEmail.trim(),
+      hr_email: normalizedEmail,
       company_name: companyName || null,
       role_title: roleTitle || null,
       generated_subject: finalSubjectToSend,
@@ -543,7 +545,7 @@ export async function POST(req: NextRequest) {
           await supabase.from("sent_emails").insert({
             user_id: user.id,
             jd_text: bodyData.jdText || "",
-            hr_email: bodyData.hrEmail,
+            hr_email: bodyData.hrEmail.trim().toLowerCase(),
             company_name: bodyData.companyName || null,
             role_title: bodyData.roleTitle || null,
             generated_subject: bodyData.subject || "Unknown",

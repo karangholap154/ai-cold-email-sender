@@ -721,9 +721,9 @@ export default function SettingsPage() {
       <div className="mx-auto w-full max-w-2xl">
         {/* Page Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="font-heading text-xl sm:text-2xl text-ink">Settings & Account</h1>
+          <h1 className="font-heading text-xl sm:text-2xl text-ink">Settings</h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-ink">
-            Configure your active resume, sending identity, background skills summary, and automatic sender signature.
+            Configure your active résumé, sending identity, background skills summary, and automatic sender signature.
           </p>
         </div>
 
@@ -1452,11 +1452,11 @@ export default function SettingsPage() {
                   <div className="border border-hairline bg-paper p-4 rounded-sm space-y-2">
                     <span className="font-medium text-ink">Free Tier</span>
                     <ul className="space-y-1.5 text-muted-ink text-[11px]">
-                      <li>• 5 tailored sends per month</li>
-                      <li>• 1 active resume PDF</li>
+                      <li>• 5 tailored letters per month</li>
+                      <li>• 1 active résumé PDF</li>
                       <li>• 2 AI regenerations per draft</li>
-                      <li>• 30-day send log history</li>
-                      <li>• Duplicate contact protection</li>
+                      <li>• 30-day sent letters history</li>
+                      <li>• Duplicate contact detection</li>
                     </ul>
                   </div>
 
@@ -1469,7 +1469,7 @@ export default function SettingsPage() {
                       <li>• Unlimited tailored letters</li>
                       <li>• 1-click follow-up correspondence</li>
                       <li>• Unlimited AI regenerations</li>
-                      <li>• Full lifetime send log archive</li>
+                      <li>• Full lifetime sent letters history</li>
                       <li>• Priority model & fast support</li>
                     </ul>
                   </div>
@@ -1533,7 +1533,7 @@ export default function SettingsPage() {
                 <span>Disconnect Gmail</span>
               </div>
               <DialogTitle className="font-heading text-lg sm:text-xl text-ink">
-                Disconnect sending account?
+                Disconnect your Gmail account?
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-ink leading-relaxed">
                 You will no longer be able to send tailored letters directly from your personal address until you reconnect Google OAuth in Settings.

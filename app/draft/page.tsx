@@ -446,7 +446,7 @@ export default function DraftPage() {
             setUsage({ ...usage, monthlySends: data.sentCount });
           }
         }
-        throw new Error(data.error || "Failed to send email.");
+        throw new Error(data.error || "Failed to send letter.");
       }
 
       toast.success(`Sent. It's on its way to ${targetEmail}.`);

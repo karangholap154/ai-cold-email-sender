@@ -505,7 +505,7 @@ export function LetterFrame({
                 {copied ? (
                   <>
                     <Check className="h-3.5 w-3.5 text-confirmed" />
-                    <span className="text-confirmed font-medium">Copied!</span>
+                    <span className="text-confirmed font-medium">Copied</span>
                   </>
                 ) : (
                   <>
@@ -549,7 +549,7 @@ export function LetterFrame({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             className="w-full resize-none bg-transparent text-sm sm:text-base leading-relaxed text-ink focus:outline-none transition-colors selection:bg-[#E4DFD3]"
-            placeholder="Email body..."
+            placeholder="Letter body..."
           />
         </div>
 
@@ -718,10 +718,10 @@ export function LetterFrame({
               }
               title={
                 reachedSendCap
-                  ? "Monthly free send limit reached. Upgrade to Pro to send."
+                  ? "You've sent 5 letters this month on the free plan. Upgrade to Pro to send more."
                   : isFollowUp
                   ? "Send follow-up letter directly via Gmail"
-                  : "Send letter directly via Gmail"
+                  : "Send this letter directly via Gmail"
               }
               className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-sm px-5 py-2.5 sm:py-2 text-xs font-medium shadow-xs transition-all disabled:opacity-50 min-h-[40px] sm:min-h-0 ${
                 reachedSendCap

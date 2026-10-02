@@ -48,11 +48,12 @@ export async function GET(req: NextRequest) {
 
     // 2. Check duplicate email query for this user
     if (email) {
+      const normalizedQueryEmail = email.trim().toLowerCase();
       const { data, error } = await supabase
         .from("sent_emails")
         .select("id, created_at, company_name, role_title")
         .eq("user_id", user.id)
-        .ilike("hr_email", email.trim())
+        .ilike("hr_email", normalizedQueryEmail)
         .eq("status", "sent")
         .limit(1)
         .maybeSingle();
