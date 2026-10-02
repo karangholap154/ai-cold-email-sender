@@ -478,7 +478,7 @@ export default function DraftPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
+    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-24 md:pb-10">
       <div className="mx-auto w-full max-w-2xl">
         {step === "input" && (
           <div className="space-y-6 sm:space-y-8">

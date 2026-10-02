@@ -227,7 +227,7 @@ export default function LogPage() {
   }, [emails]);
 
   return (
-    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10">
+    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-24 md:pb-10">
       <div className="mx-auto w-full max-w-4xl space-y-5 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 sm:gap-4">
