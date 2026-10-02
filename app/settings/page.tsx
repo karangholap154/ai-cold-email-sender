@@ -62,20 +62,7 @@ const MIGRATION_SQL = `alter table public.profiles
   add column if not exists dodo_subscription_id text;`;
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const requestedTab = params.get("tab") as SettingsTab | null;
-      if (requestedTab && ["profile", "resume", "gmail", "billing"].includes(requestedTab)) {
-        return requestedTab;
-      } else if (params.get("billing")) {
-        return "billing";
-      } else if (params.get("gmail") || params.get("error")) {
-        return "gmail";
-      }
-    }
-    return "profile";
-  });
+  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [resume, setResume] = useState<Resume | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [skillsSummary, setSkillsSummary] = useState("");
@@ -120,20 +107,29 @@ export default function SettingsPage() {
   const [isCustomDirty, setIsCustomDirty] = useState(false);
   const [migrationRequired, setMigrationRequired] = useState(false);
 
-  // Handle URL query feedback from OAuth redirect & billing return
+  // Handle URL query feedback from OAuth redirect, billing return, and tab selection
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      const requestedTab = params.get("tab") as SettingsTab | null;
+
+      if (requestedTab && ["profile", "resume", "gmail", "billing"].includes(requestedTab)) {
+        setActiveTab(requestedTab);
+      } else if (params.get("billing")) {
+        setActiveTab("billing");
+      } else if (params.get("gmail") || params.get("error")) {
+        setActiveTab("gmail");
+      }
 
       if (params.get("billing") === "success") {
         toast.success("Welcome to Pro. You now have unlimited letters.");
-        window.history.replaceState({}, "", "/settings");
+        window.history.replaceState({}, "", "/settings?tab=billing");
       } else if (params.get("gmail") === "connected") {
         toast.success("Gmail connected. Letters will now send directly from your account.");
-        window.history.replaceState({}, "", "/settings");
+        window.history.replaceState({}, "", "/settings?tab=gmail");
       } else if (params.get("error")) {
         toast.error(`Could not connect Gmail: ${params.get("error")}`);
-        window.history.replaceState({}, "", "/settings");
+        window.history.replaceState({}, "", "/settings?tab=gmail");
       }
     }
   }, []);
@@ -736,7 +732,12 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (typeof window !== "undefined") {
+                    window.history.replaceState({}, "", `/settings?tab=${tab.id}`);
+                  }
+                }}
                 className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-all cursor-pointer shrink-0 ${
                   isActive
                     ? "border-ink text-ink font-semibold"

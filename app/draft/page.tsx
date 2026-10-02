@@ -570,7 +570,7 @@ export default function DraftPage() {
                   </div>
                 </div>
                 <Link
-                  href="/settings"
+                  href="/settings?tab=gmail"
                   className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0 self-start sm:self-auto py-1"
                 >
                   <span>Connect Gmail</span>
@@ -592,7 +592,7 @@ export default function DraftPage() {
                   </div>
                 </div>
                 <Link
-                  href="/settings"
+                  href="/settings?tab=resume"
                   className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0 self-start sm:self-auto py-1"
                 >
                   <span>Upload résumé</span>
@@ -603,36 +603,43 @@ export default function DraftPage() {
 
             {/* Active Résumé Indicator / Selector */}
             {!isResumeLoading && resumes.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border border-hairline bg-[#FAF9F5] px-3.5 py-2.5 rounded-sm text-xs">
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <FileText className="h-4 w-4 text-muted-ink shrink-0" />
-                  <span className="text-muted-ink shrink-0">Attached résumé:</span>
-                  {resumes.length > 1 ? (
-                    <select
-                      value={selectedResume?.id || ""}
-                      onChange={(e) => {
-                        const target = resumes.find((r) => r.id === e.target.value);
-                        if (target) {
-                          setSelectedResume(target);
-                          setResume(target);
-                        }
-                      }}
-                      className="bg-paper border border-hairline rounded-sm px-2 py-1 text-xs font-medium text-ink focus:border-seal focus:outline-none cursor-pointer max-w-full truncate"
-                    >
-                      {resumes.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.label || "Primary Résumé"} {r.is_default ? "• Default" : ""} ({r.file_name || "PDF"})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="font-medium text-ink truncate">
-                      {selectedResume?.label || "Primary Résumé"} ({selectedResume?.file_name || "PDF"})
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 border border-hairline bg-[#FAF9F5] p-3 sm:px-3.5 sm:py-2.5 rounded-sm text-xs">
+                <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
+                  <FileText className="h-4 w-4 text-muted-ink shrink-0 mt-0.5 sm:mt-0" />
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                    <span className="text-muted-ink shrink-0 font-medium sm:font-normal">
+                      Attached résumé:
                     </span>
-                  )}
+                    {resumes.length > 1 ? (
+                      <select
+                        value={selectedResume?.id || ""}
+                        onChange={(e) => {
+                          const target = resumes.find((r) => r.id === e.target.value);
+                          if (target) {
+                            setSelectedResume(target);
+                            setResume(target);
+                          }
+                        }}
+                        className="w-full sm:w-auto bg-paper border border-hairline rounded-sm px-2 py-1 text-xs font-medium text-ink focus:border-seal focus:outline-none cursor-pointer truncate"
+                      >
+                        {resumes.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.label || "Primary Résumé"} {r.is_default ? "• Default" : ""} ({r.file_name || "PDF"})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="font-medium text-ink truncate text-xs">
+                        {selectedResume?.label || "Primary Résumé"}{" "}
+                        <span className="text-muted-ink font-normal">
+                          ({selectedResume?.file_name || "PDF"})
+                        </span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto text-[11px]">
+                <div className="flex items-center gap-2 shrink-0 pt-1.5 sm:pt-0 border-t border-hairline/60 sm:border-t-0 text-[11px]">
                   {usage?.plan === "pro" ? (
                     <Link
                       href="/settings?tab=resume"
