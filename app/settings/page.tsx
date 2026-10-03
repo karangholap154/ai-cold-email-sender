@@ -1,43 +1,28 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import TextareaAutosize from "react-textarea-autosize";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import {
   FileText,
-  Upload,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  Copy,
-  PenLine,
   User,
-  Globe,
-  Code2,
-  Link2,
-  Phone,
   Mail,
-  Unlink,
   CreditCard,
-  Zap,
+  Loader2,
   Save,
-  Plus,
-  Trash2,
-  Edit2,
-  Star,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import type { Resume, GmailConnectionStatus, UserUsage } from "@/lib/types/database";
 import { generateFormattedSignature } from "@/lib/signature";
 import { initiateCheckout } from "@/lib/billing";
 
-type SettingsTab = "profile" | "resume" | "gmail" | "billing";
+// Modular settings components
+import { SignatureTab } from "@/components/settings/signature-tab";
+import { ResumeTab } from "@/components/settings/resume-tab";
+import { GmailTab } from "@/components/settings/gmail-tab";
+import { BillingTab } from "@/components/settings/billing-tab";
+import { DisconnectModal } from "@/components/settings/disconnect-modal";
+import { AddResumeModal } from "@/components/settings/add-resume-modal";
+
+type SettingsTabType = "profile" | "resume" | "gmail" | "billing";
 
 interface SettingsBaseline {
   skillsSummary: string;
@@ -62,7 +47,7 @@ const MIGRATION_SQL = `alter table public.profiles
   add column if not exists dodo_subscription_id text;`;
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const [activeTab, setActiveTab] = useState<SettingsTabType>("profile");
   const [resume, setResume] = useState<Resume | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [skillsSummary, setSkillsSummary] = useState("");
@@ -70,19 +55,25 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Add résumé modal state
   const [showAddResumeModal, setShowAddResumeModal] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newFile, setNewFile] = useState<File | null>(null);
   const [newSkillsSummary, setNewSkillsSummary] = useState("");
   const [newIsDefault, setNewIsDefault] = useState(false);
   const [isSubmittingNewResume, setIsSubmittingNewResume] = useState(false);
+  const newFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit inline résumé state
   const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [editingSkillsSummary, setEditingSkillsSummary] = useState("");
   const [isUpdatingResume, setIsUpdatingResume] = useState(false);
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
-  const newFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Baseline state for unsaved dirty check
   const [baseline, setBaseline] = useState<SettingsBaseline | null>(null);
 
   // User Plan & Usage State
@@ -111,7 +102,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const requestedTab = params.get("tab") as SettingsTab | null;
+      const requestedTab = params.get("tab") as SettingsTabType | null;
 
       if (requestedTab && ["profile", "resume", "gmail", "billing"].includes(requestedTab)) {
         setActiveTab(requestedTab);
@@ -261,8 +252,7 @@ export default function SettingsPage() {
     toast.info("Unsaved modifications reverted.");
   };
 
-  // Update signature when fields change if user hasn't manually customized textarea
-  const updateGeneratedSignature = (
+  const updateGeneratedSignature = useCallback((
     fn: string,
     so: string,
     po: string,
@@ -282,7 +272,7 @@ export default function SettingsPage() {
       }, layout);
       setCustomSignature(generated);
     }
-  };
+  }, [activeLayout, isCustomDirty]);
 
   const applyPreset = (layout: "stack" | "inline" | "compact") => {
     setActiveLayout(layout);
@@ -670,13 +660,13 @@ export default function SettingsPage() {
 
   const tabs = [
     {
-      id: "profile" as SettingsTab,
+      id: "profile" as SettingsTabType,
       label: "Signature",
       icon: User,
       badge: null,
     },
     {
-      id: "resume" as SettingsTab,
+      id: "resume" as SettingsTabType,
       label: "Résumé",
       icon: FileText,
       badge: resume?.file_url ? (
@@ -686,7 +676,7 @@ export default function SettingsPage() {
       ),
     },
     {
-      id: "gmail" as SettingsTab,
+      id: "gmail" as SettingsTabType,
       label: "Gmail",
       icon: Mail,
       badge: gmailStatus.connected ? (
@@ -696,7 +686,7 @@ export default function SettingsPage() {
       ),
     },
     {
-      id: "billing" as SettingsTab,
+      id: "billing" as SettingsTabType,
       label: "Billing",
       icon: CreditCard,
       badge:
@@ -713,7 +703,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-28">
+    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-36 md:pb-28">
       <div className="mx-auto w-full max-w-2xl">
         {/* Page Header */}
         <div className="mb-6 sm:mb-8">
@@ -761,726 +751,81 @@ export default function SettingsPage() {
           <form onSubmit={handleSave} className="space-y-6">
             {/* TAB 1: Profile & Custom Signature */}
             {activeTab === "profile" && (
-              <div className="space-y-6 animate-in fade-in-50 duration-150">
-                <div>
-                  <h2 className="font-heading text-lg sm:text-xl text-ink">
-                    How you sign off
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                    Added to the end of every letter automatically.
-                  </p>
-                </div>
-
-                {/* Supabase migration alert if database columns not present */}
-                {migrationRequired && (
-                  <div className="border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm space-y-2.5 text-xs">
-                    <div className="flex items-center gap-2 text-amber-800 font-medium">
-                      <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span>One-time database migration query needed in Supabase</span>
-                    </div>
-                    <p className="text-[11px] text-muted-ink leading-relaxed">
-                      To persist your signature fields in Supabase, run this query in your <strong>Supabase Dashboard → SQL Editor</strong>:
-                    </p>
-                    <div className="flex items-center justify-between gap-2 border border-hairline bg-paper p-2 rounded-xs overflow-x-auto font-mono text-[11px] text-ink">
-                      <span className="truncate">{MIGRATION_SQL.replace(/\s+/g, " ")}</span>
-                      <button
-                        type="button"
-                        onClick={handleCopySql}
-                        className="inline-flex items-center gap-1 shrink-0 rounded-xs border border-hairline bg-[#EDEAE2] px-2 py-1 text-[10px] font-sans font-medium text-ink hover:bg-[#E2DDD3] cursor-pointer"
-                      >
-                        <Copy className="h-3 w-3" />
-                        <span>Copy SQL</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="border border-hairline bg-paper p-4 sm:p-5 rounded-sm space-y-4">
-                  {/* Row 1: Full Name & Sign-off Phrase */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5">
-                      <label htmlFor="full-name" className="flex items-center gap-1.5 text-xs font-medium text-ink">
-                        <User className="h-3.5 w-3.5 text-muted-ink" />
-                        <span>Full Name</span>
-                      </label>
-                      <input
-                        id="full-name"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setFullName(val);
-                          updateGeneratedSignature(val, signOff, portfolioUrl, githubUrl, linkedinUrl, phone);
-                        }}
-                        placeholder="e.g. Karan Gholap"
-                        className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label htmlFor="sign-off" className="flex items-center gap-1.5 text-xs font-medium text-ink">
-                        <PenLine className="h-3.5 w-3.5 text-muted-ink" />
-                        <span>Sign-off Phrase</span>
-                      </label>
-                      <input
-                        id="sign-off"
-                        type="text"
-                        value={signOff}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSignOff(val);
-                          updateGeneratedSignature(fullName, val, portfolioUrl, githubUrl, linkedinUrl, phone);
-                        }}
-                        placeholder="e.g. Best regards, / Best,"
-                        className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row 2: Portfolio / Website & Phone */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5">
-                      <label htmlFor="portfolio-url" className="flex items-center gap-1.5 text-xs font-medium text-ink">
-                        <Globe className="h-3.5 w-3.5 text-muted-ink" />
-                        <span>Portfolio / Website</span>
-                      </label>
-                      <input
-                        id="portfolio-url"
-                        type="url"
-                        value={portfolioUrl}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPortfolioUrl(val);
-                          updateGeneratedSignature(fullName, signOff, val, githubUrl, linkedinUrl, phone);
-                        }}
-                        placeholder="https://yourwebsite.com"
-                        className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label htmlFor="phone" className="flex items-center gap-1.5 text-xs font-medium text-ink">
-                        <Phone className="h-3.5 w-3.5 text-muted-ink" />
-                        <span>Phone Number (optional)</span>
-                      </label>
-                      <input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setPhone(val);
-                          updateGeneratedSignature(fullName, signOff, portfolioUrl, githubUrl, linkedinUrl, val);
-                        }}
-                        placeholder="+1 (555) 000-0000"
-                        className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row 3: GitHub & LinkedIn */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-1.5">
-                      <label htmlFor="github-url" className="flex items-center gap-1.5 text-xs font-medium text-ink">
-                        <Code2 className="h-3.5 w-3.5 text-muted-ink" />
-                        <span>GitHub URL</span>
-                      </label>
-                      <input
-                        id="github-url"
-                        type="url"
-                        value={githubUrl}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setGithubUrl(val);
-                          updateGeneratedSignature(fullName, signOff, portfolioUrl, val, linkedinUrl, phone);
-                        }}
-                        placeholder="https://github.com/yourhandle"
-                        className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label htmlFor="linkedin-url" className="flex items-center gap-1.5 text-xs font-medium text-ink">
-                        <Link2 className="h-3.5 w-3.5 text-muted-ink" />
-                        <span>LinkedIn URL</span>
-                      </label>
-                      <input
-                        id="linkedin-url"
-                        type="url"
-                        value={linkedinUrl}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setLinkedinUrl(val);
-                          updateGeneratedSignature(fullName, signOff, portfolioUrl, githubUrl, val, phone);
-                        }}
-                        placeholder="https://linkedin.com/in/yourhandle"
-                        className="w-full rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Interactive Signature Preview & Direct Editor */}
-                  <div className="space-y-2.5 pt-3 border-t border-hairline">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <span className="block text-xs font-medium text-ink">
-                          Signature Preview & Customizer
-                        </span>
-                        <span className="text-[11px] text-muted-ink">
-                          Click a format preset or edit the text directly:
-                        </span>
-                      </div>
-
-                      {/* Layout Preset Buttons */}
-                      <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
-                        <button
-                          type="button"
-                          onClick={() => applyPreset("stack")}
-                          title="Each link on its own line (clean, no broken wraps)"
-                          className={`rounded-xs border border-hairline px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
-                            activeLayout === "stack"
-                              ? "bg-ink text-paper"
-                              : "bg-paper text-ink hover:bg-[#EDEAE2]"
-                          }`}
-                        >
-                          Line by line
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPreset("inline")}
-                          title="All links in a single line separated by pipes"
-                          className={`rounded-xs border border-hairline px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
-                            activeLayout === "inline"
-                              ? "bg-ink text-paper"
-                              : "bg-paper text-ink hover:bg-[#EDEAE2]"
-                          }`}
-                        >
-                          Single line
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPreset("compact")}
-                          title="Clean domain handles separated by bullets"
-                          className={`rounded-xs border border-hairline px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
-                            activeLayout === "compact"
-                              ? "bg-ink text-paper"
-                              : "bg-paper text-ink hover:bg-[#EDEAE2]"
-                          }`}
-                        >
-                          Compact
-                        </button>
-                      </div>
-                    </div>
-
-                    <TextareaAutosize
-                      minRows={5}
-                      value={customSignature}
-                      onChange={(e) => {
-                        setCustomSignature(e.target.value);
-                        setIsCustomDirty(true);
-                      }}
-                      placeholder={`Best regards,\nKaran Gholap\n\nPortfolio: https://...\nGitHub: https://...`}
-                      className="w-full resize-none rounded-xs border border-dashed border-hairline bg-[#FAF9F5] p-3 sm:p-4 font-mono text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none leading-relaxed transition-colors"
-                    />
-                    <p className="text-[11px] text-muted-ink">
-                      This exact signature will be appended to the bottom of all drafted correspondence.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Tab Action */}
-                <div className="flex items-center justify-end pt-2 border-t border-hairline">
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-sm border border-hairline bg-ink px-5 py-2.5 sm:py-2 text-xs font-medium text-paper hover:bg-ink/90 disabled:opacity-50 transition-colors cursor-pointer min-h-[42px]"
-                  >
-                    {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    <span>{isSaving ? "Saving..." : "Save profile & signature"}</span>
-                  </button>
-                </div>
-              </div>
+              <SignatureTab
+                fullName={fullName}
+                setFullName={setFullName}
+                signOff={signOff}
+                setSignOff={setSignOff}
+                portfolioUrl={portfolioUrl}
+                setPortfolioUrl={setPortfolioUrl}
+                githubUrl={githubUrl}
+                setGithubUrl={setGithubUrl}
+                linkedinUrl={linkedinUrl}
+                setLinkedinUrl={setLinkedinUrl}
+                phone={phone}
+                setPhone={setPhone}
+                customSignature={customSignature}
+                setCustomSignature={setCustomSignature}
+                activeLayout={activeLayout}
+                applyPreset={applyPreset}
+                setIsCustomDirty={setIsCustomDirty}
+                updateGeneratedSignature={updateGeneratedSignature}
+                migrationRequired={migrationRequired}
+                handleCopySql={handleCopySql}
+                migrationSql={MIGRATION_SQL}
+                isSaving={isSaving}
+              />
             )}
 
             {/* TAB 2: Resume PDF & Skills Background */}
             {activeTab === "resume" && (
-              <div className="space-y-6 animate-in fade-in-50 duration-150">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h2 className="font-heading text-lg sm:text-xl text-ink">
-                      Targeted Résumés & Backgrounds
-                    </h2>
-                    <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                      Upload and label résumé versions for different roles (e.g. Frontend, Full-Stack). Vina references the active version to tailor each letter.
-                    </p>
-                  </div>
-
-                  {usage?.plan === "pro" && resumes.length < 3 ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddResumeModal(true)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal hover:bg-seal/90 text-paper px-3.5 py-2 text-xs font-medium transition-colors shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add another résumé</span>
-                    </button>
-                  ) : usage?.plan === "pro" ? (
-                    <span className="text-xs text-muted-ink">3 résumé versions maximum</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("billing")}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-sm border border-seal/40 bg-seal/10 text-seal hover:bg-seal/20 px-3.5 py-2 text-xs font-medium transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
-                    >
-                      <Star className="h-3.5 w-3.5" />
-                      <span>Unlock multiple résumés</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Free plan info banner */}
-                {usage?.plan === "free" && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
-                    <div className="flex items-start gap-2.5 min-w-0">
-                      <AlertCircle className="h-4 w-4 shrink-0 text-muted-ink mt-0.5" />
-                      <div>
-                        <p className="font-medium text-ink">
-                          You&apos;re on the Free plan (1 résumé).
-                        </p>
-                        <p className="text-muted-ink mt-0.5">
-                          Upgrade to Pro to manage multiple targeted versions for different roles and tech stacks.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("billing")}
-                      className="text-xs text-seal font-medium underline underline-offset-4 shrink-0 self-start sm:self-auto cursor-pointer"
-                    >
-                      View Pro features
-                    </button>
-                  </div>
-                )}
-
-                {/* Hidden file input for Replace action */}
-                <input
-                  ref={replaceFileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleReplaceFileSelected}
-                  className="hidden"
-                />
-
-                {/* Résumé List */}
-                <div className="space-y-4">
-                  {resumes.length === 0 ? (
-                    <div className="border border-dashed border-hairline bg-[#FAF9F5] p-8 rounded-sm text-center space-y-3">
-                      <FileText className="mx-auto h-8 w-8 text-muted-ink/60" />
-                      <div>
-                        <p className="text-sm font-medium text-ink">No résumé uploaded yet</p>
-                        <p className="text-xs text-muted-ink mt-1">
-                          Upload your résumé (PDF) so Vina can reference your experience when drafting letters.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-2 border border-hairline px-4 py-2 text-xs font-medium text-ink hover:bg-[#ece9e1] transition-colors rounded-sm cursor-pointer"
-                      >
-                        <Upload className="h-3.5 w-3.5" />
-                        <span>Upload résumé (PDF)</span>
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="application/pdf"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </div>
-                  ) : (
-                    resumes.map((r) => {
-                      const isDefault = Boolean(r.is_default);
-                      const isEditing = editingResumeId === r.id;
-
-                      return (
-                        <div
-                          key={r.id}
-                          className={`border rounded-sm p-4 sm:p-5 transition-colors ${
-                            isDefault
-                              ? "border-seal/60 bg-paper shadow-2xs"
-                              : "border-hairline bg-paper"
-                          }`}
-                        >
-                          {/* Card Header */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-3.5">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <h3 className="font-heading text-base font-medium text-ink truncate">
-                                {r.label || "Primary Résumé"}
-                              </h3>
-                              {isDefault ? (
-                                <span className="rounded-sm border border-seal/40 bg-seal/10 text-seal px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider shrink-0">
-                                  Default
-                                </span>
-                              ) : null}
-                            </div>
-
-                            {/* Actions on Card Header */}
-                            <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-xs text-muted-ink">
-                              {!isDefault && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetDefaultResume(r.id)}
-                                  className="inline-flex items-center gap-1 hover:text-ink transition-colors cursor-pointer py-1"
-                                >
-                                  <Star className="h-3 w-3 text-muted-ink" />
-                                  <span>Make default</span>
-                                </button>
-                              )}
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  isEditing
-                                    ? setEditingResumeId(null)
-                                    : handleStartEdit(r)
-                                }
-                                className="inline-flex items-center gap-1 hover:text-ink transition-colors cursor-pointer py-1"
-                              >
-                                <Edit2 className="h-3 w-3" />
-                                <span>{isEditing ? "Close" : "Edit details"}</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleTriggerReplace(r.id)}
-                                className="inline-flex items-center gap-1 hover:text-ink transition-colors cursor-pointer py-1"
-                              >
-                                <Upload className="h-3 w-3" />
-                                <span>Replace PDF</span>
-                              </button>
-
-                              {resumes.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteResume(r.id)}
-                                  className="inline-flex items-center gap-1 text-muted-ink hover:text-red-700 transition-colors cursor-pointer py-1 ml-1"
-                                  title="Delete this résumé"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* File info row */}
-                          <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-muted-ink">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FileText className="h-4 w-4 shrink-0 text-muted-ink" />
-                              <span className="font-medium text-ink truncate">
-                                {r.file_name || "resume.pdf"}
-                              </span>
-                              {r.file_size ? (
-                                <span className="text-[11px] text-muted-ink shrink-0">
-                                  ({Math.round(r.file_size / 1024)} KB)
-                                </span>
-                              ) : null}
-                            </div>
-                            <span className="text-[11px] text-muted-ink shrink-0">
-                              Uploaded{" "}
-                              {new Date(r.updated_at).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
-
-                          {/* Inline Edit Form OR Display Area */}
-                          {isEditing ? (
-                            <div className="mt-4 pt-3.5 border-t border-hairline space-y-3.5 animate-in fade-in-50 duration-100">
-                              <div className="space-y-1">
-                                <label className="block text-xs font-medium text-ink">
-                                  Target Role Label
-                                </label>
-                                <input
-                                  type="text"
-                                  value={editingLabel}
-                                  onChange={(e) => setEditingLabel(e.target.value)}
-                                  placeholder="e.g. Frontend Specialist, Full-Stack Lead"
-                                  className="w-full rounded-sm border border-hairline bg-paper px-3 py-1.5 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors"
-                                />
-                              </div>
-
-                              <div className="space-y-1">
-                                <label className="block text-xs font-medium text-ink">
-                                  Role-Specific Background & Skills Summary
-                                </label>
-                                <TextareaAutosize
-                                  minRows={4}
-                                  value={editingSkillsSummary}
-                                  onChange={(e) => setEditingSkillsSummary(e.target.value)}
-                                  placeholder="Highlight the key skills and achievements relevant to this specific role target..."
-                                  className="w-full resize-none rounded-sm border border-hairline bg-paper px-3 py-2 text-xs text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors leading-relaxed"
-                                />
-                              </div>
-
-                              <div className="flex items-center justify-end gap-2 pt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingResumeId(null)}
-                                  className="text-xs text-muted-ink hover:text-ink px-2.5 py-1.5 cursor-pointer"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={isUpdatingResume}
-                                  onClick={() => handleSaveEdit(r.id)}
-                                  className="inline-flex items-center gap-1.5 rounded-sm bg-ink hover:bg-ink/90 text-paper px-3.5 py-1.5 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
-                                >
-                                  {isUpdatingResume && (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  )}
-                                  <span>Save details</span>
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="mt-3.5 pt-3 border-t border-hairline/70">
-                              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-ink">
-                                Role Background & Skills
-                              </p>
-                              {r.skills_summary ? (
-                                <p className="mt-1.5 text-xs text-ink/90 leading-relaxed bg-[#FAF9F5] p-3 rounded-xs border border-hairline/60">
-                                  {r.skills_summary}
-                                </p>
-                              ) : (
-                                <p className="mt-1 text-xs text-muted-ink italic">
-                                  No background summary added yet for this version.
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+              <ResumeTab
+                resumes={resumes}
+                usage={usage}
+                editingResumeId={editingResumeId}
+                setEditingResumeId={setEditingResumeId}
+                editingLabel={editingLabel}
+                setEditingLabel={setEditingLabel}
+                editingSkillsSummary={editingSkillsSummary}
+                setEditingSkillsSummary={setEditingSkillsSummary}
+                isUpdatingResume={isUpdatingResume}
+                handleSetDefaultResume={handleSetDefaultResume}
+                handleDeleteResume={handleDeleteResume}
+                handleStartEdit={handleStartEdit}
+                handleSaveEdit={handleSaveEdit}
+                handleTriggerReplace={handleTriggerReplace}
+                handleReplaceFileSelected={handleReplaceFileSelected}
+                replaceFileInputRef={replaceFileInputRef}
+                fileInputRef={fileInputRef}
+                handleFileChange={handleFileChange}
+                setShowAddResumeModal={setShowAddResumeModal}
+                setActiveTab={setActiveTab}
+              />
             )}
 
             {/* TAB 3: Sending Account (Gmail) */}
             {activeTab === "gmail" && (
-              <div className="space-y-6 animate-in fade-in-50 duration-150">
-                <div>
-                  <h2 className="font-heading text-lg sm:text-xl text-ink">
-                    Gmail
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                    Connect your Gmail to start sending letters directly from your personal address.
-                  </p>
-                </div>
-
-                <div className="border border-hairline bg-paper p-3.5 sm:p-5 rounded-sm">
-                  {gmailStatus.connected ? (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <Mail className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
-                        <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-ink truncate font-mono">
-                            Sending as {gmailStatus.email}
-                          </p>
-                          <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
-                            Connected {gmailStatus.connectedAt ? new Date(gmailStatus.connectedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : ""}
-                          </p>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={isDisconnectingGmail}
-                        onClick={() => setShowDisconnectModal(true)}
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-ink hover:text-red-700 underline underline-offset-4 self-start sm:self-auto py-1 cursor-pointer disabled:opacity-50 transition-colors"
-                      >
-                        {isDisconnectingGmail ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Unlink className="h-3.5 w-3.5" />
-                        )}
-                        <span>Disconnect</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
-                        <div>
-                          <p className="text-xs sm:text-sm font-medium text-ink">
-                            Connect your Gmail to start sending.
-                          </p>
-                          <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
-                            Vina asks for permission to send messages on your behalf and to find your own sent messages so follow-ups land in the same conversation. It never reads your incoming mail.
-                          </p>
-                        </div>
-                      </div>
-
-                      <a
-                        href="/api/gmail/connect"
-                        className="inline-flex items-center justify-center gap-2 rounded-sm border border-hairline bg-[#EDEAE2] hover:bg-[#E4DFD3] text-ink px-4 py-2 text-xs font-medium transition-colors shrink-0 self-start sm:self-auto min-h-[38px]"
-                      >
-                        <Mail className="h-3.5 w-3.5 text-seal" />
-                        <span>Connect Gmail</span>
-                      </a>
-                    </div>
-                  )}
-                </div>
-
-                {/* Scope disclosure banner */}
-                <div className="border border-hairline bg-[#FAF9F5] p-4 sm:p-5 rounded-sm space-y-2 text-xs text-muted-ink leading-relaxed">
-                  <div className="flex items-center gap-2 font-medium text-ink text-xs">
-                    <CheckCircle2 className="h-4 w-4 text-confirmed shrink-0" />
-                    <span>Scope disclosure</span>
-                  </div>
-                  <p>
-                    Vina asks for permission to send messages on your behalf and to find your own sent messages so follow-ups land in the same conversation. It never reads your incoming mail.
-                  </p>
-                </div>
-              </div>
+              <GmailTab
+                gmailStatus={gmailStatus}
+                isDisconnectingGmail={isDisconnectingGmail}
+                setShowDisconnectModal={setShowDisconnectModal}
+              />
             )}
 
             {/* TAB 4: Plan & Membership */}
             {activeTab === "billing" && (
-              <div className="space-y-6 animate-in fade-in-50 duration-150">
-                <div>
-                  <h2 className="font-heading text-lg sm:text-xl text-ink">
-                    Billing
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-ink leading-relaxed">
-                    View your monthly sending allowance or manage your subscription.
-                  </p>
-                </div>
-
-                {/* Membership & Usage Card */}
-                <div className="border border-hairline bg-paper p-3.5 sm:p-5 rounded-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-muted-ink" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs sm:text-sm font-medium text-ink">
-                            {usage?.plan === "pro"
-                              ? "You're on Pro."
-                              : "You're on the free plan — 5 letters this month."}
-                          </p>
-                          {usage?.plan === "pro" ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-seal bg-[#FAF6EE] px-1.5 py-0.5 rounded-sm border border-seal/30">
-                              <Zap className="h-2.5 w-2.5 fill-seal text-seal" />
-                              <span>Active</span>
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-ink bg-paper px-1.5 py-0.5 rounded-sm border border-hairline">
-                              Free
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5 leading-relaxed">
-                          {usage?.plan === "pro"
-                            ? "Unlimited tailored letters, automated attachments, and follow-ups."
-                            : `${usage?.monthlySends ?? 0} of ${usage?.monthlyLimit ?? 5} letters sent this month.`}
-                        </p>
-                      </div>
-                    </div>
-
-                    {usage?.plan === "pro" ? (
-                      <button
-                        type="button"
-                        disabled={isOpeningPortal}
-                        onClick={handleManageBilling}
-                        className="inline-flex items-center justify-center gap-1.5 text-xs text-muted-ink hover:text-ink underline underline-offset-4 self-start sm:self-auto py-1 cursor-pointer"
-                      >
-                        {isOpeningPortal && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                        <span>Manage billing</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isUpgrading}
-                        onClick={handleUpgrade}
-                        className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-4 py-2 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto min-h-[38px] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-                      >
-                        {isUpgrading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Zap className="h-3.5 w-3.5 fill-paper" />
-                        )}
-                        <span>Upgrade to Pro</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Free quota progress bar */}
-                  {usage?.plan !== "pro" && (
-                    <div className="space-y-1.5 pt-2 border-t border-hairline">
-                      <div className="flex justify-between text-[11px] text-muted-ink">
-                        <span>Monthly quota usage</span>
-                        <span>
-                          {Math.min(usage?.monthlySends ?? 0, 5)} / 5 sends
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-[#EDEAE2] rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-300 ${
-                            (usage?.monthlySends ?? 0) >= 5 ? "bg-amber-700" : "bg-seal"
-                          }`}
-                          style={{
-                            width: `${Math.min(
-                              ((usage?.monthlySends ?? 0) / 5) * 100,
-                              100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-muted-ink">
-                        Payment methods accepted: UPI (PhonePe, GPay, Paytm) in India • Credit/Debit Cards, Apple Pay, Google Pay globally.
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Plan Comparison Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
-                  <div className="border border-hairline bg-paper p-4 rounded-sm space-y-2">
-                    <span className="font-medium text-ink">Free Tier</span>
-                    <ul className="space-y-1.5 text-muted-ink text-[11px]">
-                      <li>• 5 tailored letters per month</li>
-                      <li>• 1 active résumé PDF</li>
-                      <li>• 2 AI regenerations per draft</li>
-                      <li>• 30-day sent letters history</li>
-                      <li>• Duplicate contact detection</li>
-                    </ul>
-                  </div>
-
-                  <div className="border border-seal/30 bg-[#FAF6EE] p-4 rounded-sm space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-seal">Pro Membership</span>
-                      <span className="text-[10px] font-semibold text-seal uppercase tracking-wider">$9 (₹499) / mo</span>
-                    </div>
-                    <ul className="space-y-1.5 text-muted-ink text-[11px]">
-                      <li>• Unlimited tailored letters</li>
-                      <li>• 1-click follow-up correspondence</li>
-                      <li>• Unlimited AI regenerations</li>
-                      <li>• Full lifetime sent letters history</li>
-                      <li>• Priority model & fast support</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              <BillingTab
+                usage={usage}
+                isUpgrading={isUpgrading}
+                handleUpgrade={handleUpgrade}
+                isOpeningPortal={isOpeningPortal}
+                handleManageBilling={handleManageBilling}
+              />
             )}
 
-            {/* Sticky Floating Save Bar when settings have unsaved modifications across any tab */}
+            {/* Sticky Floating Save Bar: elevated with z-50 and offset on mobile above the mobile navigation dock */}
             {isDirty && (
-              <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-hairline bg-paper/95 backdrop-blur-md px-4 py-3 sm:px-6 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] animate-in slide-in-from-bottom duration-200">
+              <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-50 border-t border-hairline bg-paper/95 backdrop-blur-md px-4 py-3 sm:px-6 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] animate-in slide-in-from-bottom duration-200">
                 <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="relative flex h-2 w-2 shrink-0">
@@ -1526,148 +871,30 @@ export default function SettingsPage() {
         )}
 
         {/* In-App Styled Gmail Disconnect Modal */}
-        <Dialog open={showDisconnectModal} onOpenChange={setShowDisconnectModal}>
-          <DialogContent className="border border-hairline bg-paper text-ink sm:max-w-md p-5 sm:p-6">
-            <DialogHeader className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 text-amber-800 text-xs font-semibold uppercase tracking-wider">
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span>Disconnect Gmail</span>
-              </div>
-              <DialogTitle className="font-heading text-lg sm:text-xl text-ink">
-                Disconnect your Gmail account?
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-ink leading-relaxed">
-                You will no longer be able to send tailored letters directly from your personal address until you reconnect Google OAuth in Settings.
-              </DialogDescription>
-            </DialogHeader>
-
-            {gmailStatus.email && (
-              <div className="my-2 rounded-sm border border-hairline bg-[#FAF9F5] p-3 text-xs flex items-center gap-2.5">
-                <Mail className="h-4 w-4 text-muted-ink shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-mono text-ink font-medium truncate">{gmailStatus.email}</p>
-                  <p className="text-[11px] text-muted-ink mt-0.5">Direct personal OAuth dispatch</p>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
-              <button
-                type="button"
-                disabled={isDisconnectingGmail}
-                onClick={() => setShowDisconnectModal(false)}
-                className="px-4 py-2 rounded-sm border border-hairline text-xs font-medium text-muted-ink hover:text-ink transition-colors cursor-pointer"
-              >
-                Keep connected
-              </button>
-              <button
-                type="button"
-                disabled={isDisconnectingGmail}
-                onClick={executeDisconnectGmail}
-                className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-red-800 hover:bg-red-900 px-4 py-2 text-xs font-medium text-paper shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {isDisconnectingGmail && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>Disconnect account</span>
-              </button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <DisconnectModal
+          open={showDisconnectModal}
+          onOpenChange={setShowDisconnectModal}
+          email={gmailStatus.email}
+          isDisconnecting={isDisconnectingGmail}
+          onDisconnect={executeDisconnectGmail}
+        />
 
         {/* In-App Styled Add Résumé Modal (Pro) */}
-        <Dialog open={showAddResumeModal} onOpenChange={setShowAddResumeModal}>
-          <DialogContent className="border border-hairline bg-paper text-ink sm:max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 text-seal text-xs font-semibold uppercase tracking-wider">
-                <FileText className="h-3.5 w-3.5" />
-                <span>New Résumé Version</span>
-              </div>
-              <DialogTitle className="font-heading text-lg sm:text-xl text-ink">
-                Add Targeted Résumé
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-ink leading-relaxed">
-                Add a specialized CV tailored for specific roles (e.g. Frontend Engineer, Founding Engineer). Your AI drafts will cite this version when selected.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 pt-2">
-              <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">
-                  Version Label <span className="text-red-700">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Frontend / Design Engineer"
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  className="w-full text-xs font-mono bg-paper border border-hairline rounded-sm px-3 py-2 text-ink placeholder:text-muted-ink/50 focus:outline-none focus:border-ink transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-ink mb-1.5">
-                  PDF Document <span className="text-red-700">*</span>
-                </label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  ref={newFileInputRef}
-                  onChange={(e) => setNewFile(e.target.files?.[0] ?? null)}
-                  className="block w-full text-xs text-muted-ink file:mr-3 file:py-1.5 file:px-3 file:rounded-sm file:border file:border-hairline file:text-xs file:font-medium file:bg-[#FAF9F5] file:text-ink hover:file:bg-[#F2EFE9] file:cursor-pointer cursor-pointer"
-                />
-                <p className="text-[10px] text-muted-ink mt-1">PDF format only, maximum 10MB.</p>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-medium text-ink">
-                    Parsed Skills & Experience Summary
-                  </label>
-                  <span className="text-[10px] text-muted-ink">Optional manual notes</span>
-                </div>
-                <textarea
-                  rows={4}
-                  placeholder="Summarize key achievements, tech stack, or portfolio highlights relevant to this specific role target..."
-                  value={newSkillsSummary}
-                  onChange={(e) => setNewSkillsSummary(e.target.value)}
-                  className="w-full text-xs font-mono bg-paper border border-hairline rounded-sm p-3 text-ink placeholder:text-muted-ink/50 focus:outline-none focus:border-ink transition-colors leading-relaxed"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="newIsDefault"
-                  checked={newIsDefault}
-                  onChange={(e) => setNewIsDefault(e.target.checked)}
-                  className="rounded-xs border-hairline text-seal focus:ring-0 cursor-pointer"
-                />
-                <label htmlFor="newIsDefault" className="text-xs text-ink cursor-pointer select-none">
-                  Set as default résumé version for new drafts
-                </label>
-              </div>
-            </div>
-
-            <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-hairline mt-3">
-              <button
-                type="button"
-                disabled={isSubmittingNewResume}
-                onClick={() => setShowAddResumeModal(false)}
-                className="px-4 py-2 rounded-sm border border-hairline text-xs font-medium text-muted-ink hover:text-ink transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isSubmittingNewResume || !newLabel.trim() || !newFile}
-                onClick={handleCreateNewResume}
-                className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal hover:bg-seal/90 px-4 py-2 text-xs font-medium text-paper shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {isSubmittingNewResume && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>Add Version</span>
-              </button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AddResumeModal
+          open={showAddResumeModal}
+          onOpenChange={setShowAddResumeModal}
+          newLabel={newLabel}
+          setNewLabel={setNewLabel}
+          newFile={newFile}
+          setNewFile={setNewFile}
+          newFileInputRef={newFileInputRef}
+          newSkillsSummary={newSkillsSummary}
+          setNewSkillsSummary={setNewSkillsSummary}
+          newIsDefault={newIsDefault}
+          setNewIsDefault={setNewIsDefault}
+          isSubmitting={isSubmittingNewResume}
+          onSubmit={handleCreateNewResume}
+        />
       </div>
     </main>
   );
