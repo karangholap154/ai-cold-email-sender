@@ -177,6 +177,22 @@ export default function SignupPage() {
                 {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 <span>{isLoading ? "Creating account..." : "Create account"}</span>
               </button>
+
+              <p className="text-[11px] text-muted-ink text-center pt-2 leading-relaxed">
+                By creating an account, you agree to our{" "}
+                <Link href="/terms" className="text-ink underline underline-offset-2 hover:text-seal">
+                  Terms
+                </Link>
+                ,{" "}
+                <Link href="/privacy" className="text-ink underline underline-offset-2 hover:text-seal">
+                  Privacy Policy
+                </Link>
+                , and{" "}
+                <Link href="/refund" className="text-ink underline underline-offset-2 hover:text-seal">
+                  Refund Policy
+                </Link>
+                .
+              </p>
             </form>
           </div>
         )}

@@ -131,6 +131,18 @@ export default function LoginPage() {
             Create one
           </Link>
         </p>
+
+        <div className="mt-6 flex justify-center gap-4 text-[11px] text-muted-ink">
+          <Link href="/privacy" className="hover:text-ink underline underline-offset-2">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-ink underline underline-offset-2">
+            Terms
+          </Link>
+          <Link href="/contact" className="hover:text-ink underline underline-offset-2">
+            Contact
+          </Link>
+        </div>
       </div>
     </main>
   );
