@@ -85,7 +85,33 @@ export default function TermsOfServicePage() {
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              4. Accounts & Google Connection
+              4. Subscriptions, Billing & Cancellations
+            </h2>
+            <p className="text-muted-ink">
+              Vina offers a free plan with monthly quotas alongside a paid Pro membership ($9 USD / ₹499 INR monthly):
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 text-muted-ink pl-1">
+              <li>
+                <strong className="text-ink">Merchant of Record:</strong> All subscription billing, global card processing, UPI transactions, invoice generation, and tax compliance are securely managed by our authorized Merchant of Record, <strong>Dodo Payments Inc.</strong>. Vina does not process or retain credit card numbers directly.
+              </li>
+              <li>
+                <strong className="text-ink">Recurring Billing:</strong> Pro subscriptions renew automatically at the conclusion of each monthly billing cycle unless cancelled prior to the renewal date.
+              </li>
+              <li>
+                <strong className="text-ink">Cancellation at Any Time:</strong> You can cancel your subscription at any time without fees or penalties directly through your <em>Settings &gt; Billing</em> tab or through the Dodo customer portal. Following cancellation, your Pro benefits remain active until the end of your prepaid period.
+              </li>
+              <li>
+                <strong className="text-ink">Refund Policy:</strong> For details on our 14-day money-back guarantee, refund eligibility, and request procedures, please review our dedicated{" "}
+                <Link href="/refund" className="text-seal underline underline-offset-4 hover:opacity-80">
+                  Refund & Cancellation Policy
+                </Link>.
+              </li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="font-heading text-base sm:text-lg text-ink">
+              5. Accounts & Google Connection
             </h2>
             <p className="text-muted-ink">
               When connecting your Gmail account via Google OAuth 2.0, you authorize the Service to dispatch individual letters as directed by you. You may revoke this access at any time through your account Settings or via Google’s account security panel. We reserve the right to suspend or terminate accounts that violate Google’s Acceptable Use Policies or our anti-spam standards.
@@ -94,7 +120,7 @@ export default function TermsOfServicePage() {
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              5. Intellectual Property
+              6. Intellectual Property
             </h2>
             <p className="text-muted-ink">
               You retain all ownership rights to your uploaded résumé documents, personal background summaries, and finalized correspondence text. We retain all rights, title, and interest in and to the Vina software, design tokens, interfaces, and branding.
@@ -103,7 +129,7 @@ export default function TermsOfServicePage() {
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              6. Limitation of Liability & Disclaimers
+              7. Limitation of Liability & Disclaimers
             </h2>
             <p className="text-muted-ink">
               The Service is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis without warranties of any kind, whether express or implied. Under no circumstances shall Vina, its owners, or affiliates be liable for any indirect, incidental, consequential, or punitive damages arising from the use or inability to use the Service.
@@ -112,23 +138,24 @@ export default function TermsOfServicePage() {
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              7. Changes to Terms
+              8. Governing Law & Dispute Resolution
             </h2>
             <p className="text-muted-ink">
-              We reserve the right to modify these Terms at any time. Material modifications will be posted to this page with an updated effective date. Continued use of the Service following revisions constitutes acceptance of the new terms.
+              These Terms shall be governed by and construed in accordance with applicable laws, without regard to conflict of law principles. Any dispute arising under these Terms shall be resolved amicably through good-faith negotiation prior to formal dispute proceedings.
             </p>
           </section>
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              8. Contact
+              9. Contact
             </h2>
             <p className="text-muted-ink">
-              For any questions regarding these Terms of Service, please reach out to:
+              For any questions regarding these Terms of Service or billing inquiries, please reach out to:
             </p>
             <p className="text-ink font-medium">
               Legal & Support Team<br />
-              Email: <a href="mailto:karangholap154@gmail.com" className="underline underline-offset-2 hover:text-seal">karangholap154@gmail.com</a>
+              Email: <a href="mailto:karangholap154@gmail.com" className="underline underline-offset-2 hover:text-seal">karangholap154@gmail.com</a><br />
+              Website: <a href="https://meetvina.app" className="underline underline-offset-2 hover:text-seal">meetvina.app</a>
             </p>
           </section>
         </div>
@@ -136,9 +163,15 @@ export default function TermsOfServicePage() {
         {/* Footer info */}
         <div className="border-t border-hairline pt-6 text-xs text-muted-ink flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} Vina (meetvina.app). All rights reserved.</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Link href="/privacy" className="hover:text-ink underline underline-offset-4">
               Privacy Policy
+            </Link>
+            <Link href="/refund" className="hover:text-ink underline underline-offset-4">
+              Refund Policy
+            </Link>
+            <Link href="/contact" className="hover:text-ink underline underline-offset-4">
+              Contact
             </Link>
             <Link href="/" className="hover:text-ink underline underline-offset-4">
               Home

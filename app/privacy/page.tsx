@@ -125,58 +125,93 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
               <li>
-                <strong className="text-ink">Encrypted at Rest:</strong> All Google OAuth refresh tokens are encrypted at rest using industry-standard <strong>AES-256-GCM</strong> encryption with unique initialization vectors and authentication tags. Plaintext credentials are never written to disk.
+                <strong className="text-ink">Encrypted at Rest:</strong> All Google OAuth refresh tokens are encrypted at rest using industry-standard <strong>AES-256-GCM</strong> encryption with unique initialization vectors and authentication tags. Plaintext credentials are never written to disk or logged.
               </li>
               <li>
-                <strong className="text-ink">Isolated Storage:</strong> Your uploaded resume PDF files are stored in private, user-isolated Supabase Storage buckets secured by Row Level Security (RLS).
+                <strong className="text-ink">Isolated Storage:</strong> Your uploaded résumé PDF files are stored in private, user-isolated Supabase Storage buckets secured by Row Level Security (RLS). They are never publicly accessible.
               </li>
               <li>
-                <strong className="text-ink">Encrypted in Transit:</strong> All data transferred between your browser, our servers, Supabase, and Google APIs is encrypted using TLS/HTTPS.
+                <strong className="text-ink">Encrypted in Transit:</strong> All data transferred between your browser, our servers, Supabase, AI providers, and Google APIs is encrypted using modern TLS (HTTPS).
               </li>
             </ul>
           </section>
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              4. Data Retention & Disconnection
+              4. Artificial Intelligence & LLM Data Protection
             </h2>
             <p className="text-muted-ink">
-              You maintain total control over your connected accounts and stored information:
+              Vina uses advanced language models provided by enterprise partners (Groq Inc. and Google Cloud Vertex AI) to synthesize job descriptions and draft personalized application letters.
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
               <li>
-                <strong className="text-ink">Disconnect at Any Time:</strong> You can disconnect your Gmail account instantly from your <em>Settings</em> page. Disconnecting immediately revokes the token with Google and permanently deletes the stored credentials from our database.
+                <strong className="text-ink">Zero Model Training:</strong> Under our enterprise API terms with Groq and Google, <strong>your inputs (job descriptions, résumés, profile summaries) and generated letters are never used to train, retrain, or improve public AI models</strong>.
               </li>
               <li>
-                <strong className="text-ink">Account Deletion:</strong> You may request complete deletion of your account, resume files, and send logs at any time by contacting support.
+                <strong className="text-ink">Ephemeral Processing:</strong> Prompts sent to AI endpoints are processed ephemerally in memory to generate your draft and are not retained by AI vendors beyond immediate completion.
               </li>
             </ul>
           </section>
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              5. Third-Party Sub-Processors
+              5. Cookies & Local Storage
             </h2>
             <p className="text-muted-ink">
-              We rely on trusted enterprise infrastructure providers to deliver our application:
+              We do not use tracking cookies or third-party advertising trackers. We utilize only essential browser storage technologies:
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
-              <li><strong className="text-ink">Google Cloud Platform:</strong> Gmail API delivery and OAuth authentication.</li>
-              <li><strong className="text-ink">Supabase:</strong> Encrypted PostgreSQL database and file storage.</li>
-              <li><strong className="text-ink">Vercel:</strong> Edge hosting, application runtime, and SSL delivery.</li>
+              <li>
+                <strong className="text-ink">Essential Authentication Cookies:</strong> Cryptographically signed HTTP-only cookies provided by Supabase to maintain your secure session.
+              </li>
+              <li>
+                <strong className="text-ink">Local Storage (Draft Auto-Recovery):</strong> Temporary client-side caching in your browser so you do not lose in-progress job description drafts if your tab is refreshed. This data remains on your local device.
+              </li>
             </ul>
           </section>
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              6. Contact & Data Inquiries
+              6. Third-Party Sub-Processors
             </h2>
             <p className="text-muted-ink">
-              If you have any questions, concerns, or requests regarding this Privacy Policy or your data, please contact:
+              We engage only trusted infrastructure and compliance vendors:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
+              <li><strong className="text-ink">Google Cloud Platform:</strong> Gmail API delivery and Google OAuth authentication.</li>
+              <li><strong className="text-ink">Supabase Inc.:</strong> Encrypted PostgreSQL database, authentication, and file storage.</li>
+              <li><strong className="text-ink">Dodo Payments Inc.:</strong> Merchant of Record for global checkout, recurring subscriptions, tax compliance, Apple Pay, and UPI processing. (We never handle or store raw credit card numbers).</li>
+              <li><strong className="text-ink">Groq Inc. & Google Cloud:</strong> AI letter generation and job description analysis (stateless API, zero model training).</li>
+              <li><strong className="text-ink">Vercel Inc.:</strong> Application edge hosting, serverless functions, and SSL delivery.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="font-heading text-base sm:text-lg text-ink">
+              7. Regional Privacy Rights (GDPR, CCPA/CPRA & India DPDP)
+            </h2>
+            <p className="text-muted-ink">
+              Depending on your location, you may have specific statutory rights regarding your personal information:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
+              <li><strong className="text-ink">Right to Access & Portability:</strong> You may request an export of all your correspondence history, résumé files, and profile details.</li>
+              <li><strong className="text-ink">Right to Erasure (Right to be Forgotten):</strong> You may request the permanent deletion of your account and all associated data at any time.</li>
+              <li><strong className="text-ink">Right to Disconnect:</strong> You can revoke Gmail OAuth permissions at any time from your Settings page or Google Security Settings, immediately purging stored tokens.</li>
+              <li><strong className="text-ink">No Sale of Personal Data:</strong> We do not sell, rent, or trade user data to data brokers or third parties.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="font-heading text-base sm:text-lg text-ink">
+              8. Contact & Data Protection Inquiries
+            </h2>
+            <p className="text-muted-ink">
+              For any questions, requests for data export, or deletion inquiries regarding this Privacy Policy, please reach out to:
             </p>
             <p className="text-ink font-medium">
-              Privacy & Data Protection Officer<br />
-              Email: <a href="mailto:karangholap154@gmail.com" className="underline underline-offset-2 hover:text-seal">karangholap154@gmail.com</a>
+              Privacy & Data Protection<br />
+              Email: <a href="mailto:karangholap154@gmail.com" className="underline underline-offset-2 hover:text-seal">karangholap154@gmail.com</a><br />
+              Response time: Typically within 24 to 48 hours.
             </p>
           </section>
         </div>
@@ -184,9 +219,15 @@ export default function PrivacyPolicyPage() {
         {/* Footer info */}
         <div className="border-t border-hairline pt-6 text-xs text-muted-ink flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} Vina (meetvina.app). All rights reserved.</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Link href="/terms" className="hover:text-ink underline underline-offset-4">
               Terms of Service
+            </Link>
+            <Link href="/refund" className="hover:text-ink underline underline-offset-4">
+              Refund Policy
+            </Link>
+            <Link href="/contact" className="hover:text-ink underline underline-offset-4">
+              Contact
             </Link>
             <Link href="/" className="hover:text-ink underline underline-offset-4">
               Home

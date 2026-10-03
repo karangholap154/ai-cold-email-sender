@@ -690,6 +690,12 @@ Qualifications:
             <Link href="/terms" className="hover:text-ink transition-colors py-1">
               Terms of Service
             </Link>
+            <Link href="/refund" className="hover:text-ink transition-colors py-1">
+              Refund Policy
+            </Link>
+            <Link href="/contact" className="hover:text-ink transition-colors py-1">
+              Contact
+            </Link>
           </div>
         </div>
 
