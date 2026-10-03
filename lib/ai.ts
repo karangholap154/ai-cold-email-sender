@@ -19,7 +19,7 @@ export interface GenerateFollowUpParams {
   senderSignature?: string;
 }
 
-const SYSTEM_PROMPT = `You are a careful, literate colleague helping someone draft an important job application letter for Vina (meetvina.com). Your task is to analyze a job description (JD) and the applicant's background/skills summary, and:
+const SYSTEM_PROMPT = `You are a careful, literate colleague helping someone draft an important job application letter for Vina (meetvina.app). Your task is to analyze a job description (JD) and the applicant's background/skills summary, and:
 
 1. Extract key details about the role:
    - companyName: Company name if identifiable or mentioned (null if unknown)
@@ -49,7 +49,7 @@ You must respond ONLY with valid JSON in this exact structure:
   "body": string
 }`;
 
-const FOLLOWUP_SYSTEM_PROMPT = `You are a careful, literate colleague helping someone draft a brief, respectful follow-up letter regarding a job application for Vina (meetvina.com).
+const FOLLOWUP_SYSTEM_PROMPT = `You are a careful, literate colleague helping someone draft a brief, respectful follow-up letter regarding a job application for Vina (meetvina.app).
 
 Your task is to write a polite, concise, and high-signal follow-up letter to the hiring team or recruiter regarding a previously sent application.
 

@@ -3,7 +3,7 @@ import { Shield, Lock, CheckCircle2, ArrowLeft } from "lucide-react";
 
 export const metadata = {
   title: "Privacy Policy | Vina",
-  description: "Privacy policy and Google API user data disclosure for Vina (meetvina.com).",
+  description: "Privacy policy and Google API user data disclosure for Vina (meetvina.app).",
 };
 
 export default function PrivacyPolicyPage() {
@@ -183,7 +183,7 @@ export default function PrivacyPolicyPage() {
 
         {/* Footer info */}
         <div className="border-t border-hairline pt-6 text-xs text-muted-ink flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} Vina (meetvina.com). All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Vina (meetvina.app). All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/terms" className="hover:text-ink underline underline-offset-4">
               Terms of Service

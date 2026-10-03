@@ -55,24 +55,24 @@ export default function LandingPage() {
     "@graph": [
       {
         "@type": "WebSite",
-        "@id": "https://meetvina.com/#website",
-        "url": "https://meetvina.com",
+        "@id": "https://meetvina.app/#website",
+        "url": "https://meetvina.app",
         "name": "Vina",
         "description": "Turn a job description into a letter worth sending.",
         "publisher": {
           "@type": "Organization",
           "name": "Vina",
-          "url": "https://meetvina.com",
-          "logo": "https://meetvina.com/logo.png",
+          "url": "https://meetvina.app",
+          "logo": "https://meetvina.app/logo.png",
         },
       },
       {
         "@type": "SoftwareApplication",
-        "@id": "https://meetvina.com/#software",
+        "@id": "https://meetvina.app/#software",
         "name": "Vina",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "All",
-        "url": "https://meetvina.com",
+        "url": "https://meetvina.app",
         "description":
           "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
         "offers": [
@@ -94,7 +94,7 @@ export default function LandingPage() {
       },
       {
         "@type": "FAQPage",
-        "@id": "https://meetvina.com/#faq",
+        "@id": "https://meetvina.app/#faq",
         "mainEntity": faqs.map((faq) => ({
           "@type": "Question",
           "name": faq.q,
@@ -667,7 +667,7 @@ Qualifications:
                 height={20}
                 className="h-5 w-auto"
               />
-              <span className="font-heading text-base text-ink font-medium">Vina — meetvina.com</span>
+              <span className="font-heading text-base text-ink font-medium">Vina — meetvina.app</span>
             </div>
             <p className="text-[11px] text-muted-ink">
               Turn a job description into a letter worth sending.
@@ -695,7 +695,7 @@ Qualifications:
 
         <div className="mx-auto max-w-4xl border-t border-hairline mt-6 sm:mt-8 pt-5 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-[10px] text-muted-ink/80 text-center sm:text-left">
           <div>
-            © {new Date().getFullYear()} Vina (meetvina.com). All rights reserved.
+            © {new Date().getFullYear()} Vina (meetvina.app). All rights reserved.
           </div>
           <div className="flex items-center justify-center gap-3 sm:gap-4">
             <Link href="/privacy" className="hover:text-ink transition-colors">

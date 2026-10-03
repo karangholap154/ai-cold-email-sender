@@ -1,8 +1,8 @@
-# BRANDING.md — Vina (meetvina.com)
+# BRANDING.md — Vina (meetvina.app)
 
 Companion to PRD.md. PRD.md is the technical/product source of truth (data model, APIs, build phases). This file is the voice/copy/identity source of truth — how Vina sounds and what it says, page by page. When the two disagree on visual system basics (color, type), PRD.md Section 8 wins; this file expands it into actual words.
 
-**Status:** Draft v1 — written ahead of domain purchase. Update once meetvina.com is live and Google OAuth consent screen name is locked in.
+**Status:** Draft v1 — written ahead of domain purchase. Update once meetvina.app is live and Google OAuth consent screen name is locked in.
 
 ---
 
@@ -10,7 +10,7 @@ Companion to PRD.md. PRD.md is the technical/product source of truth (data model
 
 ### 1.1 The name
 - **Vina** — the product name.
-- **meetvina.com** — the domain (once purchased).
+- **meetvina.app** — the domain (once purchased).
 - Read aloud as "VEE-nuh." Worth deciding this explicitly and using it consistently in any spoken/video content, since ambiguous pronunciation undercuts word-of-mouth.
 
 ### 1.2 What Vina *is* — the decision this file assumes
@@ -98,7 +98,7 @@ Draft copy below is a starting point, not final — treat it as the right *regis
 **Pricing section intro:**
 > Start free. Upgrade when you're applying at volume.
 
-**Footer tagline:** `Vina — meetvina.com`
+**Footer tagline:** `Vina — meetvina.app`
 
 ### 3.2 Signup / Login (`/signup`, `/login`)
 
@@ -178,7 +178,7 @@ Draft copy below is a starting point, not final — treat it as the right *regis
 - A simple monogram ("V") or the seal mark, in Ink (`#1E2530`) on Paper (`#F6F5F1`), or inverted for dark-mode favicon variants if supported.
 
 ### 4.3 OG image / link preview (for shared links)
-- Paper background, Ink text, headline in Fraunces: "Vina — meetvina.com"
+- Paper background, Ink text, headline in Fraunces: "Vina — meetvina.app"
 - Subline in Plex Sans: the one-line positioning statement (Section 1.3)
 - No stock photography, no gradient background — consistent with the "no decoration that isn't earned" rule from PRD.md 8.2.
 

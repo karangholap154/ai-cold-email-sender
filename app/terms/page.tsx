@@ -3,7 +3,7 @@ import { FileText, ArrowLeft, AlertCircle } from "lucide-react";
 
 export const metadata = {
   title: "Terms of Service | Vina",
-  description: "Terms and acceptable use policy for Vina (meetvina.com).",
+  description: "Terms and acceptable use policy for Vina (meetvina.app).",
 };
 
 export default function TermsOfServicePage() {
@@ -135,7 +135,7 @@ export default function TermsOfServicePage() {
 
         {/* Footer info */}
         <div className="border-t border-hairline pt-6 text-xs text-muted-ink flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} Vina (meetvina.com). All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Vina (meetvina.app). All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:text-ink underline underline-offset-4">
               Privacy Policy

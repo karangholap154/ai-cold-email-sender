@@ -20,7 +20,7 @@ const fraunces = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://meetvina.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://meetvina.app"),
   title: {
     default: "Vina — Tailored Job Application Letters",
     template: "%s — Vina",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     "Gmail job application",
     "meetvina",
   ],
-  authors: [{ name: "Vina", url: "https://meetvina.com" }],
+  authors: [{ name: "Vina", url: "https://meetvina.app" }],
   creator: "Vina",
   alternates: {
     canonical: "./",
@@ -50,9 +50,9 @@ export const metadata: Metadata = {
     apple: [{ url: "/logo.png", sizes: "512x512", type: "image/png" }],
   },
   openGraph: {
-    title: "Vina — meetvina.com",
+    title: "Vina — meetvina.app",
     description: "Vina turns a job description into a letter worth sending.",
-    url: "https://meetvina.com",
+    url: "https://meetvina.app",
     siteName: "Vina",
     locale: "en_US",
     type: "website",
@@ -61,13 +61,13 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Vina — meetvina.com",
+        alt: "Vina — meetvina.app",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vina — meetvina.com",
+    title: "Vina — meetvina.app",
     description: "Turn a job description into a letter worth sending.",
     images: ["/opengraph-image"],
   },

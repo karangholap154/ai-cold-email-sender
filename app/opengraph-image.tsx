@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import fs from "fs";
 import path from "path";
 
-export const alt = "Vina — meetvina.com";
+export const alt = "Vina — meetvina.app";
 export const size = {
   width: 1200,
   height: 630,
@@ -83,7 +83,7 @@ export default async function Image() {
             paddingTop: 32,
           }}
         >
-          <span>meetvina.com</span>
+          <span>meetvina.app</span>
           <span>•</span>
           <span>Personal correspondence for thoughtful job applications</span>
         </div>
