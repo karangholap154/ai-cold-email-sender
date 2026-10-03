@@ -3,6 +3,7 @@ import nodemailer, { type SendMailOptions } from "nodemailer";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto";
+import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 
 interface SendRequestBody {
   hrEmail?: string;
@@ -178,15 +179,14 @@ export async function POST(req: NextRequest) {
         .gte("created_at", startOfMonth);
 
       const sentCount = count ?? 0;
-      const FREE_TIER_LIMIT = 5;
 
-      if (!countError && sentCount >= FREE_TIER_LIMIT) {
+      if (!countError && sentCount >= FREE_MONTHLY_LIMIT) {
         return NextResponse.json(
           {
-            error: "You've sent 5 letters this month on the free plan.",
+            error: `You've sent ${FREE_MONTHLY_LIMIT} letters this month on the free plan.`,
             code: "PLAN_LIMIT_REACHED",
             sentCount,
-            limit: FREE_TIER_LIMIT,
+            limit: FREE_MONTHLY_LIMIT,
           },
           { status: 403 }
         );

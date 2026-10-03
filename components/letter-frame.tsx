@@ -22,6 +22,7 @@ import {
   Lock,
 } from "lucide-react";
 import type { AnalyzeResponse, UserUsage } from "@/lib/types/database";
+import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 
 export interface LetterFrameProps {
   initialData: AnalyzeResponse;
@@ -426,7 +427,7 @@ export function LetterFrame({
             <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
             <div>
               <p className="font-medium text-ink">
-                You&apos;ve sent 5 letters this month on the free plan.
+                You&apos;ve sent {FREE_MONTHLY_LIMIT} letters this month on the free plan.
               </p>
               <p className="text-muted-ink mt-0.5">
                 Upgrade to Pro to send more letters and unlock follow-ups.
@@ -718,7 +719,7 @@ export function LetterFrame({
               }
               title={
                 reachedSendCap
-                  ? "You've sent 5 letters this month on the free plan. Upgrade to Pro to send more."
+                  ? `You've sent ${FREE_MONTHLY_LIMIT} letters this month on the free plan. Upgrade to Pro to send more.`
                   : isFollowUp
                   ? "Send follow-up letter directly via Gmail"
                   : "Send this letter directly via Gmail"

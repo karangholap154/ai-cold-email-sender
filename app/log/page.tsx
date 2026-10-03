@@ -32,6 +32,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { initiateCheckout } from "@/lib/billing";
+import { PRO_PLAN, FREE_RETENTION_DAYS } from "@/lib/constants/plans";
 
 function formatRelativeDays(dateString: string): string {
   const diffMs = Date.now() - new Date(dateString).getTime();
@@ -562,7 +563,7 @@ export default function LogPage() {
           </div>
         )}
 
-        {/* Notice for archived older emails outside 30-day window on Free tier */}
+        {/* Notice for archived older emails outside retention window on Free tier */}
         {!isLoading && hasOlderEmails && plan === "free" && (
           <div className="border border-dashed border-hairline bg-[#FAF9F5] p-4 text-center rounded-sm text-xs text-muted-ink space-y-1">
             <div className="flex items-center justify-center gap-1.5 text-ink font-medium">
@@ -570,7 +571,7 @@ export default function LogPage() {
               <span>Older correspondence archived ({totalCount - emails.length} earlier sends)</span>
             </div>
             <p>
-              Free accounts only display correspondence from the last 30 days.{" "}
+              Free accounts only display correspondence from the last {FREE_RETENTION_DAYS} days.{" "}
               <Link href="/settings" className="text-seal underline underline-offset-4 hover:opacity-80">
                 Upgrade to Pro
               </Link>{" "}
@@ -625,7 +626,7 @@ export default function LogPage() {
                 className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-5 py-2 text-xs font-medium text-paper hover:bg-seal/90 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {isUpgrading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>Upgrade to Pro — $9 (₹499) / mo</span>
+                <span>Upgrade to Pro — {PRO_PLAN.priceFormatted} {PRO_PLAN.periodText}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>

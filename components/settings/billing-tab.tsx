@@ -2,6 +2,7 @@
 
 import { CreditCard, Zap, Loader2 } from "lucide-react";
 import type { UserUsage } from "@/lib/types/database";
+import { FREE_PLAN, PRO_PLAN, FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 
 export interface BillingTabProps {
   usage: UserUsage | null;
@@ -39,7 +40,7 @@ export function BillingTab({
                 <p className="text-xs sm:text-sm font-medium text-ink">
                   {usage?.plan === "pro"
                     ? "You're on Pro."
-                    : "You're on the free plan — 5 letters this month."}
+                    : `You're on the free plan — ${FREE_MONTHLY_LIMIT} letters this month.`}
                 </p>
                 {usage?.plan === "pro" ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-seal bg-[#FAF6EE] px-1.5 py-0.5 rounded-sm border border-seal/30">
@@ -55,7 +56,7 @@ export function BillingTab({
               <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5 leading-relaxed">
                 {usage?.plan === "pro"
                   ? "Unlimited tailored letters, automated attachments, and follow-ups."
-                  : `${usage?.monthlySends ?? 0} of ${usage?.monthlyLimit ?? 5} letters sent this month.`}
+                  : `${usage?.monthlySends ?? 0} of ${usage?.monthlyLimit ?? FREE_MONTHLY_LIMIT} letters sent this month.`}
               </p>
             </div>
           </div>
@@ -93,17 +94,17 @@ export function BillingTab({
             <div className="flex justify-between text-[11px] text-muted-ink">
               <span>Monthly quota usage</span>
               <span>
-                {Math.min(usage?.monthlySends ?? 0, 5)} / 5 sends
+                {Math.min(usage?.monthlySends ?? 0, FREE_MONTHLY_LIMIT)} / {FREE_MONTHLY_LIMIT} sends
               </span>
             </div>
             <div className="w-full h-1.5 bg-[#EDEAE2] rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ${
-                  (usage?.monthlySends ?? 0) >= 5 ? "bg-amber-700" : "bg-seal"
+                  (usage?.monthlySends ?? 0) >= FREE_MONTHLY_LIMIT ? "bg-amber-700" : "bg-seal"
                 }`}
                 style={{
                   width: `${Math.min(
-                    ((usage?.monthlySends ?? 0) / 5) * 100,
+                    ((usage?.monthlySends ?? 0) / FREE_MONTHLY_LIMIT) * 100,
                     100
                   )}%`,
                 }}
@@ -119,27 +120,27 @@ export function BillingTab({
       {/* Plan Comparison Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs">
         <div className="border border-hairline bg-paper p-4 rounded-sm space-y-2">
-          <span className="font-medium text-ink">Free Tier</span>
+          <span className="font-medium text-ink">{FREE_PLAN.name} Tier</span>
           <ul className="space-y-1.5 text-muted-ink text-[11px]">
-            <li>• 5 tailored letters per month</li>
-            <li>• 1 active résumé PDF</li>
-            <li>• 2 AI regenerations per draft</li>
-            <li>• 30-day sent letters history</li>
-            <li>• Duplicate contact detection</li>
+            {FREE_PLAN.features.map((feat, idx) => (
+              <li key={idx}>• {feat.text}</li>
+            ))}
           </ul>
         </div>
 
         <div className="border border-seal/30 bg-[#FAF6EE] p-4 rounded-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-seal">Pro Membership</span>
-            <span className="text-[10px] font-semibold text-seal uppercase tracking-wider">$9 (₹499) / mo</span>
+            <span className="font-medium text-seal">{PRO_PLAN.name} Membership</span>
+            <span className="text-[10px] font-semibold text-seal uppercase tracking-wider">
+              {PRO_PLAN.priceFormatted} {PRO_PLAN.periodText}
+            </span>
           </div>
           <ul className="space-y-1.5 text-muted-ink text-[11px]">
-            <li>• Unlimited tailored letters</li>
-            <li>• 1-click follow-up correspondence</li>
-            <li>• Unlimited AI regenerations</li>
-            <li>• Full lifetime sent letters history</li>
-            <li>• Priority model & fast support</li>
+            {PRO_PLAN.features.map((feat, idx) => (
+              <li key={idx} className={feat.isHighlight ? "font-medium text-ink" : ""}>
+                • {feat.text}
+              </li>
+            ))}
           </ul>
         </div>
       </div>

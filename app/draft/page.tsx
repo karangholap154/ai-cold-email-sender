@@ -18,6 +18,7 @@ import {
 import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
 import { initiateCheckout } from "@/lib/billing";
+import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 
 const DRAFT_STORAGE_KEY = "cold_email_draft_session";
 
@@ -524,13 +525,13 @@ export default function DraftPage() {
             )}
 
             {/* Quota reached callout banner if capped on free tier */}
-            {usage?.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? 5) && (
+            {usage?.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? FREE_MONTHLY_LIMIT) && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-seal/30 bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
                 <div className="flex items-start gap-2.5 min-w-0">
                   <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
                   <div>
                     <p className="font-medium text-ink">
-                      You&apos;ve sent 5 letters this month on the free plan.
+                      You&apos;ve sent {FREE_MONTHLY_LIMIT} letters this month on the free plan.
                     </p>
                     <p className="text-muted-ink mt-0.5">
                       Upgrade to Pro to send more letters and unlock follow-ups.

@@ -17,6 +17,7 @@ import {
   Lock,
   ChevronDown,
 } from "lucide-react";
+import { FREE_PLAN, PRO_PLAN } from "@/lib/constants/plans";
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<"preview" | "raw">("preview");
@@ -77,17 +78,17 @@ export default function LandingPage() {
         "offers": [
           {
             "@type": "Offer",
-            "name": "Free Tier",
-            "price": "0",
+            "name": `${FREE_PLAN.name} Tier`,
+            "price": String(FREE_PLAN.priceUsd),
             "priceCurrency": "USD",
-            "description": "5 tailored letters per month, 1 active résumé PDF, 2 AI regenerations per draft",
+            "description": FREE_PLAN.features.map((f) => f.text).join(", "),
           },
           {
             "@type": "Offer",
-            "name": "Pro Membership",
-            "price": "9.00",
+            "name": `${PRO_PLAN.name} Membership`,
+            "price": `${PRO_PLAN.priceUsd}.00`,
             "priceCurrency": "USD",
-            "description": "Unlimited tailored letters, one-click follow-up letters in same thread, unlimited AI regenerations, lifetime archive",
+            "description": PRO_PLAN.features.map((f) => f.text).join(", "),
           },
         ],
       },
@@ -522,37 +523,23 @@ Qualifications:
             <div className="border border-hairline bg-paper p-6 sm:p-8 rounded-sm flex flex-col justify-between space-y-6">
               <div className="space-y-4">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-heading text-lg sm:text-xl text-ink">Free</h3>
+                  <h3 className="font-heading text-lg sm:text-xl text-ink">{FREE_PLAN.name}</h3>
                   <div className="text-right">
-                    <span className="font-heading text-xl sm:text-2xl text-ink">$0</span>
-                    <span className="text-xs text-muted-ink"> / month</span>
+                    <span className="font-heading text-xl sm:text-2xl text-ink">{FREE_PLAN.priceFormatted}</span>
+                    <span className="text-xs text-muted-ink"> {FREE_PLAN.periodText}</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-ink leading-relaxed">
-                  Ideal for testing Vina with your top target positions.
+                  {FREE_PLAN.description}
                 </p>
 
                 <div className="border-t border-hairline pt-4 space-y-2.5 text-xs text-ink/90">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>5 tailored letters per month</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>1 active résumé PDF</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>2 AI regenerations per draft</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Duplicate contact warning</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>30-day sent letters history</span>
-                  </div>
+                  {FREE_PLAN.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
+                      <span className={feature.isHighlight ? "font-medium" : ""}>{feature.text}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -566,43 +553,31 @@ Qualifications:
 
             {/* Pro Tier */}
             <div className="border-2 border-seal bg-paper p-6 sm:p-8 rounded-sm flex flex-col justify-between space-y-6 relative">
-              <div className="absolute -top-3 right-4 sm:right-6 bg-seal text-paper text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded-sm">
-                Active Job Search
-              </div>
+              {PRO_PLAN.badge && (
+                <div className="absolute -top-3 right-4 sm:right-6 bg-seal text-paper text-[10px] font-medium tracking-wide uppercase px-2 py-0.5 rounded-sm">
+                  {PRO_PLAN.badge}
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-baseline justify-between">
-                  <h3 className="font-heading text-lg sm:text-xl text-ink">Pro</h3>
+                  <h3 className="font-heading text-lg sm:text-xl text-ink">{PRO_PLAN.name}</h3>
                   <div className="text-right">
-                    <span className="font-heading text-xl sm:text-2xl text-ink">$9</span>
-                    <span className="text-xs text-muted-ink"> (₹499) / mo</span>
+                    <span className="font-heading text-xl sm:text-2xl text-ink">{PRO_PLAN.priceFormatted}</span>
+                    <span className="text-xs text-muted-ink"> {PRO_PLAN.periodText}</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-ink leading-relaxed">
-                  For job seekers conducting active outreach with one-click follow-ups.
+                  {PRO_PLAN.description}
                 </p>
 
                 <div className="border-t border-hairline pt-4 space-y-2.5 text-xs text-ink/90">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span className="font-medium">Unlimited tailored letters</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>One-click follow-up letters in same thread</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Unlimited AI regenerations</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Full lifetime sent letters history</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
-                    <span>Fast generation & priority email support</span>
-                  </div>
+                  {PRO_PLAN.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-confirmed shrink-0" />
+                      <span className={feature.isHighlight ? "font-medium" : ""}>{feature.text}</span>
+                    </div>
+                  ))}
                   <div className="pt-1 text-[11px] text-muted-ink flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-confirmed"></span>
                     <span>Supports UPI in India & Cards / Apple Pay globally</span>

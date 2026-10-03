@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 
 export function Header() {
   const pathname = usePathname();
@@ -210,7 +211,7 @@ export function Header() {
                     {user.email}
                   </p>
                   <p className="text-[10px] text-muted-ink">
-                    {plan === "pro" ? "Pro Plan • Unlimited letters" : "Free Tier • 5 letters / mo"}
+                    {plan === "pro" ? "Pro Plan • Unlimited letters" : `Free Tier • ${FREE_MONTHLY_LIMIT} letters / mo`}
                   </p>
                 </div>
               </div>
