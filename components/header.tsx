@@ -178,7 +178,7 @@ export function Header() {
                   {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
                 </button>
               </>
-            ) : !isLoading && !user && pathname !== "/login" && pathname !== "/signup" ? (
+            ) : !isLoading && !user && pathname !== "/login" ? (
               <div className="flex items-center gap-2">
                 <Link
                   href="/login"
@@ -187,7 +187,7 @@ export function Header() {
                   Sign in
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/login?mode=signup"
                   className="rounded-full border border-ink bg-ink px-4 py-1.5 text-xs font-medium text-paper hover:bg-ink/90 active:scale-95 transition-all shadow-xs shrink-0"
                 >
                   Create account

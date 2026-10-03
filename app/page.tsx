@@ -142,7 +142,7 @@ export default function LandingPage() {
           {/* Primary Action Group */}
           <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
             <Link
-              href="/signup"
+              href="/login?mode=signup"
               className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-6 py-3 text-xs sm:text-sm font-medium text-paper hover:bg-seal/90 shadow-xs transition-all min-h-[44px]"
             >
               <span>Get started free</span>
@@ -672,7 +672,7 @@ Qualifications:
               </div>
 
               <Link
-                href="/signup"
+                href="/login?mode=signup"
                 className="w-full text-center rounded-sm border border-hairline bg-[#EDEAE2] py-2.5 text-xs font-medium text-ink hover:bg-[#E4DFD3] transition-colors min-h-[42px] flex items-center justify-center cursor-pointer"
               >
                 Get started free
@@ -784,7 +784,7 @@ Qualifications:
           </p>
           <div className="pt-2 flex items-center justify-center">
             <Link
-              href="/signup"
+              href="/login?mode=signup"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-7 py-3 text-xs sm:text-sm font-medium text-paper hover:bg-seal/90 shadow-xs transition-all min-h-[44px]"
             >
               <span>Get started free</span>
