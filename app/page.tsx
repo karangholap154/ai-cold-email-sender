@@ -18,6 +18,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { FREE_PLAN, PRO_PLAN } from "@/lib/constants/plans";
+import { Footer } from "@/components/footer";
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<"preview" | "raw">("preview");
@@ -655,63 +656,8 @@ Qualifications:
         </div>
       </section>
 
-      {/* 9. RESTRAINED FOOTER */}
-      <footer className="px-4 py-8 sm:px-6 sm:py-12 text-xs text-muted-ink">
-        <div className="mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-5 sm:gap-6">
-          <div className="space-y-1 text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-2">
-              <Image
-                src="/logo.png"
-                alt="Vina logo"
-                width={20}
-                height={20}
-                className="h-5 w-auto"
-              />
-              <span className="font-heading text-base text-ink font-medium">Vina — meetvina.app</span>
-            </div>
-            <p className="text-[11px] text-muted-ink">
-              Turn a job description into a letter worth sending.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-[11px]">
-            <Link href="/draft" className="hover:text-ink transition-colors py-1">
-              Draft
-            </Link>
-            <Link href="/log" className="hover:text-ink transition-colors py-1">
-              Sent letters
-            </Link>
-            <Link href="/settings" className="hover:text-ink transition-colors py-1">
-              Settings
-            </Link>
-            <Link href="/privacy" className="hover:text-ink transition-colors py-1">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-ink transition-colors py-1">
-              Terms of Service
-            </Link>
-            <Link href="/refund" className="hover:text-ink transition-colors py-1">
-              Refund Policy
-            </Link>
-            <Link href="/contact" className="hover:text-ink transition-colors py-1">
-              Contact
-            </Link>
-          </div>
-        </div>
-
-        <div className="mx-auto max-w-4xl border-t border-hairline mt-6 sm:mt-8 pt-5 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-[10px] text-muted-ink/80 text-center sm:text-left">
-          <div>
-            © {new Date().getFullYear()} Vina (meetvina.app). All rights reserved.
-          </div>
-          <div className="flex items-center justify-center gap-3 sm:gap-4">
-            <Link href="/privacy" className="hover:text-ink transition-colors">
-              Google API Verification Disclosed
-            </Link>
-            <span>•</span>
-            <span>Encrypted at rest</span>
-          </div>
-        </div>
-      </footer>
+      {/* 9. MODERN RESPONSIVE FOOTER */}
+      <Footer />
     </main>
   );
 }
