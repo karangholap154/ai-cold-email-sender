@@ -49,8 +49,71 @@ export default function LandingPage() {
     },
   ];
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://meetvina.com/#website",
+        "url": "https://meetvina.com",
+        "name": "Vina",
+        "description": "Turn a job description into a letter worth sending.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Vina",
+          "url": "https://meetvina.com",
+          "logo": "https://meetvina.com/logo.png",
+        },
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://meetvina.com/#software",
+        "name": "Vina",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "All",
+        "url": "https://meetvina.com",
+        "description":
+          "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Free Tier",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "5 tailored letters per month, 1 active résumé PDF, 2 AI regenerations per draft",
+          },
+          {
+            "@type": "Offer",
+            "name": "Pro Membership",
+            "price": "9.00",
+            "priceCurrency": "USD",
+            "description": "Unlimited tailored letters, one-click follow-up letters in same thread, unlimited AI regenerations, lifetime archive",
+          },
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://meetvina.com/#faq",
+        "mainEntity": faqs.map((faq) => ({
+          "@type": "Question",
+          "name": faq.q,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.a,
+          },
+        })),
+      },
+    ],
+  };
+
   return (
     <main className="flex flex-1 flex-col bg-paper text-ink selection:bg-[#E4DFD3]">
+      {/* Schema.org Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       {/* 1. HERO SECTION */}
       <section className="relative border-b border-hairline px-4 pt-12 pb-16 sm:px-6 sm:pt-20 sm:pb-24 md:pt-24 md:pb-28">
         <div className="mx-auto max-w-4xl">

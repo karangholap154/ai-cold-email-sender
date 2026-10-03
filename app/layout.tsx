@@ -27,6 +27,21 @@ export const metadata: Metadata = {
   },
   description:
     "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
+  applicationName: "Vina",
+  keywords: [
+    "job application letter",
+    "tailored cold email",
+    "recruiter outreach",
+    "cold email generator",
+    "cover letter alternative",
+    "Gmail job application",
+    "meetvina",
+  ],
+  authors: [{ name: "Vina", url: "https://meetvina.com" }],
+  creator: "Vina",
+  alternates: {
+    canonical: "./",
+  },
   icons: {
     icon: [
       { url: "/favicon.png", sizes: "32x32", type: "image/png" },
@@ -39,7 +54,36 @@ export const metadata: Metadata = {
     description: "Vina turns a job description into a letter worth sending.",
     url: "https://meetvina.com",
     siteName: "Vina",
+    locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Vina — meetvina.com",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vina — meetvina.com",
+    description: "Turn a job description into a letter worth sending.",
+    images: ["/opengraph-image"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
   },
 };
 
