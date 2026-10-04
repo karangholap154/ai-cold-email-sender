@@ -54,11 +54,11 @@ export function Footer() {
                 Have a question or feedback?
               </span>
               <a
-                href="mailto:karangholap154@gmail.com"
+                href="mailto:support@meetvina.app"
                 className="inline-flex items-center gap-1.5 text-xs text-ink font-medium hover:text-seal transition-colors mt-0.5 group"
               >
                 <Mail className="h-3.5 w-3.5 text-muted-ink group-hover:text-seal transition-colors" />
-                <span>karangholap154@gmail.com</span>
+                <span>support@meetvina.app</span>
                 <ArrowUpRight className="h-3 w-3 opacity-60 group-hover:opacity-100 transition-opacity" />
               </a>
             </div>

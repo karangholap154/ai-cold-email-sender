@@ -48,10 +48,10 @@ export default function ContactPage() {
                 Official Support Desk
               </span>
               <a
-                href="mailto:karangholap154@gmail.com"
+                href="mailto:support@meetvina.app"
                 className="font-mono text-sm sm:text-base text-seal font-medium hover:underline underline-offset-4"
               >
-                karangholap154@gmail.com
+                support@meetvina.app
               </a>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-ink">

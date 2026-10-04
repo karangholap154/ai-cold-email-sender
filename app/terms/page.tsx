@@ -154,7 +154,7 @@ export default function TermsOfServicePage() {
             </p>
             <p className="text-ink font-medium">
               Legal & Support Team<br />
-              Email: <a href="mailto:karangholap154@gmail.com" className="underline underline-offset-2 hover:text-seal">karangholap154@gmail.com</a><br />
+              Email: <a href="mailto:support@meetvina.app" className="underline underline-offset-2 hover:text-seal">support@meetvina.app</a><br />
               Website: <a href="https://meetvina.app" className="underline underline-offset-2 hover:text-seal">meetvina.app</a>
             </p>
           </section>

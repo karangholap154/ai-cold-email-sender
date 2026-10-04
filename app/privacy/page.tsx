@@ -210,7 +210,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <p className="text-ink font-medium">
               Privacy & Data Protection<br />
-              Email: <a href="mailto:karangholap154@gmail.com" className="underline underline-offset-2 hover:text-seal">karangholap154@gmail.com</a><br />
+              Email: <a href="mailto:support@meetvina.app" className="underline underline-offset-2 hover:text-seal">support@meetvina.app</a><br />
               Response time: Typically within 24 to 48 hours.
             </p>
           </section>
