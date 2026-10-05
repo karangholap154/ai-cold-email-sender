@@ -51,16 +51,33 @@ export async function updateSession(request: NextRequest) {
     pathname === "/log" ||
     pathname.startsWith("/log/");
 
-  if (!user && isProtectedPage) {
-    url.pathname = "/login";
-    const redirectResponse = NextResponse.redirect(url);
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie);
-    });
-    return redirectResponse;
+  // If user is not authenticated or has not confirmed their email, block protected pages
+  if (isProtectedPage) {
+    if (!user) {
+      url.pathname = "/login";
+      const redirectResponse = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
+    }
+
+    if (!user.email_confirmed_at) {
+      url.pathname = "/login";
+      url.searchParams.set(
+        "error",
+        "Please check your inbox and confirm your email address before continuing."
+      );
+      const redirectResponse = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
+    }
   }
 
-  if (user && isAuthPage) {
+  // Only redirect confirmed users away from auth pages to /draft
+  if (user && user.email_confirmed_at && isAuthPage) {
     url.pathname = "/draft";
     const redirectResponse = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach((cookie) => {

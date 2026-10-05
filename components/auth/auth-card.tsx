@@ -97,6 +97,25 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
         router.push(nextUrl);
         router.refresh();
       } else {
+        // Pre-validate email to block temporary/disposable inboxes
+        try {
+          const valRes = await fetch("/api/auth/validate-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.trim() }),
+          });
+          const valData = await valRes.json();
+          if (!valRes.ok || !valData.valid) {
+            toast.error(
+              valData.error ||
+                "Temporary/disposable email addresses are not permitted."
+            );
+            return;
+          }
+        } catch {
+          // If the validation check fails due to an unexpected network issue, continue to Supabase
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
