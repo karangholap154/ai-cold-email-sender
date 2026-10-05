@@ -56,7 +56,19 @@ insert into public.blocked_email_domains (domain) values
   ('tempinbox.com'),
   ('dropmail.me'),
   ('disposablemail.com'),
-  ('emailondeck.com')
+  ('emailondeck.com'),
+  ('hudzer.com'),
+  ('aminavin.com'),
+  ('bitproy.com'),
+  ('caps7.com'),
+  ('cwsgear.com'),
+  ('deertees.com'),
+  ('flakeian.com'),
+  ('meshelp.com'),
+  ('sssonar.com'),
+  ('sweepser.com'),
+  ('xiunt.com'),
+  ('maxxspace.com')
 on conflict (domain) do nothing;
 
 -- 3. Database function to reject disposable domains BEFORE row is inserted into auth.users
