@@ -91,7 +91,8 @@ export async function POST(req: NextRequest) {
     if (
       eventType === "subscription.active" ||
       eventType === "subscription.renewed" ||
-      eventType === "subscription.updated"
+      eventType === "subscription.updated" ||
+      eventType === "subscription.unpaused"
     ) {
       const subscriptionId =
         (data.subscription_id as string) || (data.id as string) || null;
@@ -140,7 +141,9 @@ export async function POST(req: NextRequest) {
     else if (
       eventType === "subscription.cancelled" ||
       eventType === "subscription.expired" ||
-      eventType === "subscription.paused"
+      eventType === "subscription.paused" ||
+      eventType === "subscription.failed" ||
+      eventType === "subscription.on_hold"
     ) {
       await supabase
         .from("profiles")
