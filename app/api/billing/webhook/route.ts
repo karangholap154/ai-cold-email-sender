@@ -50,11 +50,17 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1. Identify User ID from metadata or customer email
-    let userId: string | null = (metadata?.user_id as string) || null;
+    let userId: string | null =
+      (metadata?.user_id as string) ||
+      ((data.subscription as Record<string, unknown>)?.metadata as Record<string, unknown>)?.user_id as string ||
+      ((data.customer as Record<string, unknown>)?.metadata as Record<string, unknown>)?.user_id as string ||
+      null;
+
     const customerEmail: string | null =
       (customer?.email as string) ||
       (data.customer_email as string) ||
       (data.email as string) ||
+      ((data.customer as Record<string, unknown>)?.email as string) ||
       null;
 
     if (!userId && customerEmail) {
@@ -92,7 +98,8 @@ export async function POST(req: NextRequest) {
       eventType === "subscription.active" ||
       eventType === "subscription.renewed" ||
       eventType === "subscription.updated" ||
-      eventType === "subscription.unpaused"
+      eventType === "subscription.unpaused" ||
+      eventType === "payment.succeeded"
     ) {
       const subscriptionId =
         (data.subscription_id as string) || (data.id as string) || null;
