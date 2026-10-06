@@ -20,11 +20,12 @@ export async function POST(req: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
 
-    const origin =
+    const origin = (
       req.headers.get("origin") ||
       req.nextUrl.origin ||
       process.env.NEXT_PUBLIC_APP_URL ||
-      "http://localhost:3000";
+      "http://localhost:3000"
+    ).replace(/\/+$/, "");
 
     const returnUrl = `${origin}/settings`;
 

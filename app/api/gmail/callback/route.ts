@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get("error");
   const state = searchParams.get("state");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "");
 
   if (error || !code) {
     console.error("Google OAuth error response:", error);
