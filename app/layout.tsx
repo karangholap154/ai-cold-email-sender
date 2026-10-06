@@ -20,7 +20,7 @@ const fraunces = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://meetvina.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.meetvina.app"),
   title: {
     default: "Vina — Tailored Job Application Letters",
     template: "%s — Vina",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     "Gmail job application",
     "meetvina",
   ],
-  authors: [{ name: "Vina", url: "https://meetvina.app" }],
+  authors: [{ name: "Vina", url: "https://www.meetvina.app" }],
   creator: "Vina",
   alternates: {
     canonical: "./",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Vina — meetvina.app",
     description: "Vina turns a job description into a letter worth sending.",
-    url: "https://meetvina.app",
+    url: "https://www.meetvina.app",
     siteName: "Vina",
     locale: "en_US",
     type: "website",

@@ -60,24 +60,24 @@ export default function LandingPage() {
     "@graph": [
       {
         "@type": "WebSite",
-        "@id": "https://meetvina.app/#website",
-        "url": "https://meetvina.app",
+        "@id": "https://www.meetvina.app/#website",
+        "url": "https://www.meetvina.app",
         "name": "Vina",
         "description": "Turn a job description into a letter worth sending.",
         "publisher": {
           "@type": "Organization",
           "name": "Vina",
-          "url": "https://meetvina.app",
-          "logo": "https://meetvina.app/logo.png",
+          "url": "https://www.meetvina.app",
+          "logo": "https://www.meetvina.app/logo.png",
         },
       },
       {
         "@type": "SoftwareApplication",
-        "@id": "https://meetvina.app/#software",
+        "@id": "https://www.meetvina.app/#software",
         "name": "Vina",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "All",
-        "url": "https://meetvina.app",
+        "url": "https://www.meetvina.app",
         "description":
           "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
         "offers": [
@@ -99,7 +99,7 @@ export default function LandingPage() {
       },
       {
         "@type": "FAQPage",
-        "@id": "https://meetvina.app/#faq",
+        "@id": "https://www.meetvina.app/#faq",
         "mainEntity": faqs.map((faq) => ({
           "@type": "Question",
           "name": faq.q,
