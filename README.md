@@ -113,6 +113,12 @@ DODO_PAYMENTS_API_KEY="live_... or test_..."
 DODO_PAYMENTS_WEBHOOK_KEY="whsec_..."
 DODO_PAYMENTS_PRODUCT_ID="pdt_..."
 DODO_PAYMENTS_ENVIRONMENT="live_mode" # 'test_mode' for local testing, 'live_mode' for production
+
+# ==========================================
+# 7. Resend (Contact Form & Transactional)
+# ==========================================
+RESEND_API_KEY="re_..."
+CONTACT_RECEIVER_EMAIL="support@meetvina.app"
 ```
 
 ---
@@ -194,10 +200,10 @@ Before launching to the public on `meetvina.app`:
 2. Toggle on **Enable Custom SMTP**.
 3. Use a provider like **Resend**, **Postmark**, or **SendGrid**:
    - Host: `smtp.resend.com`
-   - Port: `587` (or `465`)
+   - Port: `587`
    - User: `resend`
-   - Password: `re_...`
-   - Sender Email: `auth@meetvina.app`
+   - Password: `re_...` (Resend API Key)
+   - Sender Email: `auth@mail.meetvina.app` (or `noreply@mail.meetvina.app`)
    - Sender Name: `Vina`
 
 ---

@@ -77,6 +77,17 @@ const globalRateLimiter =
 
 export const signupRateLimiter = globalRateLimiter;
 
+// Max 5 contact messages per IP per 15 minutes
+const globalContactRateLimiter =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ((globalThis as any).__contactRateLimiter as MemoryRateLimiter) ||
+  new MemoryRateLimiter(15 * 60 * 1000, 5);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).__contactRateLimiter = globalContactRateLimiter;
+
+export const contactRateLimiter = globalContactRateLimiter;
+
 /**
  * Safely extracts client IP address from standard reverse-proxy headers
  */

@@ -189,7 +189,7 @@ Notes:
 | Database | Supabase (Postgres) + RLS |
 | File storage | Supabase Storage bucket `resumes` (private, per-user folder) |
 | Payments | Dodo Payments (Checkout sessions, customer portal, webhooks + Svix) |
-| Transactional email (post-MVP) | Resend, via Supabase custom SMTP — **not integrated yet**; Supabase's built-in 2 emails/hour cap is fine while testing solo, must be swapped in before real multi-user signups |
+| Transactional email (post-MVP) | Resend, via Supabase custom SMTP — **integrated** (`mail.meetvina.app`) |
 | Hosting | Vercel |
 
 ## 11. Data Model (Supabase)
@@ -420,9 +420,9 @@ Broken into small, single-focus steps. **Struck-through or "done" notes** mean t
 60. Submit the OAuth consent screen for Google's verification review.
 61. Prepare for a possible CASA security assessment if requested.
 
-### Phase 11 — Transactional email upgrade — still open
-62. Create a Resend account, verify a sending domain.
-63. Configure Resend as custom SMTP in Supabase Auth settings.
+### Phase 11 — Transactional email upgrade — done
+62. Create a Resend account, verify a sending domain (`mail.meetvina.app`).
+63. Configure Resend as custom SMTP in Supabase Auth settings (`smtp.resend.com:587`).
 64. Raise the Supabase auth email rate limit accordingly.
 65. Re-test signup/verification flow end-to-end at expected real-world volume.
 

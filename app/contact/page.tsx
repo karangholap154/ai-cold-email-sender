@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Mail, ArrowLeft, MessageSquare, ShieldCheck, Clock, FileQuestion, HelpCircle } from "lucide-react";
+import { Mail, ArrowLeft, ShieldCheck, FileQuestion, HelpCircle } from "lucide-react";
+import { ContactForm } from "@/components/contact-form";
 
 export const metadata = {
   title: "Contact & Support | Vina",
@@ -33,32 +34,21 @@ export default function ContactPage() {
           </p>
         </div>
 
-        {/* Primary Contact Card */}
-        <div className="border border-seal/30 bg-[#FAF9F5] p-6 rounded-sm space-y-4">
-          <div className="flex items-center gap-2.5 text-ink font-medium text-sm sm:text-base">
-            <MessageSquare className="h-4 w-4 text-seal shrink-0" />
-            <span>Direct Email Support</span>
+        {/* Interactive Contact Form */}
+        <ContactForm />
+
+        {/* Fallback direct email notice */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border border-hairline bg-paper text-xs text-muted-ink rounded-sm">
+          <div>
+            <span>Prefer to email us directly from your email app? </span>
+            <a
+              href="mailto:support@meetvina.app"
+              className="font-mono text-seal font-medium hover:underline underline-offset-4 ml-1"
+            >
+              support@meetvina.app
+            </a>
           </div>
-          <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-            Have a question about your account, need assistance connecting Gmail, or want help with a subscription? Drop us a line directly:
-          </p>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-hairline">
-            <div>
-              <span className="text-[11px] uppercase tracking-wider text-muted-ink font-medium block">
-                Official Support Desk
-              </span>
-              <a
-                href="mailto:support@meetvina.app"
-                className="font-mono text-sm sm:text-base text-seal font-medium hover:underline underline-offset-4"
-              >
-                support@meetvina.app
-              </a>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-ink">
-              <Clock className="h-3.5 w-3.5 text-confirmed shrink-0" />
-              <span>Response within 24–48 hours</span>
-            </div>
-          </div>
+          <span className="text-[11px] text-muted-ink">Typical response within 24–48 hours</span>
         </div>
 
         {/* Support Categories */}
