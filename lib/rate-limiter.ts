@@ -88,6 +88,17 @@ const globalContactRateLimiter =
 
 export const contactRateLimiter = globalContactRateLimiter;
 
+// Max 20 AI draft generations per key per 5 minutes
+const globalAiRateLimiter =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ((globalThis as any).__aiRateLimiter as MemoryRateLimiter) ||
+  new MemoryRateLimiter(5 * 60 * 1000, 20);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).__aiRateLimiter = globalAiRateLimiter;
+
+export const aiRateLimiter = globalAiRateLimiter;
+
 /**
  * Safely extracts client IP address from standard reverse-proxy headers
  */

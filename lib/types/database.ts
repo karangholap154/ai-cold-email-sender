@@ -70,6 +70,8 @@ export interface AnalyzeRequest {
   originalBody?: string;
   originalSentDate?: string;
   resumeId?: string;
+  isRegeneration?: boolean;
+  regenerationCount?: number;
 }
 
 export interface AnalyzeResponse {

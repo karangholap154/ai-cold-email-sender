@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeJdAndDraftEmail, generateFollowUpEmail } from "@/lib/ai";
 import { formatSenderSignature } from "@/lib/signature";
+import { FREE_REGEN_LIMIT } from "@/lib/constants/plans";
+import { aiRateLimiter } from "@/lib/rate-limiter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,24 +13,40 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser();
 
-    // 1. If this is a follow-up request, enforce Pro Plan server-side
+    // 1. Enforce user authentication for all generation requests
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "You must be signed in to generate tailored letters." },
+        { status: 401 }
+      );
+    }
+
+    // 2. Enforce AI generation rate limits (per user)
+    const rateLimitStatus = aiRateLimiter.check(user.id);
+    if (!rateLimitStatus.success) {
+      return NextResponse.json(
+        {
+          error: "You are generating letters too quickly. Please wait a moment before trying again.",
+          code: "RATE_LIMIT_EXCEEDED",
+        },
+        { status: 429 }
+      );
+    }
+
+    // 3. Fetch user profile, plan & signature preferences in a single query
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const plan = profile?.plan || "free";
+
+    // 4. If this is a follow-up request, enforce Pro Plan server-side
     if (type === "followup") {
-      if (!user) {
-        return NextResponse.json(
-          { error: "You must be signed in to draft follow-up letters." },
-          { status: 401 }
-        );
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const plan = profile?.plan || "free";
       if (plan !== "pro") {
         return NextResponse.json(
           {
@@ -40,46 +58,49 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Fetch authenticated user's background / skills summary & sender signature from Supabase
-    let skillsSummary = "";
-    let senderSignature = "";
-    if (user) {
-      try {
-        // Fetch resume skills summary (specific resumeId if provided, or default)
-        let resumeQuery = supabase
-          .from("resume")
-          .select("id, skills_summary")
-          .eq("user_id", user.id);
-
-        if (body.resumeId) {
-          resumeQuery = resumeQuery.eq("id", body.resumeId);
-        } else {
-          resumeQuery = resumeQuery
-            .order("is_default", { ascending: false })
-            .order("updated_at", { ascending: false });
-        }
-
-        const { data: resumeData } = await resumeQuery.limit(1).maybeSingle();
-
-        if (resumeData?.skills_summary) {
-          skillsSummary = resumeData.skills_summary;
-        }
-
-        // Fetch profile signature
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature")
-          .eq("id", user.id)
-          .limit(1)
-          .maybeSingle();
-
-        if (profileData) {
-          senderSignature = formatSenderSignature(profileData);
-        }
-      } catch (dbErr) {
-        console.warn("Could not fetch user profile or resume from Supabase:", dbErr);
-      }
+    // 5. Enforce Free-tier rewrite limits server-side
+    if (
+      plan === "free" &&
+      body?.isRegeneration &&
+      typeof body?.regenerationCount === "number" &&
+      body.regenerationCount >= FREE_REGEN_LIMIT
+    ) {
+      return NextResponse.json(
+        {
+          error: "You've used both free rewrites for this draft. Upgrade to Pro for unlimited rewrites.",
+          code: "REGEN_LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
     }
+
+    // 6. Fetch authenticated user's background / skills summary from Supabase
+    let skillsSummary = "";
+    try {
+      // Fetch resume skills summary (specific resumeId if provided, or default)
+      let resumeQuery = supabase
+        .from("resume")
+        .select("id, skills_summary")
+        .eq("user_id", user.id);
+
+      if (body.resumeId) {
+        resumeQuery = resumeQuery.eq("id", body.resumeId);
+      } else {
+        resumeQuery = resumeQuery
+          .order("is_default", { ascending: false })
+          .order("updated_at", { ascending: false });
+      }
+
+      const { data: resumeData } = await resumeQuery.limit(1).maybeSingle();
+
+      if (resumeData?.skills_summary) {
+        skillsSummary = resumeData.skills_summary;
+      }
+    } catch (dbErr) {
+      console.warn("Could not fetch user resume from Supabase:", dbErr);
+    }
+
+    const senderSignature = profile ? formatSenderSignature(profile) : "";
 
     // 3. Handle Follow-up generation
     if (type === "followup") {
@@ -144,6 +165,13 @@ export async function POST(req: NextRequest) {
     if (!jdText || typeof jdText !== "string" || jdText.trim().length < 20) {
       return NextResponse.json(
         { error: "Please provide a valid job description (at least 20 characters)." },
+        { status: 400 }
+      );
+    }
+
+    if (jdText.length > 20000) {
+      return NextResponse.json(
+        { error: "Job description is too long (maximum 20,000 characters)." },
         { status: 400 }
       );
     }

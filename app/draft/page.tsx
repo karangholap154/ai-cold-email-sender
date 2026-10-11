@@ -367,11 +367,15 @@ export default function DraftPage() {
             type: "followup",
             parentEmailId: followUpContext.parentEmailId,
             resumeId: selectedResume?.id,
+            isRegeneration: true,
+            regenerationCount,
           }
         : {
             type: "initial",
             jdText,
             resumeId: selectedResume?.id,
+            isRegeneration: true,
+            regenerationCount,
           };
 
       const res = await fetch("/api/analyze", {
