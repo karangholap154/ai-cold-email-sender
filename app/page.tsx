@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,107 +7,153 @@ import {
   FileText,
   ShieldCheck,
   Zap,
-  Building2,
-  Briefcase,
   AlertTriangle,
-  Send,
   Lock,
-  ChevronDown,
   Sparkles,
   CornerDownRight,
   Check,
 } from "lucide-react";
 import { FREE_PLAN, PRO_PLAN } from "@/lib/constants/plans";
 import { Footer } from "@/components/footer";
+import { InteractivePreview } from "@/components/landing/interactive-preview";
+import { FaqAccordion } from "@/components/landing/faq-accordion";
+
+export const metadata: Metadata = {
+  title: "Vina — Turn Job Descriptions into Tailored Cold Emails That Get Read",
+  description:
+    "AI-powered job application letter writer. Paste any job posting to draft short, punchy cold emails with your résumé attached automatically. Sent directly from your authentic Gmail account.",
+  alternates: {
+    canonical: "https://www.meetvina.app",
+  },
+  openGraph: {
+    title: "Vina — Turn Job Descriptions into Tailored Cold Emails That Get Read",
+    description:
+      "Draft concise, human-sounding outreach emails directly from job postings with your résumé attached and duplicate recruiter warnings.",
+    url: "https://www.meetvina.app",
+    type: "website",
+  },
+};
+
+const faqs = [
+  {
+    q: "Does Vina read or access my private Gmail inbox?",
+    a: "Never. Vina only ever sends what you approve, from your own Gmail account. We don't read your inbox, and we don't send anything automatically.",
+  },
+  {
+    q: "Can I inspect and edit every letter before it is sent?",
+    a: "Yes. Vina is built for people applying to real roles at real companies — not for blasting the same message to a hundred inboxes. Every letter is editable before anything goes out.",
+  },
+  {
+    q: "How does the résumé attachment work?",
+    a: "Upload your résumé (PDF) once in Settings so Vina can reference it in your letters. When you send, your résumé is attached automatically.",
+  },
+  {
+    q: "What prevents me from emailing the same recruiter twice?",
+    a: "Vina includes built-in duplicate contact detection. When you enter an HR email address you have previously written to, an inline warning reminds you before sending.",
+  },
+  {
+    q: "Why is sending from my personal Gmail better than an email automation tool?",
+    a: "Outreach sent through third-party marketing servers often lands in Spam or Promotions. Sending directly from your authentic Gmail account preserves your sender reputation and reaches the primary inbox.",
+  },
+];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://www.meetvina.app/#website",
+      "url": "https://www.meetvina.app",
+      "name": "Vina",
+      "description": "Turn a job description into a letter worth sending.",
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://www.meetvina.app/#organization",
+      },
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://www.meetvina.app/#organization",
+      "name": "Vina",
+      "url": "https://www.meetvina.app",
+      "logo": "https://www.meetvina.app/logo.png",
+      "sameAs": [
+        "https://github.com/karangholap154/ai-cold-email-sender",
+      ],
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://www.meetvina.app/#software",
+      "name": "Vina",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "All",
+      "url": "https://www.meetvina.app",
+      "description":
+        "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": `${FREE_PLAN.name} Tier`,
+          "price": String(FREE_PLAN.priceUsd),
+          "priceCurrency": "USD",
+          "description": FREE_PLAN.features.map((f) => f.text).join(", "),
+        },
+        {
+          "@type": "Offer",
+          "name": `${PRO_PLAN.name} Membership`,
+          "price": `${PRO_PLAN.priceUsd}.00`,
+          "priceCurrency": "USD",
+          "description": PRO_PLAN.features.map((f) => f.text).join(", "),
+        },
+      ],
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://www.meetvina.app/#howto",
+      "name": "How to draft and send a tailored job application letter with Vina",
+      "description":
+        "A 3-step process to generate a concise, tailored outreach email from a job posting, attach your résumé, and dispatch it via your personal Gmail.",
+      "totalTime": "PT2M",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Paste the job posting",
+          "text": "Paste any job posting or recruiter note into Vina. The AI extracts the company name, role title, and priority requirements.",
+          "url": "https://www.meetvina.app/#how-it-works",
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Review and refine the draft",
+          "text": "Inspect the generated letter in the Letter Frame. Vina drafts a concise, hype-free note under 130 words highlighting your relevant achievements.",
+          "url": "https://www.meetvina.app/#how-it-works",
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Send from your Gmail with résumé attached",
+          "text": "Vina attaches your uploaded PDF résumé and sends the email through your personal Gmail account via official Google OAuth, avoiding spam folders.",
+          "url": "https://www.meetvina.app/#how-it-works",
+        },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.meetvina.app/#faq",
+      "mainEntity": faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.q,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.a,
+        },
+      })),
+    },
+  ],
+};
 
 export default function LandingPage() {
-  const [activeTab, setActiveTab] = useState<"preview" | "raw">("preview");
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  const toggleFaq = (idx: number) => {
-    setOpenFaq(openFaq === idx ? null : idx);
-  };
-
-  const faqs = [
-    {
-      q: "Does Vina read or access my private Gmail inbox?",
-      a: "Never. Vina only ever sends what you approve, from your own Gmail account. We don't read your inbox, and we don't send anything automatically.",
-    },
-    {
-      q: "Can I inspect and edit every letter before it is sent?",
-      a: "Yes. Vina is built for people applying to real roles at real companies — not for blasting the same message to a hundred inboxes. Every letter is editable before anything goes out.",
-    },
-    {
-      q: "How does the résumé attachment work?",
-      a: "Upload your résumé (PDF) once in Settings so Vina can reference it in your letters. When you send, your résumé is attached automatically.",
-    },
-    {
-      q: "What prevents me from emailing the same recruiter twice?",
-      a: "Vina includes built-in duplicate contact detection. When you enter an HR email address you have previously written to, an inline warning reminds you before sending.",
-    },
-    {
-      q: "Why is sending from my personal Gmail better than an email automation tool?",
-      a: "Outreach sent through third-party marketing servers often lands in Spam or Promotions. Sending directly from your authentic Gmail account preserves your sender reputation and reaches the primary inbox.",
-    },
-  ];
-
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://www.meetvina.app/#website",
-        "url": "https://www.meetvina.app",
-        "name": "Vina",
-        "description": "Turn a job description into a letter worth sending.",
-        "publisher": {
-          "@type": "Organization",
-          "name": "Vina",
-          "url": "https://www.meetvina.app",
-          "logo": "https://www.meetvina.app/logo.png",
-        },
-      },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://www.meetvina.app/#software",
-        "name": "Vina",
-        "applicationCategory": "BusinessApplication",
-        "operatingSystem": "All",
-        "url": "https://www.meetvina.app",
-        "description":
-          "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
-        "offers": [
-          {
-            "@type": "Offer",
-            "name": `${FREE_PLAN.name} Tier`,
-            "price": String(FREE_PLAN.priceUsd),
-            "priceCurrency": "USD",
-            "description": FREE_PLAN.features.map((f) => f.text).join(", "),
-          },
-          {
-            "@type": "Offer",
-            "name": `${PRO_PLAN.name} Membership`,
-            "price": `${PRO_PLAN.priceUsd}.00`,
-            "priceCurrency": "USD",
-            "description": PRO_PLAN.features.map((f) => f.text).join(", "),
-          },
-        ],
-      },
-      {
-        "@type": "FAQPage",
-        "@id": "https://www.meetvina.app/#faq",
-        "mainEntity": faqs.map((faq) => ({
-          "@type": "Question",
-          "name": faq.q,
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": faq.a,
-          },
-        })),
-      },
-    ],
-  };
-
   return (
     <main className="flex flex-1 flex-col bg-paper text-ink selection:bg-[#E4DFD3]">
       {/* Schema.org Structured Data */}
@@ -176,173 +220,7 @@ export default function LandingPage() {
       {/* 2. THE SIGNATURE EXPERIENCE: THE LETTER FRAME SHOWCASE */}
       <section className="border-b border-hairline bg-[#FAF9F5] px-4 py-12 sm:px-6 sm:py-20 md:py-24">
         <div className="mx-auto max-w-4xl">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-8">
-            <div>
-              <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-muted-ink">
-                Human-in-the-loop correspondence
-              </span>
-              <h2 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink mt-1">
-                The Letter Frame
-              </h2>
-              <p className="mt-1.5 text-xs sm:text-sm text-muted-ink max-w-xl leading-relaxed">
-                Designed to slow you down at the single moment that matters: before sending. Inspect extracted role context, hone the phrasing, and dispatch with genuine confidence.
-              </p>
-            </div>
-
-            {/* Toggle tabs */}
-            <div className="flex items-center rounded-sm border border-hairline bg-paper p-1 text-xs shrink-0 self-start sm:self-auto shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setActiveTab("preview")}
-                className={`px-3 py-1.5 rounded-xs transition-all cursor-pointer ${
-                  activeTab === "preview"
-                    ? "bg-ink text-paper font-medium shadow-xs"
-                    : "text-muted-ink hover:text-ink"
-                }`}
-              >
-                Tailored Letter
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("raw")}
-                className={`px-3 py-1.5 rounded-xs transition-all cursor-pointer ${
-                  activeTab === "raw"
-                    ? "bg-ink text-paper font-medium shadow-xs"
-                    : "text-muted-ink hover:text-ink"
-                }`}
-              >
-                Raw Job Posting
-              </button>
-            </div>
-          </div>
-
-          {activeTab === "preview" ? (
-            <div className="space-y-4">
-              {/* Extracted Entity Confirmation Strip */}
-              <div className="border border-hairline bg-paper p-3.5 sm:p-4 rounded-sm shadow-2xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                    <div className="flex items-center gap-1.5 text-ink">
-                      <Building2 className="h-3.5 w-3.5 text-muted-ink shrink-0" />
-                      <span className="text-muted-ink">Target:</span>
-                      <span className="font-medium text-ink">Linear</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-ink">
-                      <Briefcase className="h-3.5 w-3.5 text-muted-ink shrink-0" />
-                      <span className="text-muted-ink">Role:</span>
-                      <span className="font-medium text-ink">Staff Frontend Engineer</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1 sm:pt-0">
-                    <span className="rounded-sm border border-hairline bg-[#EDEAE2] px-2 py-0.5 text-[10px] sm:text-[11px] text-muted-ink font-medium">
-                      Design Systems
-                    </span>
-                    <span className="rounded-sm border border-hairline bg-[#EDEAE2] px-2 py-0.5 text-[10px] sm:text-[11px] text-muted-ink font-medium">
-                      Next.js &amp; WebGL
-                    </span>
-                    <span className="rounded-sm border border-hairline bg-[#EDEAE2] px-2 py-0.5 text-[10px] sm:text-[11px] text-muted-ink font-medium">
-                      Sub-50ms Latency
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Physical Stationery Letter Frame Mockup */}
-              <div className="border border-hairline bg-paper p-5 sm:p-8 md:p-12 rounded-sm shadow-[0_4px_24px_rgba(0,0,0,0.03)] relative overflow-hidden">
-                {/* Decorative vintage postage stamp motif in top right */}
-                <div className="absolute top-4 right-4 sm:top-6 sm:right-6 border border-dashed border-hairline bg-[#FAF9F5] px-2.5 py-1 text-[9px] font-mono uppercase tracking-widest text-muted-ink/80 select-none hidden sm:block">
-                  AIR MAIL • 1ST CLASS
-                </div>
-
-                {/* Recipient & Attachment Header */}
-                <div className="border-b border-hairline pb-4 mb-5 sm:mb-6 text-xs text-muted-ink flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-ink/70">To:</span>
-                    <span className="font-mono text-ink font-medium break-all">sarah.chen@linear.app</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 text-[11px] text-confirmed bg-confirmed/10 px-2.5 py-0.5 rounded-sm border border-confirmed/20 self-start sm:self-auto shrink-0 font-medium">
-                    <FileText className="h-3 w-3" />
-                    <span>Résumé attached (Resume_2026.pdf)</span>
-                  </div>
-                </div>
-
-                {/* Subject Line */}
-                <div className="mb-5 sm:mb-6 space-y-1">
-                  <span className="block text-[11px] font-medium uppercase tracking-wider text-muted-ink/70">
-                    Subject Line
-                  </span>
-                  <div className="font-heading text-base sm:text-lg md:text-xl text-ink leading-snug">
-                    Linear Staff Frontend Engineer — background in high-performance design systems
-                  </div>
-                </div>
-
-                {/* Letter Body */}
-                <div className="space-y-3.5 sm:space-y-4 text-sm sm:text-base leading-relaxed text-ink/90 font-serif">
-                  <p>Hi Sarah,</p>
-                  <p>
-                    I noticed Linear is expanding the web client team to rebuild core keyboard interactions and canvas-rendered timeline views. Given your focus on sub-50ms interaction latency, I wanted to reach out directly.
-                  </p>
-                  <p>
-                    Over the past four years leading design system architecture at Scale, I led our migration to headless primitives and built our real-time collaborative workspace, decreasing bundle weight by 42% and sustaining 60fps renders on complex graph views.
-                  </p>
-                  <p>
-                    I’ve attached my résumé with further project breakdowns. If you’re open to a brief 10-minute introductory conversation this week, I would welcome the chance to share notes on how we tackled similar rendering bottlenecks.
-                  </p>
-                  <p className="pt-2">
-                    Best regards,<br />
-                    <span className="font-sans text-sm font-medium text-ink">Karan Gholap</span>
-                  </p>
-                </div>
-
-                {/* Metadata stats */}
-                <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-t border-hairline pt-3.5 text-[11px] text-muted-ink">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-ink font-medium">124 words</span>
-                    <span>•</span>
-                    <span>1 min reading time</span>
-                  </div>
-                  <span className="italic text-muted-ink/80 text-[10px] sm:text-[11px]">
-                    Restrained, direct, high-signal correspondence
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Delivery Preview Bar */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
-                <div className="flex items-center gap-2 text-xs text-muted-ink">
-                  <Lock className="h-3.5 w-3.5 text-seal shrink-0" />
-                  <span>Delivered natively via your personal Gmail OAuth token</span>
-                </div>
-
-                <div className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-5 py-2.5 sm:py-2 text-xs font-medium text-paper shadow-xs min-h-[42px] sm:min-h-0">
-                  <Send className="h-3.5 w-3.5" />
-                  <span>Send letter</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="border border-hairline bg-paper p-6 sm:p-8 rounded-sm space-y-4 shadow-2xs">
-              <div className="flex items-center justify-between border-b border-hairline pb-3">
-                <span className="text-xs font-mono text-muted-ink">Pasted Job Posting Snippet</span>
-                <span className="text-xs text-muted-ink">1,450 characters</span>
-              </div>
-              <pre className="text-xs font-mono text-muted-ink whitespace-pre-wrap leading-relaxed overflow-x-auto">
-{`About the Role:
-Linear is looking for a Staff Frontend Engineer to own our core client performance and design system architecture.
-
-Responsibilities:
-- Drive rendering architecture across web and desktop clients using Next.js, React, and WebGL.
-- Architect our headless design system components for zero-latency interactions and full keyboard navigation.
-- Partner with product designers to ship buttery-smooth transitions and real-time multiplayer states.
-
-Qualifications:
-- 6+ years building mission-critical web applications with high visual polish.
-- Deep expertise in browser rendering pipelines, WebGL canvas performance, and bundle optimization.
-- Strong product intuition and obsession with tactile micro-interactions.`}
-              </pre>
-            </div>
-          )}
+          <InteractivePreview />
         </div>
       </section>
 
@@ -734,29 +612,7 @@ Qualifications:
             </h2>
           </div>
 
-          <div className="border-t border-hairline divide-y divide-hairline">
-            {faqs.map((faq, idx) => (
-              <div key={idx} className="py-3.5 sm:py-4">
-                <button
-                  type="button"
-                  onClick={() => toggleFaq(idx)}
-                  className="flex w-full items-center justify-between text-left text-xs sm:text-sm font-medium text-ink hover:text-seal transition-colors gap-3 cursor-pointer py-1"
-                >
-                  <span>{faq.q}</span>
-                  <ChevronDown
-                    className={`h-4 w-4 text-muted-ink shrink-0 transition-transform duration-200 ${
-                      openFaq === idx ? "rotate-180 text-seal" : ""
-                    }`}
-                  />
-                </button>
-                {openFaq === idx && (
-                  <p className="mt-2 text-xs sm:text-sm text-muted-ink leading-relaxed">
-                    {faq.a}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+          <FaqAccordion faqs={faqs} />
 
           {/* Direct Support Question Prompt */}
           <div className="border-t border-hairline pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-muted-ink">
