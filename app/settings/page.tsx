@@ -809,6 +809,13 @@ export default function SettingsPage() {
                 gmailStatus={gmailStatus}
                 isDisconnectingGmail={isDisconnectingGmail}
                 setShowDisconnectModal={setShowDisconnectModal}
+                onConnectSuccess={(status) => {
+                  setGmailStatus({
+                    connected: true,
+                    email: status.email,
+                    connectedAt: status.connectedAt,
+                  });
+                }}
               />
             )}
 

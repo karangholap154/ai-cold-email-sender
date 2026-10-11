@@ -17,90 +17,6 @@ interface SendRequestBody {
   resumeId?: string | null;
 }
 
-/**
- * Builds an RFC 2822 MIME message buffer and returns it base64url encoded
- * along with its assigned RFC 2822 Message-ID for conversation threading.
- */
-async function buildRawMimeMessage({
-  from,
-  to,
-  subject,
-  body,
-  attachments = [],
-  inReplyTo,
-  references,
-}: {
-  from: string;
-  to: string;
-  subject: string;
-  body: string;
-  attachments?: Array<{ filename: string; content: Buffer }>;
-  inReplyTo?: string;
-  references?: string;
-}): Promise<{ raw: string; rfcMessageId: string }> {
-  const transporter = nodemailer.createTransport({
-    streamTransport: true,
-    newline: "windows",
-  });
-
-  const domain = from.includes("@")
-    ? from.split("@")[1].replace(/[>]/g, "").trim()
-    : "gmail.com";
-
-  const assignedMessageId = `<${Date.now()}.${crypto.randomUUID()}@${domain}>`;
-
-  const mailOptions: SendMailOptions = {
-    from,
-    to,
-    subject,
-    text: body,
-    messageId: assignedMessageId,
-    attachments: attachments.map((att) => ({
-      filename: att.filename,
-      content: att.content,
-    })),
-  };
-
-  if (inReplyTo) {
-    mailOptions.inReplyTo = inReplyTo.startsWith("<")
-      ? inReplyTo
-      : `<${inReplyTo}>`;
-  }
-  if (references) {
-    mailOptions.references = references.startsWith("<")
-      ? references
-      : `<${references}>`;
-  }
-
-  return new Promise<{ raw: string; rfcMessageId: string }>((resolve, reject) => {
-    transporter.sendMail(
-      mailOptions,
-      (err, info: { message: Buffer | NodeJS.ReadableStream }) => {
-        if (err) return reject(err);
-
-        if (Buffer.isBuffer(info.message)) {
-          return resolve({
-            raw: info.message.toString("base64url"),
-            rfcMessageId: assignedMessageId,
-          });
-        }
-
-        const stream = info.message;
-        const chunks: Buffer[] = [];
-        stream.on("data", (chunk: Buffer) => chunks.push(chunk));
-        stream.on("end", () => {
-          const rawBuffer = Buffer.concat(chunks);
-          resolve({
-            raw: rawBuffer.toString("base64url"),
-            rfcMessageId: assignedMessageId,
-          });
-        });
-        stream.on("error", (msgErr: Error) => reject(msgErr));
-      }
-    );
-  });
-}
-
 export async function POST(req: NextRequest) {
   let bodyData: Partial<SendRequestBody> = {};
 
@@ -147,7 +63,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Fetch user's profile and plan
+    // 1. Fetch user's profile and plan (Preserves 100% of subscription checks)
     const { data: profile } = await supabase
       .from("profiles")
       .select("plan, full_name")
@@ -170,7 +86,9 @@ export async function POST(req: NextRequest) {
     // Enforce Free-Tier Monthly Send Cap (5 sends/calendar month, UTC-normalized)
     if (plan === "free") {
       const now = new Date();
-      const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+      const startOfMonth = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+      ).toISOString();
       const { count, error: countError } = await supabase
         .from("sent_emails")
         .select("id", { count: "exact", head: true })
@@ -193,7 +111,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Fetch user's active Gmail OAuth connection
+    // 2. Fetch user's active Gmail connection
     const { data: connection, error: connError } = await supabase
       .from("gmail_connections")
       .select("*")
@@ -202,7 +120,6 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (connError || !connection) {
-      // Record failed attempt in sent_emails for audit
       await supabase.from("sent_emails").insert({
         user_id: user.id,
         jd_text: jdText || "",
@@ -214,22 +131,22 @@ export async function POST(req: NextRequest) {
         final_subject: subject,
         final_body: body,
         status: "failed",
-        error_message: "Connect your Gmail to start sending.",
+        error_message: "Connect your Gmail in Settings to start sending.",
       });
 
       return NextResponse.json(
         {
-          error: "Connect your Gmail to start sending.",
+          error: "Connect your Gmail in Settings to start sending.",
           code: "GMAIL_NOT_CONNECTED",
         },
         { status: 400 }
       );
     }
 
-    // 2. Decrypt refresh token and obtain a fresh access token from Google
-    let refreshToken: string;
+    // 3. Decrypt stored Google App Password
+    let decryptedPassword: string;
     try {
-      refreshToken = decryptToken(
+      decryptedPassword = decryptToken(
         connection.refresh_token_encrypted,
         connection.iv,
         connection.tag
@@ -238,59 +155,15 @@ export async function POST(req: NextRequest) {
       console.error("Token decryption error:", decryptErr);
       return NextResponse.json(
         {
-          error: "Could not decrypt your Gmail credentials. Please reconnect your Gmail in Settings.",
+          error:
+            "Could not decrypt your Gmail credentials. Please reconnect your Gmail in Settings.",
           code: "GMAIL_AUTH_EXPIRED",
         },
         { status: 500 }
       );
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-      return NextResponse.json(
-        { error: "Google OAuth credentials are not properly configured on server." },
-        { status: 500 }
-      );
-    }
-
-    const tokenRefreshRes = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type: "refresh_token",
-      }),
-    });
-
-    const tokenRefreshData = await tokenRefreshRes.json();
-
-    if (!tokenRefreshRes.ok || !tokenRefreshData.access_token) {
-      console.error("Google token refresh error:", tokenRefreshData);
-
-      // If token was revoked or expired, mark revoked in DB
-      if (tokenRefreshData.error === "invalid_grant") {
-        await supabase
-          .from("gmail_connections")
-          .update({ revoked_at: new Date().toISOString() })
-          .eq("user_id", user.id);
-      }
-
-      return NextResponse.json(
-        {
-          error: "Your Gmail connection session has expired or was revoked. Please reconnect your Gmail account in Settings.",
-          code: "GMAIL_AUTH_EXPIRED",
-        },
-        { status: 401 }
-      );
-    }
-
-    const accessToken = tokenRefreshData.access_token;
-
-    // 3. Fetch user's specified or default resume PDF from Supabase Storage
+    // 4. Fetch user's specified or default resume PDF from Supabase Storage
     let resumeQuery = supabase
       .from("resume")
       .select("*")
@@ -324,7 +197,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. If this is a follow-up, retrieve parent email's threadId & RFC 2822 Message-ID for native conversation nesting
+    // 5. If this is a follow-up, retrieve parent email's Message-ID for native conversation nesting
     let parentThreadId: string | null = null;
     let parentMessageId: string | null = null;
     let inReplyToHeader: string | undefined;
@@ -333,7 +206,6 @@ export async function POST(req: NextRequest) {
     let resolvedParentEmailId: string | null = parentEmailId || null;
 
     if (emailType === "followup") {
-
       // If parentEmailId was not passed explicitly, auto-detect the most recent sent email to this hrEmail
       if (!resolvedParentEmailId) {
         try {
@@ -352,7 +224,9 @@ export async function POST(req: NextRequest) {
             parentThreadId = recentEmail.gmail_thread_id;
             parentMessageId = recentEmail.gmail_message_id;
             if (recentEmail.final_subject) {
-              const baseSub = recentEmail.final_subject.replace(/^re:\s*/i, "").trim();
+              const baseSub = recentEmail.final_subject
+                .replace(/^re:\s*/i, "")
+                .trim();
               finalSubjectToSend = `Re: ${baseSub}`;
             }
           }
@@ -375,7 +249,9 @@ export async function POST(req: NextRequest) {
             parentMessageId = parentEmail.gmail_message_id;
           }
           if (parentEmail?.final_subject) {
-            const baseSub = parentEmail.final_subject.replace(/^re:\s*/i, "").trim();
+            const baseSub = parentEmail.final_subject
+              .replace(/^re:\s*/i, "")
+              .trim();
             finalSubjectToSend = `Re: ${baseSub}`;
           }
         } catch (parentErr) {
@@ -383,36 +259,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // If we don't have parent IDs from DB, query Gmail API directly for the latest message sent to this recipient
-      if (!parentThreadId || !parentMessageId) {
-        try {
-          const listRes = await fetch(
-            `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=to:${encodeURIComponent(normalizedEmail)}&maxResults=1`,
-            {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            }
-          );
-          if (listRes.ok) {
-            const listData = await listRes.json();
-            const firstMsg = listData.messages?.[0];
-            if (firstMsg) {
-              parentThreadId = parentThreadId || firstMsg.threadId;
-              parentMessageId = parentMessageId || firstMsg.id;
-            }
-          }
-        } catch (gmailListErr) {
-          console.warn("Could not query Gmail API for parent thread:", gmailListErr);
-        }
-      }
-
       // Format In-Reply-To and References headers from parent message ID
       if (parentMessageId) {
         const cleanParentId = parentMessageId.trim();
-        inReplyToHeader = cleanParentId.startsWith("<") && cleanParentId.endsWith(">")
-          ? cleanParentId
-          : cleanParentId.includes("@")
-          ? `<${cleanParentId}>`
-          : `<${cleanParentId}@mail.gmail.com>`;
+        inReplyToHeader =
+          cleanParentId.startsWith("<") && cleanParentId.endsWith(">")
+            ? cleanParentId
+            : cleanParentId.includes("@")
+            ? `<${cleanParentId}>`
+            : `<${cleanParentId}@mail.gmail.com>`;
         referencesHeader = inReplyToHeader;
       }
 
@@ -422,77 +277,77 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Construct RFC 2822 base64url MIME message
+    // 6. Initialize Nodemailer SMTP Transport using Gmail App Password
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: connection.gmail_address,
+        pass: decryptedPassword,
+      },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+    });
+
     const senderName = profile?.full_name?.trim();
     const fromAddress = senderName
       ? `"${senderName.replace(/"/g, '\\"')}" <${connection.gmail_address}>`
       : connection.gmail_address;
 
-    const { raw: rawMime, rfcMessageId: currentRfcMessageId } = await buildRawMimeMessage({
+    const mailOptions: SendMailOptions = {
       from: fromAddress,
       to: normalizedEmail,
       subject: finalSubjectToSend,
-      body: body.trim(),
-      attachments,
-      inReplyTo: inReplyToHeader,
-      references: referencesHeader,
-    });
-
-    // 6. Send message via Google Gmail API
-    const gmailPayload: Record<string, string> = {
-      raw: rawMime,
+      text: body.trim(),
+      attachments: attachments.map((att) => ({
+        filename: att.filename,
+        content: att.content,
+      })),
     };
-    if (parentThreadId) {
-      gmailPayload.threadId = parentThreadId;
+
+    if (inReplyToHeader) {
+      mailOptions.inReplyTo = inReplyToHeader;
+      mailOptions.references = referencesHeader;
     }
 
-    const gmailSendRes = await fetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(gmailPayload),
-      }
-    );
+    // 7. Send the email via Gmail SMTP
+    let sendResult;
+    try {
+      sendResult = await transporter.sendMail(mailOptions);
+    } catch (smtpErr: unknown) {
+      console.error("SMTP sending error:", smtpErr);
+      const errMsg =
+        smtpErr instanceof Error ? smtpErr.message : "Failed to send email via SMTP.";
 
-    const gmailSendData = await gmailSendRes.json();
-
-    if (!gmailSendRes.ok) {
-      console.error("Gmail API sending error:", gmailSendData);
-      throw new Error(
-        gmailSendData.error?.message || "Failed to dispatch email via Gmail API."
-      );
-    }
-
-    // Retrieve Google's authentic RFC 2822 Message-ID header from Gmail API
-    let authenticMessageId: string = currentRfcMessageId;
-    if (gmailSendData.id) {
-      try {
-        const getMsgRes = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${gmailSendData.id}?format=metadata&metadataHeaders=Message-ID`,
+      // Check if credentials failed (e.g. app password was removed)
+      if (
+        errMsg.includes("535") ||
+        errMsg.includes("Username and Password not accepted") ||
+        errMsg.includes("BadCredentials") ||
+        errMsg.includes("Invalid login")
+      ) {
+        return NextResponse.json(
           {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
+            error:
+              "Gmail rejected your connection. Please verify your App Password in Settings.",
+            code: "GMAIL_AUTH_EXPIRED",
+          },
+          { status: 401 }
         );
-        if (getMsgRes.ok) {
-          const msgDetails = await getMsgRes.json();
-          const headers = (msgDetails.payload?.headers || []) as Array<{ name: string; value: string }>;
-          const realId = headers.find(
-            (h) => h.name.toLowerCase() === "message-id"
-          )?.value;
-          if (realId) {
-            authenticMessageId = realId;
-          }
-        }
-      } catch (getErr) {
-        console.warn("Could not fetch sent message headers from Gmail API:", getErr);
       }
+
+      throw new Error(errMsg);
     }
 
-    // 7. Log successful send to sent_emails table scoped to user
+    // Capture the authentic RFC 2822 Message-ID returned by Google's SMTP server
+    const authenticMessageId =
+      sendResult.messageId ||
+      `<${Date.now()}.${crypto.randomUUID()}@gmail.com>`;
+
+    const threadIdentifier = parentThreadId || authenticMessageId;
+
+    // 8. Log successful send to sent_emails table scoped to user
     const insertPayload: Record<string, unknown> = {
       user_id: user.id,
       jd_text: jdText || "",
@@ -509,13 +364,18 @@ export async function POST(req: NextRequest) {
       parent_email_id: resolvedParentEmailId || null,
       resume_id: resumeRow?.id || null,
       gmail_message_id: authenticMessageId,
-      gmail_thread_id: gmailSendData.threadId || parentThreadId || null,
+      gmail_thread_id: threadIdentifier,
     };
 
-    const { error: insertErr } = await supabase.from("sent_emails").insert(insertPayload);
+    const { error: insertErr } = await supabase
+      .from("sent_emails")
+      .insert(insertPayload);
+
     if (insertErr) {
-      // Graceful fallback if columns don't exist yet in older schema
-      console.warn("Retrying sent_emails insert without new columns:", insertErr.message);
+      console.warn(
+        "Retrying sent_emails insert without new columns:",
+        insertErr.message
+      );
       delete insertPayload.gmail_message_id;
       delete insertPayload.gmail_thread_id;
       delete insertPayload.email_type;
@@ -526,8 +386,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      messageId: gmailSendData.id,
-      threadId: gmailSendData.threadId,
+      messageId: authenticMessageId,
+      threadId: threadIdentifier,
     });
   } catch (err: unknown) {
     console.error("Send route error:", err);

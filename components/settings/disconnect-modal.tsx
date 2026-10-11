@@ -36,7 +36,7 @@ export function DisconnectModal({
             Disconnect your Gmail account?
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-ink leading-relaxed">
-            You will no longer be able to send tailored letters directly from your personal address until you reconnect Google OAuth in Settings.
+            You will no longer be able to send tailored letters directly from your personal address until you reconnect in Settings.
           </DialogDescription>
         </DialogHeader>
 
@@ -45,7 +45,7 @@ export function DisconnectModal({
             <Mail className="h-4 w-4 text-muted-ink shrink-0" />
             <div className="min-w-0">
               <p className="font-mono text-ink font-medium truncate">{email}</p>
-              <p className="text-[11px] text-muted-ink mt-0.5">Direct personal OAuth dispatch</p>
+              <p className="text-[11px] text-muted-ink mt-0.5">Direct personal Gmail dispatch</p>
             </div>
           </div>
         )}

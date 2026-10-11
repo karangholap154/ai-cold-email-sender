@@ -22,23 +22,7 @@ export async function POST() {
       .maybeSingle();
 
     if (connection) {
-      // Attempt to revoke with Google
-      try {
-        const refreshToken = decryptToken(
-          connection.refresh_token_encrypted,
-          connection.iv,
-          connection.tag
-        );
-
-        await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(refreshToken)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        });
-      } catch (revokeErr) {
-        console.warn("Could not revoke token with Google:", revokeErr);
-      }
-
-      // Remove from database
+      // Remove connection from database
       await supabase
         .from("gmail_connections")
         .delete()

@@ -94,25 +94,24 @@ export default function PrivacyPolicyPage() {
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              2. How We Use Google User Data
+              2. How We Handle Your Email Sending Credentials
             </h2>
             <p className="text-muted-ink">
-              When you authenticate with Google, Vina requests the following permissions:
+              When you connect your Gmail account, Vina uses a dedicated, user-generated Google App Password over secure SMTP to dispatch your reviewed letters:
             </p>
-            <div className="space-y-1.5 rounded-sm border border-hairline bg-[#FAF9F5] p-3 font-mono text-xs text-ink">
-              <div>https://www.googleapis.com/auth/gmail.send</div>
-              <div>https://www.googleapis.com/auth/gmail.readonly</div>
-              <div>https://www.googleapis.com/auth/userinfo.email</div>
+            <div className="space-y-1 rounded-sm border border-hairline bg-[#FAF9F5] p-3 text-xs text-ink">
+              <div className="font-mono text-[11px] text-muted-ink">Authentication protocol:</div>
+              <div className="font-medium text-ink">Standard TLS/SSL SMTP (smtp.gmail.com:465) via Google App Password</div>
             </div>
             <p className="text-muted-ink">
-              Vina asks for permission to send messages on your behalf and to find your own sent messages so follow-ups land in the same conversation. It never reads your incoming mail.
+              Vina uses your credentials solely to send user-reviewed outreach and thread follow-up correspondence. It never accesses your incoming mail.
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
               <li>We <strong>never read, inspect, or store</strong> incoming mail from your inbox.</li>
               <li>We <strong>never access</strong> your address book, contact lists, or personal calendar.</li>
               <li>We <strong>never send</strong> automated bulk blasts or messages that you have not explicitly approved.</li>
-              <li>We <strong>never sell, lease, or monetize</strong> your personal information or Google account data.</li>
-              <li>Your Google data is <strong>never used</strong> to train artificial intelligence (AI) models.</li>
+              <li>We <strong>never sell, lease, or monetize</strong> your personal information or credentials.</li>
+              <li>Your data is <strong>never used</strong> to train artificial intelligence (AI) models.</li>
             </ul>
           </section>
 

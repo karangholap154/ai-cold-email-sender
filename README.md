@@ -138,37 +138,18 @@ CONTACT_RECEIVER_EMAIL="support@meetvina.app"
 
 ---
 
-## 5. Google Cloud Console Setup (Gmail API)
+## 5. Gmail Connection (App Passwords via SMTP)
 
-To allow users to send application letters directly from their own Gmail accounts:
+Vina connects user sending accounts using standard Google App Passwords over secure TLS/SSL SMTP (`smtp.gmail.com:465`).
 
-1. Open the [Google Cloud Console](https://console.cloud.google.com).
-2. Create or select a project (e.g. `Vina - Job Application Letters`).
-3. Enable the **Gmail API**:
-   - Go to **APIs & Services** > **Library** > Search for **Gmail API** > Click **Enable**.
-4. Configure **OAuth Consent Screen**:
-   - User Type: **External**
-   - App Name: `Vina`
-   - User Support Email: `your-email@meetvina.app`
-   - App Domain Homepage: `https://meetvina.app`
-   - Privacy Policy: `https://meetvina.app/privacy`
-   - Terms of Service: `https://meetvina.app/terms`
-   - Authorized Domains: `meetvina.app`
-5. Add OAuth Scopes:
-   - `https://www.googleapis.com/auth/gmail.send` *(Sensitive - Send emails on behalf of user)*
-   - `https://www.googleapis.com/auth/gmail.readonly` *(Verify connection)*
-   - `https://www.googleapis.com/auth/userinfo.email` *(Identify user email address)*
-6. Create **OAuth 2.0 Client ID**:
-   - Application Type: **Web Application**
-   - Name: `Vina Production Web Client`
-   - **Authorized JavaScript Origins**:
-     - `https://meetvina.app`
-     - `http://localhost:3000` *(for local development)*
-   - **Authorized Redirect URIs**:
-     - `https://meetvina.app/api/gmail/callback`
-     - `http://localhost:3000/api/gmail/callback` *(for local development)*
+### How It Works:
+1. Each user creates a dedicated 16-character Google App Password in their Google Account security settings (`myaccount.google.com/apppasswords`).
+2. The user inputs their Gmail address and App Password in **Settings → Gmail**.
+3. The server validates the credentials immediately using an SMTP handshake and encrypts the password at rest using **AES-256-GCM** before saving to Supabase.
+4. Emails and follow-ups are dispatched directly through Google's mail servers under the user's authentic identity, with conversation threading handled via native RFC 5322 headers (`In-Reply-To`, `References`).
 
-> **Note on Verification**: In Google's "Testing" status, users explicitly added under "Test Users" in the Google Cloud Console can authorize Gmail immediately. To accept general public users, submit the app for verification. Because Vina links directly to its privacy policy disclosing limited Google API use, verification typically completes smoothly.
+> **Zero Google Verification Required**: This eliminates the need for Google Cloud Console OAuth verification, CASA security audits, and user limits.
+
 
 ---
 
