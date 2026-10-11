@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { decryptToken } from "@/lib/crypto";
 
 export async function POST() {
   try {

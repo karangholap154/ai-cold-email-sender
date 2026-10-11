@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowRight,
   CheckCircle2,
@@ -18,7 +17,6 @@ import {
   ChevronDown,
   Sparkles,
   CornerDownRight,
-  MessageSquare,
   Check,
 } from "lucide-react";
 import { FREE_PLAN, PRO_PLAN } from "@/lib/constants/plans";

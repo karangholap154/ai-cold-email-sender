@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
-  AlertCircle,
   HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -148,7 +147,7 @@ export function GmailTab({
           <div className="pt-2 border-t border-hairline/60 flex items-center gap-2 text-[11px] text-muted-ink">
             <ShieldCheck className="h-3.5 w-3.5 text-confirmed shrink-0" />
             <span>
-              Outbound emails and follow-ups are routed securely via Google's official mail servers with encrypted credentials.
+              Outbound emails and follow-ups are routed securely via Google&apos;s official mail servers with encrypted credentials.
             </span>
           </div>
         </div>

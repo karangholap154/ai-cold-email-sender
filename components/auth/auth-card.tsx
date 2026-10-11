@@ -28,12 +28,14 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Sync mode if query params change externally
-  useEffect(() => {
+  const [prevUrlMode, setPrevUrlMode] = useState(urlMode);
+
+  if (urlMode !== prevUrlMode) {
+    setPrevUrlMode(urlMode);
     if (urlMode === "signup" || urlMode === "signin") {
       setMode(urlMode);
     }
-  }, [urlMode]);
+  }
 
   // Display error from query param (e.g. from /auth/callback)
   useEffect(() => {

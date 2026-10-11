@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, ShieldCheck, Mail, Sparkles, CheckCircle2 } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Mail } from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();

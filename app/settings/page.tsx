@@ -104,12 +104,19 @@ export default function SettingsPage() {
       const params = new URLSearchParams(window.location.search);
       const requestedTab = params.get("tab") as SettingsTabType | null;
 
+      let targetTab: SettingsTabType | null = null;
       if (requestedTab && ["profile", "resume", "gmail", "billing"].includes(requestedTab)) {
-        setActiveTab(requestedTab);
+        targetTab = requestedTab;
       } else if (params.get("billing")) {
-        setActiveTab("billing");
+        targetTab = "billing";
       } else if (params.get("gmail") || params.get("error")) {
-        setActiveTab("gmail");
+        targetTab = "gmail";
+      }
+
+      if (targetTab) {
+        setTimeout(() => {
+          setActiveTab(targetTab);
+        }, 0);
       }
 
       if (params.get("billing") === "success") {
