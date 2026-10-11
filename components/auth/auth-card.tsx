@@ -78,8 +78,11 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
       }
     }
 
-    setIsLoading(true);
-    const nextUrl = searchParams.get("next") || "/draft";
+    const rawNext = searchParams.get("next");
+    const nextUrl =
+      rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("://")
+        ? rawNext
+        : "/draft";
 
     try {
       const supabase = createClient();

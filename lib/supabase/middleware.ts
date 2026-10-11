@@ -55,6 +55,7 @@ export async function updateSession(request: NextRequest) {
   if (isProtectedPage) {
     if (!user) {
       url.pathname = "/login";
+      url.searchParams.set("next", pathname + (url.search || ""));
       const redirectResponse = NextResponse.redirect(url);
       supabaseResponse.cookies.getAll().forEach((cookie) => {
         redirectResponse.cookies.set(cookie);

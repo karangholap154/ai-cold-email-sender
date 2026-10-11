@@ -49,11 +49,18 @@ export async function POST(req: NextRequest) {
   const supabase = getServiceSupabase();
 
   try {
-    // 1. Identify User ID from metadata or customer email
+    // 1. Identify User ID from metadata, customer ID, subscription ID, or customer email
     let userId: string | null =
       (metadata?.user_id as string) ||
       ((data.subscription as Record<string, unknown>)?.metadata as Record<string, unknown>)?.user_id as string ||
       ((data.customer as Record<string, unknown>)?.metadata as Record<string, unknown>)?.user_id as string ||
+      null;
+
+    const subscriptionId =
+      (data.subscription_id as string) || (data.id as string) || null;
+    const customerId =
+      (customer?.customer_id as string) ||
+      (data.customer_id as string) ||
       null;
 
     const customerEmail: string | null =
@@ -63,24 +70,63 @@ export async function POST(req: NextRequest) {
       ((data.customer as Record<string, unknown>)?.email as string) ||
       null;
 
-    if (!userId && customerEmail) {
-      const { data: userRecord } = await supabase
+    // If userId not in metadata, look up via stored dodo_customer_id
+    if (!userId && customerId) {
+      const { data: matchedProfile } = await supabase
         .from("profiles")
         .select("id")
-        .eq("id", customerEmail) // in case email was used
+        .eq("dodo_customer_id", customerId)
         .maybeSingle();
 
-      if (!userRecord) {
-        // Look up by auth.users email via admin API
-        const { data: adminUsers } = await supabase.auth.admin.listUsers();
-        const matched = adminUsers?.users?.find(
-          (u) => u.email?.toLowerCase() === customerEmail.toLowerCase()
+      if (matchedProfile?.id) {
+        userId = matchedProfile.id;
+      }
+    }
+
+    // If still not identified, look up via stored dodo_subscription_id
+    if (!userId && subscriptionId) {
+      const { data: matchedProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("dodo_subscription_id", subscriptionId)
+        .maybeSingle();
+
+      if (matchedProfile?.id) {
+        userId = matchedProfile.id;
+      }
+    }
+
+    // Fallback: look up by customer email across auth.users with pagination
+    if (!userId && customerEmail) {
+      const normalizedEmail = customerEmail.trim().toLowerCase();
+      let page = 1;
+      const perPage = 100;
+      let hasMore = true;
+
+      while (hasMore && !userId) {
+        const { data: adminUsers, error: listError } = await supabase.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+
+        if (listError || !adminUsers?.users || adminUsers.users.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        const matched = adminUsers.users.find(
+          (u) => u.email?.toLowerCase() === normalizedEmail
         );
         if (matched) {
           userId = matched.id;
+          break;
         }
-      } else {
-        userId = userRecord.id;
+
+        if (adminUsers.users.length < perPage) {
+          hasMore = false;
+        } else {
+          page += 1;
+        }
       }
     }
 
