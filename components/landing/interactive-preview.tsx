@@ -151,7 +151,7 @@ export function InteractivePreview() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
             <div className="flex items-center gap-2 text-xs text-muted-ink">
               <Lock className="h-3.5 w-3.5 text-seal shrink-0" />
-              <span>Delivered natively via your personal Gmail OAuth token</span>
+              <span>Delivered natively from your authenticated personal Gmail account</span>
             </div>
 
             <div className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-5 py-2.5 sm:py-2 text-xs font-medium text-paper shadow-xs min-h-[42px] sm:min-h-0">

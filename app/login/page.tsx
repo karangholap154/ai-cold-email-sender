@@ -4,8 +4,17 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { Loader2 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Sign in — Vina",
-  description: "Sign in to review your cold email drafts and sent letters.",
+  title: "Sign in",
+  description: "Sign in to Vina to review your cold email drafts and sent letters.",
+  alternates: {
+    canonical: "https://www.meetvina.app/login",
+  },
+  openGraph: {
+    title: "Sign in — Vina",
+    description: "Sign in to Vina to review your cold email drafts and sent letters.",
+    url: "https://www.meetvina.app/login",
+    type: "website",
+  },
 };
 
 function AuthCardFallback() {

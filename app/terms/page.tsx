@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, ArrowLeft, AlertCircle } from "lucide-react";
 
-export const metadata = {
-  title: "Terms of Service | Vina",
-  description: "Terms and acceptable use policy for Vina (meetvina.app).",
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "Terms of service, fair use guidelines, and acceptable correspondence policies for Vina (meetvina.app).",
+  alternates: {
+    canonical: "https://www.meetvina.app/terms",
+  },
+  openGraph: {
+    title: "Terms of Service — Vina",
+    description:
+      "Terms of service, fair use guidelines, and acceptable correspondence policies for Vina.",
+    url: "https://www.meetvina.app/terms",
+    type: "website",
+  },
 };
 
 export default function TermsOfServicePage() {
@@ -114,7 +126,7 @@ export default function TermsOfServicePage() {
               5. Accounts & Google Connection
             </h2>
             <p className="text-muted-ink">
-              When connecting your Gmail account via Google OAuth 2.0, you authorize the Service to dispatch individual letters as directed by you. You may revoke this access at any time through your account Settings or via Google’s account security panel. We reserve the right to suspend or terminate accounts that violate Google’s Acceptable Use Policies or our anti-spam standards.
+              When connecting your Gmail account via a dedicated Google App Password, you authorize the Service to dispatch individual letters as directed by you. You may disconnect this sending account at any time through your account Settings or by deleting the App Password in your Google Account security panel. We reserve the right to suspend or terminate accounts that violate Google’s Acceptable Use Policies or our anti-spam standards.
             </p>
           </section>
 

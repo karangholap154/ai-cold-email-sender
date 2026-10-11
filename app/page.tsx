@@ -133,7 +133,7 @@ const jsonLd = {
           "@type": "HowToStep",
           "position": 3,
           "name": "Send from your Gmail with résumé attached",
-          "text": "Vina attaches your uploaded PDF résumé and sends the email through your personal Gmail account via official Google OAuth, avoiding spam folders.",
+          "text": "Vina attaches your uploaded PDF résumé and sends the email through your personal Gmail account via official Google SMTP, avoiding spam folders.",
           "url": "https://www.meetvina.app/#how-it-works",
         },
       ],
@@ -429,10 +429,10 @@ export default function LandingPage() {
             <div className="md:col-span-2 border border-hairline bg-paper p-5 sm:p-6 rounded-sm space-y-3 shadow-2xs">
               <div className="flex items-center gap-2.5 text-ink font-medium text-sm sm:text-base">
                 <Mail className="h-4 w-4 text-seal shrink-0" />
-                <h3>Native Gmail API &amp; Conversation Threading</h3>
+                <h3>Native Gmail Delivery &amp; Conversation Threading</h3>
               </div>
               <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-                Connects through official Google OAuth 2.0 with minimal scopes (<code className="text-[11px] font-mono bg-[#FAF9F5] px-1.5 py-0.5 border border-hairline rounded-xs">gmail.send</code>). Outgoing messages are genuine Gmail API sends with full RFC 2822 headers, ensuring you reach the primary inbox rather than promotional filters.
+                Connects securely using a dedicated 16-character Google App Password without risky permissions or third-party inbox reading. Outgoing messages are genuine Gmail dispatches with full RFC 2822 headers, ensuring you reach the primary inbox rather than promotional filters.
               </p>
               <div className="pt-2 flex flex-wrap gap-2 text-[10px] font-mono text-muted-ink">
                 <span className="border border-hairline bg-[#FAF9F5] px-2 py-0.5 rounded-xs">Primary Inbox Guarantee</span>
@@ -489,10 +489,10 @@ export default function LandingPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-ink font-medium text-sm">
                   <Lock className="h-4 w-4 text-seal shrink-0" />
-                  <h3>AES-256-GCM Token Encryption At Rest</h3>
+                  <h3>AES-256-GCM Credential Encryption At Rest</h3>
                 </div>
                 <p className="text-xs text-muted-ink leading-relaxed max-w-xl">
-                  OAuth refresh tokens are encrypted at rest with cryptographic initialization vectors and authentication tags. Plaintext credentials are never written to disk.
+                  Sending credentials and Google App Passwords are encrypted at rest with cryptographic initialization vectors and authentication tags. Plaintext credentials are never written to disk or logged.
                 </p>
               </div>
               <Link

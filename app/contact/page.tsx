@@ -1,10 +1,22 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Mail, ArrowLeft, ShieldCheck, FileQuestion, HelpCircle } from "lucide-react";
 import { ContactForm } from "@/components/contact-form";
 
-export const metadata = {
-  title: "Contact & Support | Vina",
-  description: "Get in touch with the Vina team for technical support, billing inquiries, or privacy questions (meetvina.app).",
+export const metadata: Metadata = {
+  title: "Contact & Support",
+  description:
+    "Get in touch with the Vina team for technical support, billing inquiries, or privacy questions.",
+  alternates: {
+    canonical: "https://www.meetvina.app/contact",
+  },
+  openGraph: {
+    title: "Contact & Support — Vina",
+    description:
+      "Get in touch with the Vina team for technical support, billing inquiries, or privacy questions.",
+    url: "https://www.meetvina.app/contact",
+    type: "website",
+  },
 };
 
 export default function ContactPage() {
@@ -59,7 +71,7 @@ export default function ContactPage() {
               <span>Technical Support</span>
             </div>
             <p className="text-[11px] text-muted-ink leading-relaxed">
-              Assistance with Google OAuth authorization, PDF résumé attachments, or email sending errors.
+              Assistance with Gmail connection, Google App Passwords, PDF résumé attachments, or email sending errors.
             </p>
           </div>
 

@@ -212,7 +212,7 @@ export function Footer() {
               href="/privacy"
               className="text-muted-ink hover:text-ink underline underline-offset-4 transition-colors"
             >
-              Google OAuth Verified
+              Dedicated App Password Security
             </Link>
             <span>•</span>
             <Link

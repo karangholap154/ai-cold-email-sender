@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { RotateCcw, ArrowLeft, CheckCircle2, CreditCard } from "lucide-react";
 
-export const metadata = {
-  title: "Refund & Cancellation Policy | Vina",
-  description: "Clear, transparent refund and cancellation policy for Vina Pro subscriptions (meetvina.app).",
+export const metadata: Metadata = {
+  title: "Refund & Cancellation Policy",
+  description:
+    "Clear, transparent 14-day refund guarantee and hassle-free cancellation policy for Vina Pro subscriptions.",
+  alternates: {
+    canonical: "https://www.meetvina.app/refund",
+  },
+  openGraph: {
+    title: "Refund & Cancellation Policy — Vina",
+    description:
+      "14-day money-back guarantee and cancellation details for Vina Pro.",
+    url: "https://www.meetvina.app/refund",
+    type: "website",
+  },
 };
 
 export default function RefundPolicyPage() {

@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Shield, Lock, CheckCircle2, ArrowLeft } from "lucide-react";
 
-export const metadata = {
-  title: "Privacy Policy | Vina",
-  description: "Privacy policy and Google API user data disclosure for Vina (meetvina.app).",
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "Privacy policy for Vina. Learn how we handle Gmail sending credentials and personal applicant data with AES-256-GCM encryption at rest.",
+  alternates: {
+    canonical: "https://www.meetvina.app/privacy",
+  },
+  openGraph: {
+    title: "Privacy Policy — Vina",
+    description:
+      "Privacy policy and data protection details for Vina. We do not read inboxes or sell applicant data.",
+    url: "https://www.meetvina.app/privacy",
+    type: "website",
+  },
 };
 
 export default function PrivacyPolicyPage() {
@@ -33,23 +45,14 @@ export default function PrivacyPolicyPage() {
           </p>
         </div>
 
-        {/* Google User Data Disclosure Notice Box */}
+        {/* Gmail App Password & Security Notice Box */}
         <section className="border border-seal/30 bg-[#FAF9F5] p-5 sm:p-6 rounded-sm space-y-3">
           <div className="flex items-center gap-2 text-ink font-medium text-xs sm:text-sm">
             <Lock className="h-4 w-4 text-seal shrink-0" />
-            <span>Google API Services User Data Policy Compliance</span>
+            <span>Dedicated Gmail App Password Security &amp; Privacy</span>
           </div>
           <p className="text-xs leading-relaxed text-muted-ink">
-            Vina adheres strictly to the{" "}
-            <a
-              href="https://developers.google.com/terms/api-services-user-data-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-ink underline underline-offset-2 hover:text-seal font-medium"
-            >
-              Google API Services User Data Policy
-            </a>
-            , including the <strong>Limited Use</strong> requirements. Our use and transfer of information received from Google APIs to any other app will adhere to these requirements.
+            Vina connects to your personal Gmail account via a user-generated 16-character Google App Password over encrypted TLS/SSL SMTP (<code>smtp.gmail.com:465</code>). We do not request broad OAuth account permissions, we never read or access your private inbox, and we dispatch only the specific letters you approve.
           </p>
           <div className="pt-1 flex flex-wrap gap-x-6 gap-y-2 text-[11px] text-muted-ink">
             <div className="flex items-center gap-1.5">
@@ -84,7 +87,7 @@ export default function PrivacyPolicyPage() {
                 <strong className="text-ink">Résumé & Profile Details:</strong> Your uploaded PDF résumé, background skills summary, and sign-off preferences stored in your private account.
               </li>
               <li>
-                <strong className="text-ink">Google OAuth Tokens:</strong> When you connect your Gmail account, we receive an OAuth 2.0 authorization code exchanged for access and refresh tokens, alongside your verified Gmail address.
+                <strong className="text-ink">Gmail Sending Credentials:</strong> When you connect your Gmail account, your verified Gmail address and 16-character Google App Password are encrypted and stored solely to dispatch user-approved letters.
               </li>
               <li>
                 <strong className="text-ink">Correspondence Log:</strong> The recipient’s email address, company name, extracted role title, and final sent subject/body for your personal records to prevent duplicate outreach.
@@ -117,14 +120,14 @@ export default function PrivacyPolicyPage() {
 
           <section className="space-y-2">
             <h2 className="font-heading text-base sm:text-lg text-ink">
-              3. Security & Token Encryption
+              3. Security &amp; Credential Encryption
             </h2>
             <p className="text-muted-ink">
               Security and data privacy are foundational to our architecture:
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
               <li>
-                <strong className="text-ink">Encrypted at Rest:</strong> All Google OAuth refresh tokens are encrypted at rest using industry-standard <strong>AES-256-GCM</strong> encryption with unique initialization vectors and authentication tags. Plaintext credentials are never written to disk or logged.
+                <strong className="text-ink">Encrypted at Rest:</strong> All Gmail sending credentials and App Passwords are encrypted at rest using industry-standard <strong>AES-256-GCM</strong> encryption with unique initialization vectors and authentication tags. Plaintext credentials are never written to disk or logged.
               </li>
               <li>
                 <strong className="text-ink">Isolated Storage:</strong> Your uploaded résumé PDF files are stored in private, user-isolated Supabase Storage buckets secured by Row Level Security (RLS). They are never publicly accessible.
@@ -177,7 +180,7 @@ export default function PrivacyPolicyPage() {
               We engage only trusted infrastructure and compliance vendors:
             </p>
             <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
-              <li><strong className="text-ink">Google Cloud Platform:</strong> Gmail API delivery and Google OAuth authentication.</li>
+              <li><strong className="text-ink">Google Workspace / Gmail:</strong> Outbound email delivery via official Google SMTP (smtp.gmail.com).</li>
               <li><strong className="text-ink">Supabase Inc.:</strong> Encrypted PostgreSQL database, authentication, and file storage.</li>
               <li><strong className="text-ink">Dodo Payments Inc.:</strong> Merchant of Record for global checkout, recurring subscriptions, tax compliance, Apple Pay, and UPI processing. (We never handle or store raw credit card numbers).</li>
               <li><strong className="text-ink">Groq Inc. & Google Cloud:</strong> AI letter generation and job description analysis (stateless API, zero model training).</li>
@@ -195,7 +198,7 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc list-inside space-y-1 text-muted-ink pl-1">
               <li><strong className="text-ink">Right to Access & Portability:</strong> You may request an export of all your correspondence history, résumé files, and profile details.</li>
               <li><strong className="text-ink">Right to Erasure (Right to be Forgotten):</strong> You may request the permanent deletion of your account and all associated data at any time.</li>
-              <li><strong className="text-ink">Right to Disconnect:</strong> You can revoke Gmail OAuth permissions at any time from your Settings page or Google Security Settings, immediately purging stored tokens.</li>
+              <li><strong className="text-ink">Right to Disconnect:</strong> You can disconnect your Gmail account at any time from your Settings page or revoke the App Password directly in your Google Account security settings, immediately purging all stored credentials.</li>
               <li><strong className="text-ink">No Sale of Personal Data:</strong> We do not sell, rent, or trade user data to data brokers or third parties.</li>
             </ul>
           </section>
