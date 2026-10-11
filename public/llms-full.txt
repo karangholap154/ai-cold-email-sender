@@ -1,0 +1,110 @@
+# Vina — Complete Technical, Product & Architectural Documentation
+> Production URL: https://www.meetvina.app
+> Summary: AI-assisted personal correspondence for thoughtful job applications. Vina reads job postings, drafts genuine tailored letters, attaches user résumés, and dispatches directly from personal Gmail.
+
+---
+
+## 1. Product Philosophy & Why Vina Exists
+
+Traditional job applications suffer from two extremes:
+1. **The 2-Page Cover Letter**: Overly formal, seldom read by busy engineering managers or founders, and treated as tedious boilerplate.
+2. **Automated B2B Cold Email Spam**: Mass blasters (e.g. Lemlist, Instantly, Apollo) configured to spam 500 recruiters with the same template. These land in Spam/Promotions, ruin sender domain reputation, and alienate hiring teams.
+
+**Vina's Middle Path**:
+Vina is built for selective applicants who care about each company they apply to. It treats job application outreach like thoughtful correspondence between respected colleagues.
+- **Tone**: Restrained, direct, plain language, and confident. No corporate sycophancy ("I was thrilled to see this opening"), no exclamation points, no inflated claims.
+- **Length**: Strictly 80 to 130 words. Respects the recruiter's limited time.
+- **High Signal**: References 2 to 3 specific required skills or challenges from the job description matched directly to the applicant's background.
+- **Authentic Sender Identity**: Dispatches from the candidate's authentic Gmail account, landing directly in the primary inbox.
+
+---
+
+## 2. Core Capabilities & Feature Breakdown
+
+### A. Job Description Analysis & Drafting Engine
+- Input: Job Description text (20 to 20,000 characters).
+- Analysis: LLM extracts role title, company name, required seniority, and key domain skills.
+- Background Synthesis: Seamlessly connects extracted requirements with the candidate's active résumé background summary.
+- Format: Outputs a polite greeting, contextual value proposition, mention of the attached résumé, low-friction call to action, and automatically formats the applicant's official signature block.
+
+### B. Personal Gmail Dispatch
+- Connects via user-generated 16-character Google App Passwords (`smtp.gmail.com:465`).
+- Credentials are encrypted at rest with Node.js `crypto` using AES-256-GCM, unique 96-bit initialization vectors (IV), and authentication tags.
+- Dispatches standard RFC 2822 MIME emails with automatic PDF attachments and captures authentic Google SMTP message IDs.
+
+### C. Native Threaded Follow-Up Generator
+- Available to Pro subscribers.
+- Follow-ups reference the previous correspondence date and role context.
+- Length: Strictly 50 to 85 words.
+- Native Nesting: Injects RFC 2822 `In-Reply-To` and `References` headers with the original message ID. When the recruiter opens their email, the follow-up appears nested inside the original email conversation rather than starting a disconnected new thread.
+
+### D. Duplicate Outreach Safeguard
+- Real-time client-server duplicate detection against the user's `sent_emails` log.
+- Warns applicants before they accidentally email the same recruiter or hiring manager twice.
+
+### E. Targeted Résumé Versions
+- Supports distinct résumé versions (e.g., "Full-Stack Engineer", "Frontend / Design Engineer", "Tech Lead").
+- Free tier: 1 résumé version.
+- Pro tier: Up to 3 specialized versions with default toggle.
+
+---
+
+## 3. Comparison Matrix: Vina vs Alternatives
+
+| Feature / Attribute | Vina (meetvina.app) | Mass B2B Email Tools (Lemlist, Instantly) | Traditional Cover Letter PDFs |
+|---|---|---|---|
+| **Primary Target** | Individual Job Applicants | Sales & Lead Gen Teams | HR Portal Uploads |
+| **Sending Mechanism** | Candidate's Personal Gmail (SMTP) | Burner Domains & Rotating Inboxes | ATS Attachment Upload |
+| **Inbox Placement** | Primary Personal Inbox | Often Spam / Promotions | Often Unread in ATS |
+| **Email Tone** | Restrained, Plain-spoken (80–130w) | Pushy, Sales Pitch, Generic | Formal, Academic, Verbose |
+| **Follow-Up Nesting** | Native RFC 2822 In-Reply-To Thread | New Email or Simulated Thread | None / Separate Application |
+| **Duplicate Warning** | Yes (Built-in recruiter protection) | No (Built for bulk lists) | N/A |
+| **Automated Attachment** | Yes (PDF résumé attached per send) | Often avoided to prevent spam flags | Attached separately |
+
+---
+
+## 4. Pricing & Plans
+
+### Free Tier ($0 / month)
+- 5 tailored letters per calendar month.
+- 1 active résumé PDF with private Supabase Storage.
+- 2 AI regenerations/rewrites per draft.
+- Built-in duplicate contact warning.
+- 30-day sent letter history.
+
+### Pro Membership ($9 USD / ₹499 INR per month)
+- Unlimited tailored letters.
+- Up to 3 targeted résumé versions.
+- Unlimited AI regenerations per draft.
+- One-click native follow-up letters in same Gmail thread.
+- Full lifetime sent letters archive.
+- Priority email support.
+- Global cards, Apple Pay, and India UPI supported via Dodo Payments.
+
+---
+
+## 5. Frequently Asked Questions (FAQ)
+
+### Does Vina read or store my private Gmail inbox?
+Never. Vina only dispatches emails that you have personally reviewed and approved. It does not read, index, scan, or monitor incoming mail in your personal inbox.
+
+### Why send from personal Gmail rather than an automated server?
+Outreach sent through bulk marketing servers frequently lands in the recipient's Spam or Promotions tab. Sending directly from your authentic personal Gmail preserves high sender reputation and ensures your letter reaches the primary inbox.
+
+### Can I edit the letter before sending?
+Yes. Every letter generated by Vina is fully editable in a clean stationery editor before any send operation occurs.
+
+### What AI models power Vina?
+Vina orchestrates high-speed inference across primary LPU infrastructure (Groq with Llama 3.3 70B) with automated fallback to Google Gemini (Gemini 2.5/Flash), Anthropic Claude, and OpenAI GPT-4o-mini to guarantee 99.9% uptime.
+
+---
+
+## 6. Official Links
+
+- Website: https://www.meetvina.app
+- Application Draft Composer: https://www.meetvina.app/draft
+- Sent Log Archive: https://www.meetvina.app/log
+- Account Settings: https://www.meetvina.app/settings
+- Contact Support: https://www.meetvina.app/contact
+- Privacy Agreement: https://www.meetvina.app/privacy
+- Terms of Use: https://www.meetvina.app/terms

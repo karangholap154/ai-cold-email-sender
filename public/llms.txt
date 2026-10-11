@@ -1,0 +1,36 @@
+# Vina
+> Personal correspondence for thoughtful job applications. Turn job descriptions into tailored application letters sent directly from your personal Gmail with your attached résumé.
+
+Vina (https://www.meetvina.app) is an AI application designed specifically for individual job seekers to compose genuine, high-signal letters to recruiters and hiring teams. Unlike mass cold-email tools designed for B2B sales spam, Vina emphasizes restraint, brevity (80–130 words), authentic personal sender reputation, and human editorial control before dispatch.
+
+## Core Features & Capabilities
+
+- **Job Description Analysis**: Extracts essential requirements, technical skills, seniority, and target company context from any pasted job description.
+- **Cliché-Free Letter Generation**: Writes plain-spoken, thoughtful letters that sound like a competent colleague writing a note—strictly avoiding corporate clichés ("I hope this finds you well", "thrilled to apply", "perfect candidate").
+- **Direct Gmail Sending**: Outbound letters and threaded replies are dispatched directly through the user's authenticated personal Google account via Google's official SMTP servers (`smtp.gmail.com`).
+- **Automated Résumé Attachment**: Stores user's PDF résumé securely in private storage and attaches it to the outbound email automatically.
+- **Native Follow-Up Threads**: Generates concise, polite follow-ups (50–85 words) with authentic RFC 2822 `In-Reply-To` and `References` headers for native conversation nesting in the recruiter's inbox.
+- **Duplicate Outreach Protection**: Alerts applicants if they have previously reached out to a specific recruiter email address.
+- **Targeted Résumé Versions**: Enables applicants to save distinct résumé versions (e.g., Frontend, Full-Stack, Lead) and cite the relevant version per application.
+- **Sender Signatures**: Appends clean sender signatures (Stack, Inline, or Compact layouts) with portfolio, GitHub, LinkedIn, and contact links automatically.
+
+## Pricing & Membership
+
+- **Free Tier ($0/month)**: 5 tailored letters per month, 1 active résumé PDF, 2 AI regenerations per draft, duplicate contact warnings, and 30-day sent letter log.
+- **Pro Membership ($9 USD / ₹499 INR per month)**: Unlimited tailored letters, 3 targeted résumé versions, unlimited AI regenerations, one-click threaded follow-up letters, full lifetime archive, priority email support.
+
+## Privacy & Security
+
+- Vina **never reads, indexes, or scans** the user's Gmail inbox.
+- Credentials and tokens are encrypted with military-grade AES-256-GCM cryptography using unique initialization vectors (IVs) and authentication tags.
+- Compliant with Google API Services User Data Policy.
+
+## Important URLs
+
+- Homepage: https://www.meetvina.app
+- Application Draft Composer: https://www.meetvina.app/draft
+- Sent Correspondence History: https://www.meetvina.app/log
+- Account & Gmail Settings: https://www.meetvina.app/settings
+- Privacy Policy: https://www.meetvina.app/privacy
+- Terms of Service: https://www.meetvina.app/terms
+- Full LLM Knowledge Base: https://www.meetvina.app/llms-full.txt
