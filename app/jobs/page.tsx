@@ -72,7 +72,7 @@ export default function JobsPage() {
         const data = await jobsRes.json();
         const rawJobs: JobPosting[] = data.jobs || [];
 
-        // Score each job against user's resume skills
+        // Score each job against user's skills
         const scoredJobs = rawJobs.map((j) => {
           if (skills.length > 0) {
             const match = calculateJobMatch(j, skills);
@@ -91,7 +91,7 @@ export default function JobsPage() {
         }
       }
     } catch (err) {
-      console.error("Failed to load jobs or resume:", err);
+      console.error("Failed to load jobs or profile skills:", err);
       toast.error("Could not load latest job postings. Please try again.");
     } finally {
       setIsLoading(false);
@@ -477,7 +477,7 @@ export default function JobsPage() {
                   {/* Matched skills highlight */}
                   {job.matchedSkills && job.matchedSkills.length > 0 && (
                     <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                      <span className="text-muted-ink">Matches your résumé:</span>
+                      <span className="text-muted-ink">Matches your skills:</span>
                       {job.matchedSkills.map((skill) => (
                         <span
                           key={skill}
