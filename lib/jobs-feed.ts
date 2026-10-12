@@ -83,6 +83,32 @@ function extractEmail(text: string): string | null {
   return null;
 }
 
+// Pre-compiled skills taxonomy for Hacker News postings to avoid allocating 2,400 regexes per refresh
+const PRECOMPILED_HN_SKILLS: { name: string; regex: RegExp }[] = [
+  "React",
+  "Next.js",
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "Go",
+  "Rust",
+  "Node.js",
+  "AWS",
+  "PostgreSQL",
+  "Tailwind",
+  "GraphQL",
+  "Docker",
+  "Kubernetes",
+  "AI",
+  "LLM",
+].map((skill) => ({
+  name: skill,
+  regex: new RegExp(
+    `(^|[^a-zA-Z0-9])${skill.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")}([^a-zA-Z0-9]|$)`,
+    "i"
+  ),
+}));
+
 /**
  * Fetches latest postings from Hacker News "Who is Hiring?" thread
  */
@@ -154,28 +180,10 @@ async function fetchHackerNewsJobs(): Promise<JobPosting[]> {
       const contactEmail = extractEmail(plainText);
       const applyUrl = `https://news.ycombinator.com/item?id=${hit.objectID}`;
 
-      // Extract skills/tags (common languages and frameworks)
-      const commonSkills = [
-        "React",
-        "Next.js",
-        "TypeScript",
-        "JavaScript",
-        "Python",
-        "Go",
-        "Rust",
-        "Node.js",
-        "AWS",
-        "PostgreSQL",
-        "Tailwind",
-        "GraphQL",
-        "Docker",
-        "Kubernetes",
-        "AI",
-        "LLM",
-      ];
-      const matchedSkills = commonSkills.filter((s) =>
-        new RegExp(`\\b${s}\\b`, "i").test(plainText)
-      );
+      // Extract skills/tags using pre-compiled regexes
+      const matchedSkills = PRECOMPILED_HN_SKILLS
+        .filter(({ regex }) => regex.test(plainText))
+        .map(({ name }) => name);
 
       jobs.push({
         id: `hn-${hit.objectID}`,
