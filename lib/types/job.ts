@@ -13,6 +13,8 @@ export interface JobPosting {
   contactEmail: string | null;
   applyUrl: string;
   source: JobSource;
+  matchScore?: number;
+  matchedSkills?: string[];
 }
 
 export interface JobsResponse {

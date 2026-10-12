@@ -13,11 +13,21 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature, plan, dodo_customer_id, dodo_subscription_id")
+      .select("id, full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature, plan, dodo_customer_id, dodo_subscription_id, skills")
       .eq("id", user.id)
       .maybeSingle();
+
+    if (error && (error.code === "42703" || error.message?.includes("skills"))) {
+      const fallback = await supabase
+        .from("profiles")
+        .select("id, full_name, sign_off, portfolio_url, github_url, linkedin_url, phone, custom_signature, plan, dodo_customer_id, dodo_subscription_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      data = fallback.data ? { ...fallback.data, skills: [] } : null;
+      error = fallback.error;
+    }
 
     const now = new Date();
     const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
@@ -41,6 +51,7 @@ export async function GET() {
             linkedin_url: "",
             phone: "",
             custom_signature: "",
+            skills: [],
             plan: "free",
           },
           usage: {
@@ -102,9 +113,10 @@ export async function POST(req: NextRequest) {
       linkedin_url,
       phone,
       custom_signature,
+      skills,
     } = body;
 
-    const payload = {
+    const payload: Record<string, any> = {
       full_name: typeof full_name === "string" ? full_name.trim() : null,
       sign_off: typeof sign_off === "string" && sign_off.trim() ? sign_off.trim() : "Best regards,",
       portfolio_url: typeof portfolio_url === "string" ? portfolio_url.trim() : null,
@@ -114,6 +126,12 @@ export async function POST(req: NextRequest) {
       custom_signature: typeof custom_signature === "string" ? custom_signature.trim() : null,
       updated_at: new Date().toISOString(),
     };
+
+    if (Array.isArray(skills)) {
+      payload.skills = skills
+        .map((s: unknown) => (typeof s === "string" ? s.trim() : ""))
+        .filter(Boolean);
+    }
 
     const { data, error } = await supabase
       .from("profiles")

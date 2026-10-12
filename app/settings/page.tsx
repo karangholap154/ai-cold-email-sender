@@ -44,13 +44,15 @@ const MIGRATION_SQL = `alter table public.profiles
   add column if not exists phone text,
   add column if not exists custom_signature text,
   add column if not exists dodo_customer_id text,
-  add column if not exists dodo_subscription_id text;`;
+  add column if not exists dodo_subscription_id text,
+  add column if not exists skills text[] default '{}';`;
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTabType>("profile");
   const [resume, setResume] = useState<Resume | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [skillsSummary, setSkillsSummary] = useState("");
+  const [userSkills, setUserSkills] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -180,6 +182,9 @@ export default function SettingsPage() {
             setGithubUrl(gh);
             setLinkedinUrl(li);
             setPhone(ph);
+            if (Array.isArray(pData.profile.skills)) {
+              setUserSkills(pData.profile.skills);
+            }
 
             if (cs) {
               setCustomSignature(cs);
@@ -709,6 +714,20 @@ export default function SettingsPage() {
     },
   ];
 
+  const handleSaveSkills = async (updatedSkills: string[]) => {
+    const res = await fetch("/api/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skills: updatedSkills }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to save skills");
+    }
+    setUserSkills(updatedSkills);
+    toast.success("Skills updated successfully!");
+  };
+
   return (
     <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-36 md:pb-28">
       <div className="mx-auto w-full max-w-2xl">
@@ -789,6 +808,8 @@ export default function SettingsPage() {
               <ResumeTab
                 resumes={resumes}
                 usage={usage}
+                userSkills={userSkills}
+                onSaveSkills={handleSaveSkills}
                 editingResumeId={editingResumeId}
                 setEditingResumeId={setEditingResumeId}
                 editingLabel={editingLabel}

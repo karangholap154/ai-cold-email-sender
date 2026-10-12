@@ -16,35 +16,73 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  ArrowUpDown,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { JobPosting, JobFilter } from "@/lib/types/job";
+import { calculateJobMatch } from "@/lib/matcher";
 
 export const INCOMING_JOB_STORAGE_KEY = "vina_incoming_job";
 
 export default function JobsPage() {
   const router = useRouter();
   const [jobs, setJobs] = useState<JobPosting[]>([]);
+  const [userSkills, setUserSkills] = useState<string[]>([]);
+  const [hasResume, setHasResume] = useState(false);
+  const [sortBy, setSortBy] = useState<"match" | "newest">("match");
+
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<JobFilter>("all");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
-  const fetchJobs = async (isManualRefresh = false) => {
+  const fetchData = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
     else setIsLoading(true);
 
     try {
-      const res = await fetch("/api/jobs");
-      if (!res.ok) throw new Error("Could not fetch jobs");
-      const data = await res.json();
-      setJobs(data.jobs || []);
-      if (isManualRefresh) {
-        toast.success("Job board refreshed with the latest postings.");
+      const [jobsRes, profileRes] = await Promise.all([
+        fetch("/api/jobs"),
+        fetch("/api/profile"),
+      ]);
+
+      let skills: string[] = [];
+      if (profileRes.ok) {
+        const pData = await profileRes.json();
+        if (Array.isArray(pData.profile?.skills) && pData.profile.skills.length > 0) {
+          skills = pData.profile.skills;
+        }
+      }
+
+      setUserSkills(skills);
+      setHasResume(skills.length > 0);
+
+      if (jobsRes.ok) {
+        const data = await jobsRes.json();
+        const rawJobs: JobPosting[] = data.jobs || [];
+
+        // Score each job against user's resume skills
+        const scoredJobs = rawJobs.map((j) => {
+          if (skills.length > 0) {
+            const match = calculateJobMatch(j, skills);
+            return {
+              ...j,
+              matchScore: match.score,
+              matchedSkills: match.matchedSkills,
+            };
+          }
+          return j;
+        });
+
+        setJobs(scoredJobs);
+        if (isManualRefresh) {
+          toast.success("Job board refreshed with the latest postings.");
+        }
       }
     } catch (err) {
-      console.error("Failed to load jobs:", err);
+      console.error("Failed to load jobs or resume:", err);
       toast.error("Could not load latest job postings. Please try again.");
     } finally {
       setIsLoading(false);
@@ -53,13 +91,14 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
-    fetchJobs();
+    fetchData();
   }, []);
 
-  // Filtered jobs calculation
+  // Filtered and sorted jobs calculation
   const filteredJobs = useMemo(() => {
     let result = [...jobs];
 
+    // Source and status filters
     if (activeFilter === "email") {
       result = result.filter((j) => Boolean(j.contactEmail));
     } else if (activeFilter === "remote") {
@@ -70,6 +109,7 @@ export default function JobsPage() {
       result = result.filter((j) => j.source === "Arbeitnow");
     }
 
+    // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
@@ -82,8 +122,22 @@ export default function JobsPage() {
       );
     }
 
+    // Sorting: Best Match vs Newest
+    if (sortBy === "match" && userSkills.length > 0) {
+      result.sort((a, b) => {
+        const scoreA = a.matchScore || 0;
+        const scoreB = b.matchScore || 0;
+        if (scoreB !== scoreA) {
+          return scoreB - scoreA;
+        }
+        return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
+      });
+    } else {
+      result.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+    }
+
     return result;
-  }, [jobs, activeFilter, searchQuery]);
+  }, [jobs, activeFilter, searchQuery, sortBy, userSkills]);
 
   // Counts for tabs
   const emailJobsCount = useMemo(
@@ -142,14 +196,14 @@ export default function JobsPage() {
               Curated Active Positions
             </h1>
             <p className="mt-1.5 text-xs sm:text-sm text-muted-ink max-w-2xl leading-relaxed">
-              Real-time openings aggregated directly from company ATS systems and tech leaders.
-              Send personal outreach when an email is detected, or apply directly on the company portal.
+              Real-time openings aggregated directly from tech leaders and applicant tracking systems.
+              Ranked by alignment with your background.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => fetchJobs(true)}
+            onClick={() => fetchData(true)}
             disabled={isLoading || isRefreshing}
             className="inline-flex items-center gap-1.5 self-start md:self-auto rounded-md border border-hairline bg-white/70 px-3 py-1.5 text-xs font-medium text-ink shadow-2xs hover:bg-white hover:border-ink/20 transition-all cursor-pointer disabled:opacity-50"
           >
@@ -159,6 +213,24 @@ export default function JobsPage() {
             <span>Refresh Feed</span>
           </button>
         </div>
+
+        {/* Missing Skills Alert Banner */}
+        {!hasResume && !isLoading && (
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border border-hairline/90 bg-[#FAF9F5] p-4 text-xs shadow-2xs">
+            <div className="flex items-center gap-2.5 text-muted-ink">
+              <Sparkles className="h-4 w-4 text-[#B8823A] shrink-0" />
+              <span>
+                Add your key skills in Settings to unlock personalized match scores and rank jobs by alignment.
+              </span>
+            </div>
+            <Link
+              href="/settings?tab=resume"
+              className="inline-flex items-center gap-1 font-medium text-ink hover:underline shrink-0"
+            >
+              Manage Skills in Settings →
+            </Link>
+          </div>
+        )}
 
         {/* Search & Filter Controls */}
         <div className="mb-6 space-y-4">
@@ -240,6 +312,44 @@ export default function JobsPage() {
               <span>Remote Only ({remoteJobsCount})</span>
             </button>
           </div>
+
+          {/* Sort bar & Results count */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-hairline/60">
+            <span className="text-[11px] text-muted-ink">
+              Showing {filteredJobs.length} {filteredJobs.length === 1 ? "position" : "positions"}
+            </span>
+
+            {userSkills.length > 0 && (
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-muted-ink text-[11px]">Rank by:</span>
+                <button
+                  type="button"
+                  onClick={() => setSortBy("match")}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-all cursor-pointer ${
+                    sortBy === "match"
+                      ? "bg-[#B8823A]/15 text-[#8E632A] font-semibold border border-[#B8823A]/30"
+                      : "text-muted-ink hover:text-ink"
+                  }`}
+                >
+                  <Sparkles className="h-3 w-3 text-[#B8823A]" />
+                  <span>Best Match</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSortBy("newest")}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-medium transition-all cursor-pointer ${
+                    sortBy === "newest"
+                      ? "bg-black/10 text-ink font-semibold"
+                      : "text-muted-ink hover:text-ink"
+                  }`}
+                >
+                  <ArrowUpDown className="h-3 w-3" />
+                  <span>Newest</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Job Listings List */}
@@ -250,7 +360,7 @@ export default function JobsPage() {
               Gathering active opportunities...
             </p>
             <p className="mt-1 text-xs text-muted-ink">
-              Scanning verified tech listings and parsing contact points.
+              Scanning verified tech listings and scoring alignment against your background.
             </p>
           </div>
         ) : filteredJobs.length === 0 ? (
@@ -280,6 +390,10 @@ export default function JobsPage() {
             {filteredJobs.map((job) => {
               const isExpanded = expandedJobId === job.id;
               const hasEmail = Boolean(job.contactEmail);
+              const hasMatchScore =
+                userSkills.length > 0 &&
+                typeof job.matchScore === "number" &&
+                job.matchScore >= 60;
 
               return (
                 <div
@@ -308,8 +422,15 @@ export default function JobsPage() {
                       </div>
                     </div>
 
-                    {/* Contact or Portal Badge */}
-                    <div>
+                    {/* Right Badges: Match Score & Contact status */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {hasMatchScore && (
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#B8823A]/30 bg-[#B8823A]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8E632A]">
+                          <Sparkles className="h-3 w-3 text-[#B8823A]" />
+                          <span>{job.matchScore}% Match</span>
+                        </div>
+                      )}
+
                       {hasEmail ? (
                         <div className="inline-flex items-center gap-1.5 rounded-full border border-[#B8823A]/30 bg-[#B8823A]/10 px-2.5 py-1 text-[11px] font-medium text-[#8E632A]">
                           <Mail className="h-3 w-3 text-[#B8823A]" />
@@ -333,6 +454,22 @@ export default function JobsPage() {
                           className="rounded-xs border border-hairline/70 bg-[#FAF9F5] px-2 py-0.5 text-[11px] text-muted-ink"
                         >
                           {skill}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Matched skills highlight */}
+                  {job.matchedSkills && job.matchedSkills.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="text-muted-ink">Matches your résumé:</span>
+                      {job.matchedSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="inline-flex items-center gap-0.5 rounded-xs border border-[#B8823A]/25 bg-[#B8823A]/8 px-1.5 py-0.5 font-medium text-[#8E632A]"
+                        >
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                          <span>{skill}</span>
                         </span>
                       ))}
                     </div>

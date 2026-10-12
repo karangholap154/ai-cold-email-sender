@@ -22,6 +22,7 @@ export interface Profile {
   linkedin_url?: string | null;
   phone?: string | null;
   custom_signature?: string | null;
+  skills?: string[];
   created_at: string;
   updated_at?: string;
 }

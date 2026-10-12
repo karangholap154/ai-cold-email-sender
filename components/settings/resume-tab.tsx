@@ -13,10 +13,13 @@ import {
   Loader2,
 } from "lucide-react";
 import type { Resume, UserUsage } from "@/lib/types/database";
+import { SkillsManager } from "@/components/settings/skills-manager";
 
 export interface ResumeTabProps {
   resumes: Resume[];
   usage: UserUsage | null;
+  userSkills?: string[];
+  onSaveSkills?: (skills: string[]) => Promise<void>;
   editingResumeId: string | null;
   setEditingResumeId: (id: string | null) => void;
   editingLabel: string;
@@ -58,6 +61,8 @@ export function ResumeTab({
   handleFileChange,
   setShowAddResumeModal,
   setActiveTab,
+  userSkills = [],
+  onSaveSkills,
 }: ResumeTabProps) {
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-150">
@@ -323,6 +328,9 @@ export function ResumeTab({
           })
         )}
       </div>
+
+      {/* Manual Key Skills & Tech Stack Manager */}
+      <SkillsManager initialSkills={userSkills} onSave={onSaveSkills} />
     </div>
   );
 }
