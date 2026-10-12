@@ -18,10 +18,16 @@ import {
   ChevronUp,
   ArrowUpDown,
   CheckCircle2,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { JobPosting, JobFilter } from "@/lib/types/job";
 import { calculateJobMatch } from "@/lib/matcher";
+import {
+  resolveJobCountry,
+  matchJobLocation,
+  OTHER_LOCATIONS,
+} from "@/lib/countries";
 
 export const INCOMING_JOB_STORAGE_KEY = "vina_incoming_job";
 
@@ -40,12 +46,13 @@ export default function JobsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<JobFilter>("all");
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
-  // Reset pagination window when filters or search change
+  // Reset pagination window when filters, search, or location change
   useEffect(() => {
     setVisibleCount(INITIAL_VISIBLE_COUNT);
-  }, [searchQuery, activeFilter, sortBy]);
+  }, [searchQuery, activeFilter, sortBy, selectedLocation]);
 
   const fetchData = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
@@ -118,6 +125,11 @@ export default function JobsPage() {
       result = result.filter((j) => j.source === "Arbeitnow");
     }
 
+    // Location / Country filter
+    if (selectedLocation !== "all") {
+      result = result.filter((j) => matchJobLocation(j.location, selectedLocation));
+    }
+
     // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -146,12 +158,43 @@ export default function JobsPage() {
     }
 
     return result;
-  }, [jobs, activeFilter, searchQuery, sortBy, userSkills]);
+  }, [jobs, activeFilter, selectedLocation, searchQuery, sortBy, userSkills]);
 
   // Sliced jobs for incremental rendering performance (prevents mounting 400+ DOM cards at once)
   const displayedJobs = useMemo(() => {
     return filteredJobs.slice(0, visibleCount);
   }, [filteredJobs, visibleCount]);
+
+  // Dynamic location counts for dropdown (only includes countries with at least 1 active job)
+  const locationCounts = useMemo(() => {
+    const countsMap = new Map<string, number>();
+
+    for (const job of jobs) {
+      const country = resolveJobCountry(job.location);
+      countsMap.set(country, (countsMap.get(country) || 0) + 1);
+    }
+
+    const items: { name: string; count: number }[] = [];
+    let otherCount = 0;
+
+    for (const [name, count] of countsMap.entries()) {
+      if (name === OTHER_LOCATIONS) {
+        otherCount = count;
+      } else {
+        items.push({ name, count });
+      }
+    }
+
+    // Sort active countries by job count descending
+    items.sort((a, b) => b.count - a.count);
+
+    // Place "Other Locations" at the end if present
+    if (otherCount > 0) {
+      items.push({ name: OTHER_LOCATIONS, count: otherCount });
+    }
+
+    return items;
+  }, [jobs]);
 
   // Counts for tabs
   const emailJobsCount = useMemo(
@@ -248,15 +291,36 @@ export default function JobsPage() {
 
         {/* Search & Filter Controls */}
         <div className="mb-6 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-ink" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by role, company, or tech stack (e.g. Next.js, Python, Lead)..."
-              className="w-full rounded-md border border-hairline bg-white/80 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-ink placeholder:text-muted-ink/60 focus:border-ink/40 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-ink/20 shadow-2xs transition-all"
-            />
+          <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-ink" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by role, company, or tech stack (e.g. Next.js, Python, Lead)..."
+                className="w-full rounded-md border border-hairline bg-white/80 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-ink placeholder:text-muted-ink/60 focus:border-ink/40 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-ink/20 shadow-2xs transition-all"
+              />
+            </div>
+
+            {/* Dynamic Location / Country Dropdown */}
+            <div className="relative shrink-0 sm:w-60">
+              <MapPin className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-ink pointer-events-none" />
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                aria-label="Filter by location or country"
+                className="w-full appearance-none rounded-md border border-hairline bg-white/80 pl-8.5 pr-8 py-2.5 text-xs font-medium text-ink focus:border-ink/40 focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-ink/20 shadow-2xs transition-all cursor-pointer truncate"
+              >
+                <option value="all">📍 All Locations ({jobs.length})</option>
+                {locationCounts.map(({ name, count }) => (
+                  <option key={name} value={name}>
+                    {name} ({count})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-ink pointer-events-none" />
+            </div>
           </div>
 
           {/* Filter Tabs */}
@@ -386,12 +450,13 @@ export default function JobsPage() {
             <p className="mt-1 text-xs sm:text-sm text-muted-ink max-w-md mx-auto">
               We couldn&apos;t find any active listings matching your current search query or filter.
             </p>
-            {(searchQuery || activeFilter !== "all") && (
+            {(searchQuery || activeFilter !== "all" || selectedLocation !== "all") && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery("");
                   setActiveFilter("all");
+                  setSelectedLocation("all");
                 }}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-hairline bg-white px-3 py-1.5 text-xs font-medium text-ink shadow-2xs hover:border-ink/20 transition-all cursor-pointer"
               >
