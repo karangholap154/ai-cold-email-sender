@@ -19,6 +19,7 @@ create table if not exists public.profiles (
   stripe_customer_id text,
   stripe_subscription_status text,
   current_period_end timestamp with time zone,
+  skills text[] default '{}',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
@@ -362,7 +363,8 @@ alter table public.profiles
   add column if not exists phone text,
   add column if not exists custom_signature text,
   add column if not exists dodo_customer_id text,
-  add column if not exists dodo_subscription_id text;
+  add column if not exists dodo_subscription_id text,
+  add column if not exists skills text[] default '{}';
 
 -- ==============================================================================
 -- 9. Follow-Up Correspondence Tracking on public.sent_emails

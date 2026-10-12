@@ -49,7 +49,9 @@ export async function updateSession(request: NextRequest) {
     pathname === "/settings" ||
     pathname.startsWith("/settings/") ||
     pathname === "/log" ||
-    pathname.startsWith("/log/");
+    pathname.startsWith("/log/") ||
+    pathname === "/jobs" ||
+    pathname.startsWith("/jobs/");
 
   // If user is not authenticated or has not confirmed their email, block protected pages
   if (isProtectedPage) {
