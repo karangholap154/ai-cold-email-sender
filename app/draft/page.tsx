@@ -118,6 +118,27 @@ export default function DraftPage() {
 
     if (!fId) {
       try {
+        // Check if user clicked "Draft & Send Letter" from the Opportunities / Jobs feed
+        const incomingJobRaw = sessionStorage.getItem("vina_incoming_job");
+        if (incomingJobRaw) {
+          sessionStorage.removeItem("vina_incoming_job");
+          const incoming = JSON.parse(incomingJobRaw);
+          if (incoming?.jdText) {
+            setTimeout(() => {
+              setJdText(incoming.jdText || "");
+              setHrEmail(incoming.hrEmail || "");
+              setStep("input");
+              setAnalyzedData(null);
+              setRestoredNotice(
+                `Imported position: ${incoming.title || "Job"} at ${incoming.company || "Company"}`
+              );
+              toast.success(`Loaded "${incoming.title || "Job"}" from Opportunities.`);
+            }, 0);
+            isHydratedRef.current = true;
+            return;
+          }
+        }
+
         const saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);

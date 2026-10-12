@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Sparkles,
+  Briefcase,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -79,6 +80,7 @@ export function Header() {
   };
 
   const navLinks = [
+    { href: "/jobs", label: "Jobs", icon: Briefcase },
     { href: "/draft", label: "Draft", icon: PenLine },
     { href: "/log", label: "Sent letters", icon: Mail },
     { href: "/settings", label: "Settings", icon: SettingsIcon },
