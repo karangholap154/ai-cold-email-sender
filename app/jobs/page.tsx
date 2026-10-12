@@ -25,18 +25,27 @@ import { calculateJobMatch } from "@/lib/matcher";
 
 export const INCOMING_JOB_STORAGE_KEY = "vina_incoming_job";
 
+const INITIAL_VISIBLE_COUNT = 30;
+const LOAD_MORE_INCREMENT = 30;
+
 export default function JobsPage() {
   const router = useRouter();
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [userSkills, setUserSkills] = useState<string[]>([]);
-  const [hasResume, setHasResume] = useState(false);
+  const [hasSkills, setHasSkills] = useState(false);
   const [sortBy, setSortBy] = useState<"match" | "newest">("match");
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<JobFilter>("all");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+
+  // Reset pagination window when filters or search change
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_COUNT);
+  }, [searchQuery, activeFilter, sortBy]);
 
   const fetchData = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
@@ -57,7 +66,7 @@ export default function JobsPage() {
       }
 
       setUserSkills(skills);
-      setHasResume(skills.length > 0);
+      setHasSkills(skills.length > 0);
 
       if (jobsRes.ok) {
         const data = await jobsRes.json();
@@ -139,6 +148,11 @@ export default function JobsPage() {
     return result;
   }, [jobs, activeFilter, searchQuery, sortBy, userSkills]);
 
+  // Sliced jobs for incremental rendering performance (prevents mounting 400+ DOM cards at once)
+  const displayedJobs = useMemo(() => {
+    return filteredJobs.slice(0, visibleCount);
+  }, [filteredJobs, visibleCount]);
+
   // Counts for tabs
   const emailJobsCount = useMemo(
     () => jobs.filter((j) => Boolean(j.contactEmail)).length,
@@ -215,7 +229,7 @@ export default function JobsPage() {
         </div>
 
         {/* Missing Skills Alert Banner */}
-        {!hasResume && !isLoading && (
+        {!hasSkills && !isLoading && (
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-md border border-hairline/90 bg-[#FAF9F5] p-4 text-xs shadow-2xs">
             <div className="flex items-center gap-2.5 text-muted-ink">
               <Sparkles className="h-4 w-4 text-[#B8823A] shrink-0" />
@@ -316,7 +330,7 @@ export default function JobsPage() {
           {/* Sort bar & Results count */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-hairline/60">
             <span className="text-[11px] text-muted-ink">
-              Showing {filteredJobs.length} {filteredJobs.length === 1 ? "position" : "positions"}
+              Showing {Math.min(visibleCount, filteredJobs.length)} of {filteredJobs.length} {filteredJobs.length === 1 ? "position" : "positions"}
             </span>
 
             {userSkills.length > 0 && (
@@ -386,8 +400,9 @@ export default function JobsPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredJobs.map((job) => {
+          <>
+            <div className="space-y-4">
+              {displayedJobs.map((job) => {
               const isExpanded = expandedJobId === job.id;
               const hasEmail = Boolean(job.contactEmail);
               const hasMatchScore =
@@ -557,7 +572,24 @@ export default function JobsPage() {
               );
             })}
           </div>
-        )}
+
+          {/* Incremental Load More Trigger */}
+          {visibleCount < filteredJobs.length && (
+            <div className="pt-6 pb-2 text-center">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => prev + LOAD_MORE_INCREMENT)}
+                className="inline-flex items-center gap-2 rounded-md border border-hairline bg-white/80 hover:bg-white hover:border-ink/20 px-6 py-2.5 text-xs font-medium text-ink shadow-2xs transition-all cursor-pointer hover:shadow-xs active:scale-[0.99]"
+              >
+                <span>Show more opportunities</span>
+                <span className="text-muted-ink text-[11px]">
+                  ({filteredJobs.length - visibleCount} remaining)
+                </span>
+              </button>
+            </div>
+          )}
+        </>
+      )}
       </div>
     </div>
   );
