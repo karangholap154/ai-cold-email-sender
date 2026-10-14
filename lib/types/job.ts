@@ -25,4 +25,4 @@ export interface JobsResponse {
   fetchedAt: string;
 }
 
-export type JobFilter = "all" | "email" | "remote" | "hn" | "arbeitnow" | "remotive";
+export type JobFilter = "all" | "email" | "remote" | "hn" | "arbeitnow" | "remotive" | "applied";

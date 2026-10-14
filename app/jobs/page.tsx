@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   CheckCircle2,
   MapPin,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { JobPosting, JobFilter } from "@/lib/types/job";
@@ -28,6 +29,10 @@ import {
   matchJobLocation,
   OTHER_LOCATIONS,
 } from "@/lib/countries";
+import {
+  getJobContactStatus,
+  type SentEmailSummary,
+} from "@/lib/contact-tracker";
 
 export const INCOMING_JOB_STORAGE_KEY = "vina_incoming_job";
 
@@ -39,6 +44,7 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [userSkills, setUserSkills] = useState<string[]>([]);
   const [hasSkills, setHasSkills] = useState(false);
+  const [sentEmails, setSentEmails] = useState<SentEmailSummary[]>([]);
   const [sortBy, setSortBy] = useState<"match" | "newest">("match");
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
 
@@ -59,9 +65,10 @@ export default function JobsPage() {
     else setIsLoading(true);
 
     try {
-      const [jobsRes, profileRes] = await Promise.all([
+      const [jobsRes, profileRes, emailsRes] = await Promise.all([
         fetch("/api/jobs"),
         fetch("/api/profile"),
+        fetch("/api/emails"),
       ]);
 
       let skills: string[] = [];
@@ -69,6 +76,13 @@ export default function JobsPage() {
         const pData = await profileRes.json();
         if (Array.isArray(pData.profile?.skills) && pData.profile.skills.length > 0) {
           skills = pData.profile.skills;
+        }
+      }
+
+      if (emailsRes.ok) {
+        const eData = await emailsRes.json();
+        if (Array.isArray(eData.emails)) {
+          setSentEmails(eData.emails);
         }
       }
 
@@ -125,6 +139,10 @@ export default function JobsPage() {
       result = result.filter((j) => j.source === "Arbeitnow");
     } else if (activeFilter === "remotive") {
       result = result.filter((j) => j.source === "Remotive");
+    } else if (activeFilter === "applied") {
+      result = result.filter(
+        (j) => getJobContactStatus(j, sentEmails)?.type === "applied_this_role"
+      );
     }
 
     // Location / Country filter
@@ -160,7 +178,7 @@ export default function JobsPage() {
     }
 
     return result;
-  }, [jobs, activeFilter, selectedLocation, searchQuery, sortBy, userSkills]);
+  }, [jobs, activeFilter, selectedLocation, searchQuery, sortBy, userSkills, sentEmails]);
 
   // Sliced jobs for incremental rendering performance (prevents mounting 400+ DOM cards at once)
   const displayedJobs = useMemo(() => {
@@ -218,6 +236,13 @@ export default function JobsPage() {
   const remoteJobsCount = useMemo(
     () => jobs.filter((j) => j.isRemote).length,
     [jobs]
+  );
+  const appliedJobsCount = useMemo(
+    () =>
+      jobs.filter(
+        (j) => getJobContactStatus(j, sentEmails)?.type === "applied_this_role"
+      ).length,
+    [jobs, sentEmails]
   );
 
   const handleDraftWithJob = (job: JobPosting, mode: "email" | "note") => {
@@ -408,6 +433,21 @@ export default function JobsPage() {
               <Globe className="h-3 w-3" />
               <span>Remote Only ({remoteJobsCount})</span>
             </button>
+
+            {appliedJobsCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveFilter("applied")}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
+                  activeFilter === "applied"
+                    ? "bg-emerald-800 text-white shadow-xs font-semibold"
+                    : "border border-emerald-300/80 bg-emerald-50/80 text-emerald-800 hover:bg-emerald-100"
+                }`}
+              >
+                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                <span>Applied ({appliedJobsCount})</span>
+              </button>
+            )}
           </div>
 
           {/* Sort bar & Results count */}
@@ -487,67 +527,95 @@ export default function JobsPage() {
           <>
             <div className="space-y-4">
               {displayedJobs.map((job) => {
-              const isExpanded = expandedJobId === job.id;
-              const hasEmail = Boolean(job.contactEmail);
-              const hasMatchScore =
-                userSkills.length > 0 &&
-                typeof job.matchScore === "number" &&
-                job.matchScore >= 60;
+                const isExpanded = expandedJobId === job.id;
+                const hasEmail = Boolean(job.contactEmail);
+                const hasMatchScore =
+                  userSkills.length > 0 &&
+                  typeof job.matchScore === "number" &&
+                  job.matchScore >= 60;
+                const contactStatus = hasEmail
+                  ? getJobContactStatus(job, sentEmails)
+                  : null;
 
-              return (
-                <div
-                  key={job.id}
-                  className="group rounded-md border border-hairline/90 bg-white/70 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-ink/25 hover:bg-white transition-all duration-200"
-                >
-                  {/* Top Meta & Badges */}
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
+                return (
+                  <div
+                    key={job.id}
+                    className="group rounded-md border border-hairline/90 bg-white/70 p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-ink/25 hover:bg-white transition-all duration-200"
+                  >
+                    {/* Top Meta & Badges */}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="font-heading text-lg sm:text-xl font-medium text-ink">
+                            {job.title}
+                          </h2>
+                          {job.isRemote && (
+                            <span className="inline-flex items-center rounded-sm bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200/60">
+                              Remote
+                            </span>
+                          )}
+                          {job.salary && (
+                            <span className="inline-flex items-center rounded-sm bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200/60">
+                              {job.salary}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-ink">
+                          <span className="font-medium text-ink/80">{job.company}</span>
+                          <span>•</span>
+                          <span>{job.location}</span>
+                          <span>•</span>
+                          <span>via {job.source}</span>
+                        </div>
+                      </div>
+
+                      {/* Right Badges: Match Score, Contact status & Already Contacted */}
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-heading text-lg sm:text-xl font-medium text-ink">
-                          {job.title}
-                        </h2>
-                        {job.isRemote && (
-                          <span className="inline-flex items-center rounded-sm bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200/60">
-                            Remote
-                          </span>
+                        {hasMatchScore && (
+                          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#B8823A]/30 bg-[#B8823A]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8E632A]">
+                            <Sparkles className="h-3 w-3 text-[#B8823A]" />
+                            <span>{job.matchScore}% Match</span>
+                          </div>
                         )}
-                        {job.salary && (
-                          <span className="inline-flex items-center rounded-sm bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200/60">
-                            {job.salary}
-                          </span>
+
+                        {contactStatus?.type === "applied_this_role" && (
+                          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-800 shadow-2xs">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                            <span>
+                              Applied on{" "}
+                              {new Date(contactStatus.date).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </span>
+                          </div>
+                        )}
+
+                        {contactStatus?.type === "contacted_recruiter_other_role" && (
+                          <div
+                            title={`You previously reached out to this recruiter for "${contactStatus.otherRole}"`}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800 shadow-2xs"
+                          >
+                            <Info className="h-3 w-3 text-sky-600" />
+                            <span>
+                              Emailed for {contactStatus.otherRole.length > 18 ? contactStatus.otherRole.slice(0, 18) + "…" : contactStatus.otherRole}
+                            </span>
+                          </div>
+                        )}
+
+                        {hasEmail ? (
+                          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#B8823A]/30 bg-[#B8823A]/10 px-2.5 py-1 text-[11px] font-medium text-[#8E632A]">
+                            <Mail className="h-3 w-3 text-[#B8823A]" />
+                            <span>Direct: {job.contactEmail}</span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-100/70 px-2.5 py-1 text-[11px] font-medium text-stone-600">
+                            <ExternalLink className="h-3 w-3 text-stone-500" />
+                            <span>Official Portal</span>
+                          </div>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-ink">
-                        <span className="font-medium text-ink/80">{job.company}</span>
-                        <span>•</span>
-                        <span>{job.location}</span>
-                        <span>•</span>
-                        <span>via {job.source}</span>
-                      </div>
                     </div>
-
-                    {/* Right Badges: Match Score & Contact status */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {hasMatchScore && (
-                        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#B8823A]/30 bg-[#B8823A]/10 px-2.5 py-1 text-[11px] font-semibold text-[#8E632A]">
-                          <Sparkles className="h-3 w-3 text-[#B8823A]" />
-                          <span>{job.matchScore}% Match</span>
-                        </div>
-                      )}
-
-                      {hasEmail ? (
-                        <div className="inline-flex items-center gap-1.5 rounded-full border border-[#B8823A]/30 bg-[#B8823A]/10 px-2.5 py-1 text-[11px] font-medium text-[#8E632A]">
-                          <Mail className="h-3 w-3 text-[#B8823A]" />
-                          <span>Direct: {job.contactEmail}</span>
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-100/70 px-2.5 py-1 text-[11px] font-medium text-stone-600">
-                          <ExternalLink className="h-3 w-3 text-stone-500" />
-                          <span>Official Portal</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Skills tags */}
                   {job.skills && job.skills.length > 0 && (
@@ -623,14 +691,24 @@ export default function JobsPage() {
                             <span>View Source</span>
                           </a>
 
-                          <button
-                            type="button"
-                            onClick={() => handleDraftWithJob(job, "email")}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-[#B8823A] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[#A37232] transition-all cursor-pointer"
-                          >
-                            <PenLine className="h-3.5 w-3.5" />
-                            <span>Draft & Send Letter</span>
-                          </button>
+                          {contactStatus?.type === "applied_this_role" ? (
+                            <Link
+                              href="/log"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-3.5 py-1.5 text-xs font-medium text-emerald-800 shadow-2xs hover:bg-emerald-100 transition-all cursor-pointer"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>View in Sent Log</span>
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleDraftWithJob(job, "email")}
+                              className="inline-flex items-center gap-1.5 rounded-md bg-[#B8823A] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[#A37232] transition-all cursor-pointer"
+                            >
+                              <PenLine className="h-3.5 w-3.5" />
+                              <span>Draft & Send Letter</span>
+                            </button>
+                          )}
                         </>
                       ) : (
                         <>
