@@ -14,6 +14,14 @@ import {
   ArrowRight,
   CheckCircle2,
   FileText,
+  Sparkles,
+  ShieldCheck,
+  RotateCcw,
+  Check,
+  Lock,
+  Building2,
+  X,
+  FileCheck,
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
@@ -503,282 +511,361 @@ export default function DraftPage() {
     }
   };
 
+  const isFreePlan = usage ? usage.plan === "free" : true;
+  const isMonthlyCapped = isCapped || (isFreePlan && usage ? usage.monthlySends >= (usage.monthlyLimit ?? FREE_MONTHLY_LIMIT) : false);
+
   return (
-    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-24 md:pb-10">
-      <div className="mx-auto w-full max-w-2xl">
-        {step === "input" && (
-          <div className="space-y-6 sm:space-y-8">
-            {/* Header */}
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <h1 className="font-heading text-xl sm:text-2xl md:text-3xl text-ink">
-                  New letter
-                </h1>
-                {usage && (
-                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-ink">
-                    <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${usage.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? 5) ? "bg-amber-700" : "bg-seal"}`}></span>
-                    {usage.plan === "pro" ? (
-                      <span className="font-medium text-ink">Pro Plan • Unlimited</span>
-                    ) : (
-                      <span>
-                        <strong className="font-medium text-ink">{usage.monthlySends} of {usage.monthlyLimit ?? 5}</strong> letters sent this month
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <p className="mt-1 text-xs sm:text-sm text-muted-ink leading-relaxed">
-                Paste the job description and recipient email. Vina drafts a tailored letter for you to review before anything is sent.
-              </p>
+    <main className="min-h-[calc(100vh-4rem)] bg-paper px-4 py-8 sm:px-6 sm:py-10 pb-24 md:pb-12">
+      <div className="mx-auto w-full max-w-5xl space-y-8">
+        
+        {/* --- Studio Header & Progression Indicator --- */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-hairline/80 pb-6">
+          <div className="space-y-1.5">
+            {/* Step Breadcrumbs */}
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs transition-colors ${
+                step === "input"
+                  ? "bg-ink text-paper"
+                  : "bg-confirmed/10 text-confirmed border border-confirmed/30"
+              }`}>
+                {step === "review" && <Check className="h-3 w-3" />}
+                1. Role & Recruiter
+              </span>
+              <span className="text-muted-ink/40">→</span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs transition-colors ${
+                step === "review"
+                  ? "bg-seal text-paper"
+                  : "text-muted-ink border border-hairline bg-paper/60"
+              }`}>
+                2. Review & Dispatch
+              </span>
             </div>
 
-            {/* Restored draft notice banner */}
-            {restoredNotice && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
-                <div className="flex items-center gap-2 text-ink min-w-0">
-                  <CheckCircle2 className="h-4 w-4 text-confirmed shrink-0" />
-                  <span className="font-medium text-ink">{restoredNotice}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleDiscardDraft}
-                  className="text-muted-ink hover:text-ink underline underline-offset-4 text-xs shrink-0 self-start sm:self-auto cursor-pointer"
-                >
-                  Discard & start fresh
-                </button>
-              </div>
-            )}
+            <h1 className="font-heading text-2xl sm:text-3xl text-ink font-normal tracking-tight">
+              {step === "input" ? "New Letter" : "Review Letter"}
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-ink max-w-2xl leading-relaxed">
+              {step === "input"
+                ? "Paste the target job description and recipient email. Vina extracts key requirements and drafts a tailored pitch referencing your background."
+                : "Carefully inspect your letter before dispatch. You can refine any phrasing directly — nothing leaves your Gmail without your approval."}
+            </p>
+          </div>
 
-            {/* Quota reached callout banner if capped on free tier */}
-            {usage?.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? FREE_MONTHLY_LIMIT) && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-seal/30 bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <AlertCircle className="h-4 w-4 shrink-0 text-seal mt-0.5" />
-                  <div>
-                    <p className="font-medium text-ink">
-                      You&apos;ve sent {FREE_MONTHLY_LIMIT} letters this month on the free plan.
-                    </p>
-                    <p className="text-muted-ink mt-0.5">
-                      Upgrade to Pro to send more letters and unlock follow-ups.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={isUpgrading}
-                  onClick={async () => {
-                    setIsUpgrading(true);
-                    try {
-                      await initiateCheckout({ onFallback: () => router.push("/settings") });
-                    } finally {
-                      setIsUpgrading(false);
-                    }
-                  }}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-3.5 py-1.5 text-xs font-medium text-paper hover:bg-seal/90 shrink-0 self-start sm:self-auto transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  {isUpgrading && <Loader2 className="h-3 w-3 animate-spin" />}
-                  <span>Upgrade to send more</span>
-                  <ArrowRight className="h-3 w-3" />
-                </button>
-              </div>
-            )}
+          {/* Quick Quota Pill */}
+          {usage && (
+            <div className="self-start sm:self-auto shrink-0 inline-flex items-center gap-2 rounded-sm border border-hairline bg-white/80 px-3 py-1.5 text-xs text-muted-ink shadow-2xs">
+              <span className={`h-2 w-2 rounded-full shrink-0 ${isMonthlyCapped ? "bg-amber-600" : "bg-seal"}`} />
+              {usage.plan === "pro" ? (
+                <span className="font-medium text-ink">Pro Plan • Unlimited Letters</span>
+              ) : (
+                <span>
+                  <strong className="text-ink font-medium">{usage.monthlySends} of {usage.monthlyLimit ?? FREE_MONTHLY_LIMIT}</strong> sent this month
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
-            {/* Gmail connection status banner */}
-            {!isGmailLoading && !isGmailConnected && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm">
-                <div className="flex items-start gap-3 min-w-0">
-                  <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" />
-                  <div className="text-xs">
-                    <p className="font-medium text-ink">Connect your Gmail to start sending.</p>
-                    <p className="text-muted-ink mt-0.5">
-                      Vina asks for permission to send messages on your behalf and never reads your incoming mail.
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  href="/settings?tab=gmail"
-                  className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0 self-start sm:self-auto py-1"
-                >
-                  <span>Connect Gmail</span>
-                  <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
-            )}
-
-            {/* Resume status banner */}
-            {!isResumeLoading && !resume?.file_url && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm">
-                <div className="flex items-start gap-3 min-w-0">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-ink" />
-                  <div className="text-xs">
-                    <p className="font-medium text-ink">No résumé uploaded yet</p>
-                    <p className="text-muted-ink mt-0.5">
-                      Upload your résumé (PDF) so Vina can reference it in your letters.
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  href="/settings?tab=resume"
-                  className="inline-flex items-center gap-1 text-xs text-ink hover:underline underline-offset-4 shrink-0 self-start sm:self-auto py-1"
-                >
-                  <span>Upload résumé</span>
-                  <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
-            )}
-
-            {/* Active Résumé Indicator / Selector */}
-            {!isResumeLoading && resumes.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 border border-hairline bg-[#FAF9F5] p-3 sm:px-3.5 sm:py-2.5 rounded-sm text-xs">
-                <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
-                  <FileText className="h-4 w-4 text-muted-ink shrink-0 mt-0.5 sm:mt-0" />
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
-                    <span className="text-muted-ink shrink-0 font-medium sm:font-normal">
-                      Attached résumé:
-                    </span>
-                    {resumes.length > 1 ? (
-                      <select
-                        value={selectedResume?.id || ""}
-                        onChange={(e) => {
-                          const target = resumes.find((r) => r.id === e.target.value);
-                          if (target) {
-                            setSelectedResume(target);
-                            setResume(target);
-                          }
-                        }}
-                        className="w-full sm:w-auto bg-paper border border-hairline rounded-sm px-2 py-1 text-xs font-medium text-ink focus:border-seal focus:outline-none cursor-pointer truncate"
-                      >
-                        {resumes.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.label || "Primary Résumé"} {r.is_default ? "• Default" : ""} ({r.file_name || "PDF"})
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="font-medium text-ink truncate text-xs">
-                        {selectedResume?.label || "Primary Résumé"}{" "}
-                        <span className="text-muted-ink font-normal">
-                          ({selectedResume?.file_name || "PDF"})
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 pt-1.5 sm:pt-0 border-t border-hairline/60 sm:border-t-0 text-[11px]">
-                  {usage?.plan === "pro" ? (
-                    <Link
-                      href="/settings?tab=resume"
-                      className="text-muted-ink hover:text-ink underline underline-offset-2"
-                    >
-                      Manage résumés
-                    </Link>
-                  ) : (
-                    <Link
-                      href="/settings?tab=billing"
-                      className="text-seal hover:underline underline-offset-2 font-medium"
-                    >
-                      Upgrade for role-specific résumés
-                    </Link>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Input Form */}
-            <form onSubmit={handleGenerate} className="space-y-5 sm:space-y-6">
-              {/* Recipient HR Email */}
-              <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex items-baseline justify-between gap-2">
-                  <label htmlFor="hr-email" className="block text-xs font-medium uppercase tracking-wider text-muted-ink">
-                    Send to
-                  </label>
-                  <span className="text-[11px] text-muted-ink shrink-0">HR or hiring manager email</span>
-                </div>
-                <input
-                  id="hr-email"
-                  type="email"
-                  value={hrEmail}
-                  onChange={(e) => setHrEmail(e.target.value)}
-                  placeholder="recruiter@company.com"
-                  required
-                  className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 text-sm text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors font-mono min-h-[42px]"
-                />
-              </div>
-
-              {/* Job Description */}
-              <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <label htmlFor="jd-text" className="block text-xs font-medium uppercase tracking-wider text-muted-ink">
-                    Job Description
-                  </label>
-                  <div className="flex items-center gap-2.5 text-[11px] text-muted-ink shrink-0">
-                    {jdText.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleDiscardDraft}
-                        className="hover:text-ink underline underline-offset-2 cursor-pointer"
-                      >
-                        Clear
-                      </button>
-                    )}
-                    <span>
-                      {jdText.length > 0 ? `${jdText.length} characters` : "Full posting"}
-                    </span>
-                  </div>
-                </div>
-                <TextareaAutosize
-                  id="jd-text"
-                  minRows={8}
-                  value={jdText}
-                  onChange={(e) => setJdText(e.target.value)}
-                  placeholder="Paste the full job description here."
-                  required
-                  className="w-full resize-none rounded-sm border border-hairline bg-paper px-3.5 py-3 text-sm text-ink placeholder:text-muted-ink/60 focus:border-seal focus:outline-none transition-colors leading-relaxed"
-                />
-              </div>
-
-              {/* Submit Action */}
-              <div className="flex items-center justify-end pt-1 sm:pt-2">
-                <button
-                  type="submit"
-                  disabled={isAnalyzing || !jdText.trim() || !hrEmail.trim()}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-sm bg-ink px-5 py-2.5 text-xs font-medium text-paper hover:bg-ink/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer min-h-[42px]"
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>Reading the job description...</span>
-                    </>
-                  ) : (
-                    <>
-                      <PenLine className="h-3.5 w-3.5" />
-                      <span>Draft this letter</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+        {/* --- Restored Notice Strip (if present) --- */}
+        {restoredNotice && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-seal/30 bg-[#FAF7F0] p-3.5 sm:px-4 sm:py-3 rounded-sm text-xs shadow-2xs">
+            <div className="flex items-center gap-2.5 text-ink min-w-0">
+              <Sparkles className="h-4 w-4 text-seal shrink-0" />
+              <span className="font-medium text-ink">{restoredNotice}</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="inline-flex items-center gap-1 text-muted-ink hover:text-ink underline underline-offset-4 text-xs shrink-0 self-start sm:self-auto cursor-pointer"
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span>Discard & start fresh</span>
+            </button>
           </div>
         )}
 
-        {step === "review" && analyzedData && (
-          <div className="space-y-4">
-            {restoredNotice && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-hairline bg-[#FAF9F5] p-3.5 sm:p-4 rounded-sm text-xs">
-                <div className="flex items-center gap-2 text-ink min-w-0">
-                  <CheckCircle2 className="h-4 w-4 text-confirmed shrink-0" />
-                  <span className="font-medium text-ink">{restoredNotice}</span>
+        {/* --- STEP 1: INPUT WORKSPACE --- */}
+        {step === "input" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+            
+            {/* Left Main Form Column */}
+            <div className="lg:col-span-8">
+              <form onSubmit={handleGenerate} className="rounded-md border border-hairline bg-white/85 p-5 sm:p-7 shadow-2xs space-y-6">
+                
+                {/* Send To Input */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <label htmlFor="hr-email" className="block text-xs font-semibold text-ink">
+                      Send to <span className="text-seal">*</span>
+                    </label>
+                    <span className="text-[11px] text-muted-ink">Recruiter, founder, or hiring manager</span>
+                  </div>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-ink/70" />
+                    <input
+                      id="hr-email"
+                      type="email"
+                      value={hrEmail}
+                      onChange={(e) => setHrEmail(e.target.value)}
+                      placeholder="e.g. alex@company.com or hiring@startup.io"
+                      required
+                      className="w-full rounded-sm border border-hairline bg-paper/60 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-ink placeholder:text-muted-ink/60 focus:bg-white focus:border-seal focus:outline-none transition-colors font-mono"
+                    />
+                  </div>
+
+                  {isDuplicateEmail && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-amber-700 pt-0.5">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>Note: You have previously sent a letter to this recipient address.</span>
+                    </div>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDiscardDraft}
-                  className="text-muted-ink hover:text-ink underline underline-offset-4 text-xs shrink-0 self-start sm:self-auto cursor-pointer"
-                >
-                  Discard & start fresh
-                </button>
+
+                {/* Job Description Textarea */}
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <label htmlFor="jd-text" className="block text-xs font-semibold text-ink">
+                      Job Description <span className="text-seal">*</span>
+                    </label>
+                    <div className="flex items-center gap-3 text-[11px] text-muted-ink">
+                      {jdText.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setJdText("")}
+                          className="hover:text-ink underline underline-offset-2 cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <span>
+                        {jdText.length > 0 ? `${jdText.length} characters` : "Full posting"}
+                      </span>
+                    </div>
+                  </div>
+                  <TextareaAutosize
+                    id="jd-text"
+                    minRows={10}
+                    value={jdText}
+                    onChange={(e) => setJdText(e.target.value)}
+                    placeholder="Paste the full job posting here (responsibilities, required qualifications, tech stack, company context)..."
+                    required
+                    className="w-full resize-none rounded-sm border border-hairline bg-paper/60 p-3.5 text-xs sm:text-sm text-ink placeholder:text-muted-ink/60 focus:bg-white focus:border-seal focus:outline-none transition-colors leading-relaxed"
+                  />
+                  <p className="text-[11px] text-muted-ink">
+                    Vina reads the entire JD to identify the specific problems this team is hiring to solve.
+                  </p>
+                </div>
+
+                {/* Submit Action Strip */}
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-hairline/80">
+                  <div className="text-[11px] text-muted-ink flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-confirmed" />
+                    <span>Nothing is sent automatically. You review everything first.</span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isAnalyzing || !jdText.trim() || !hrEmail.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-sm bg-ink px-6 py-2.5 text-xs font-medium text-paper hover:bg-ink/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer min-h-[42px]"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Reading the job description...</span>
+                      </>
+                    ) : (
+                      <>
+                        <PenLine className="h-3.5 w-3.5" />
+                        <span>Draft this letter</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+              </form>
+            </div>
+
+            {/* Right Sidebar: Sender Profile & Readiness Checklist */}
+            <aside aria-label="Sending Setup and Readiness" className="lg:col-span-4 space-y-4">
+              
+              {/* Sender Setup Card */}
+              <div className="rounded-md border border-hairline bg-white/70 p-5 shadow-2xs space-y-4">
+                <div className="border-b border-hairline/80 pb-3">
+                  <h2 className="font-heading text-sm text-ink font-medium">
+                    Dispatch Readiness
+                  </h2>
+                  <p className="text-[11px] text-muted-ink mt-0.5">
+                    Verified configuration for outgoing correspondence.
+                  </p>
+                </div>
+
+                {/* 1. Gmail Status */}
+                <div className="flex items-start justify-between gap-3 text-xs">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <Mail className="h-4 w-4 text-muted-ink mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-ink">Gmail Account</p>
+                      {isGmailLoading ? (
+                        <p className="text-[11px] text-muted-ink">Checking connection...</p>
+                      ) : isGmailConnected ? (
+                        <p className="text-[11px] text-muted-ink truncate font-mono">
+                          {gmailAddress || "Connected"}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-amber-700">Not connected</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 pt-0.5">
+                    {isGmailConnected ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-confirmed bg-confirmed/10 px-1.5 py-0.5 rounded-xs border border-confirmed/25 font-medium">
+                        <Check className="h-2.5 w-2.5" /> Ready
+                      </span>
+                    ) : (
+                      <Link
+                        href="/settings?tab=gmail"
+                        className="text-[11px] text-seal hover:underline font-medium"
+                      >
+                        Connect →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Résumé Status */}
+                <div className="flex items-start justify-between gap-3 text-xs border-t border-hairline/60 pt-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <FileText className="h-4 w-4 text-muted-ink mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-ink">Attached Résumé</p>
+                      {isResumeLoading ? (
+                        <p className="text-[11px] text-muted-ink">Loading résumé...</p>
+                      ) : resume?.file_url ? (
+                        <div className="mt-1">
+                          {resumes.length > 1 ? (
+                            <select
+                              value={selectedResume?.id || ""}
+                              onChange={(e) => {
+                                const target = resumes.find((r) => r.id === e.target.value);
+                                if (target) {
+                                  setSelectedResume(target);
+                                  setResume(target);
+                                }
+                              }}
+                              className="w-full bg-paper border border-hairline rounded-xs px-2 py-1 text-[11px] text-ink focus:border-seal focus:outline-none cursor-pointer truncate"
+                            >
+                              {resumes.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.label || "Primary"} ({r.file_name || "PDF"})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <p className="text-[11px] text-muted-ink truncate">
+                              {selectedResume?.label || selectedResume?.file_name || "Uploaded PDF"}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-amber-700">No résumé uploaded</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 pt-0.5">
+                    {resume?.file_url ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-confirmed bg-confirmed/10 px-1.5 py-0.5 rounded-xs border border-confirmed/25 font-medium">
+                        <Check className="h-2.5 w-2.5" /> Attached
+                      </span>
+                    ) : (
+                      <Link
+                        href="/settings?tab=resume"
+                        className="text-[11px] text-seal hover:underline font-medium"
+                      >
+                        Upload →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Monthly Sends Quota */}
+                <div className="flex items-start justify-between gap-3 text-xs border-t border-hairline/60 pt-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <FileCheck className="h-4 w-4 text-muted-ink mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-ink">Monthly Dispatch Quota</p>
+                      {usage ? (
+                        <p className="text-[11px] text-muted-ink">
+                          {usage.plan === "pro"
+                            ? "Unlimited letters on Pro"
+                            : `${usage.monthlySends} of ${usage.monthlyLimit ?? FREE_MONTHLY_LIMIT} letters used`}
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-muted-ink">5 free letters / month</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 pt-0.5">
+                    {usage?.plan === "pro" ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-confirmed bg-confirmed/10 px-1.5 py-0.5 rounded-xs border border-confirmed/25 font-medium">
+                        Pro Active
+                      </span>
+                    ) : isMonthlyCapped ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsUpgrading(true);
+                          try {
+                            await initiateCheckout({ onFallback: () => router.push("/settings") });
+                          } finally {
+                            setIsUpgrading(false);
+                          }
+                        }}
+                        className="text-[11px] text-seal hover:underline font-medium cursor-pointer"
+                      >
+                        Upgrade →
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-muted-ink">
+                        {(usage?.monthlyLimit ?? FREE_MONTHLY_LIMIT) - (usage?.monthlySends ?? 0)} left
+                      </span>
+                    )}
+                  </div>
+                </div>
+
               </div>
-            )}
+
+              {/* Informative Guidance Card */}
+              <div className="rounded-md border border-hairline bg-[#FAF9F5] p-5 shadow-2xs space-y-2.5 text-xs">
+                <h3 className="font-heading text-xs font-semibold text-ink">
+                  How Vina drafts your letter
+                </h3>
+                <ul className="space-y-2 text-[11px] text-muted-ink leading-relaxed">
+                  <li className="flex items-start gap-2">
+                    <span className="text-seal font-semibold shrink-0">•</span>
+                    <span>Extracts the exact hiring team requirements and core responsibilities from the posting.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-seal font-semibold shrink-0">•</span>
+                    <span>Correlates your actual work history and skills from your uploaded résumé.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-seal font-semibold shrink-0">•</span>
+                    <span>Formats an executive, concise note (75–125 words) that respects hiring managers&apos; time.</span>
+                  </li>
+                </ul>
+              </div>
+
+            </aside>
+
+          </div>
+        )}
+
+        {/* --- STEP 2: REVIEW WORKSPACE --- */}
+        {step === "review" && analyzedData && (
+          <div className="space-y-6">
             <LetterFrame
               key={followUpContext ? `followup-${followUpContext.parentEmailId}` : "main-draft"}
               initialData={analyzedData}
@@ -818,6 +905,7 @@ export default function DraftPage() {
             />
           </div>
         )}
+
       </div>
     </main>
   );
