@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import {
   FileText,
@@ -9,6 +9,14 @@ import {
   CreditCard,
   Loader2,
   Save,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  RotateCcw,
+  Sparkles,
+  ShieldCheck,
+  Check,
+  Zap,
 } from "lucide-react";
 import type { Resume, GmailConnectionStatus, UserUsage } from "@/lib/types/database";
 import { generateFormattedSignature } from "@/lib/signature";
@@ -232,12 +240,13 @@ export default function SettingsPage() {
       }
     }
     loadData();
-  }, [skillsSummary]);
+  }, []);
 
   // Compute dirty (unsaved) modifications
-  const isDirty = Boolean(
-    selectedFile !== null ||
-    (baseline && (
+  const isDirty = useMemo(() => {
+    if (!baseline) return false;
+    return (
+      selectedFile !== null ||
       skillsSummary !== baseline.skillsSummary ||
       fullName !== baseline.fullName ||
       signOff !== baseline.signOff ||
@@ -246,8 +255,19 @@ export default function SettingsPage() {
       linkedinUrl !== baseline.linkedinUrl ||
       phone !== baseline.phone ||
       customSignature !== baseline.customSignature
-    ))
-  );
+    );
+  }, [
+    baseline,
+    selectedFile,
+    skillsSummary,
+    fullName,
+    signOff,
+    portfolioUrl,
+    githubUrl,
+    linkedinUrl,
+    phone,
+    customSignature,
+  ]);
 
   const handleResetChanges = () => {
     if (!baseline) return;
@@ -453,14 +473,13 @@ export default function SettingsPage() {
       if (resume?.id === replaceTargetId) {
         setResume(data.resume);
       }
-      toast.success("Résumé PDF replaced.", { id: toastId });
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Error replacing file.", { id: toastId });
-    } finally {
+      toast.dismiss(toastId);
+      toast.success("Résumé PDF replaced.");
       setReplaceTargetId(null);
-      if (replaceFileInputRef.current) {
-        replaceFileInputRef.current.value = "";
-      }
+      if (replaceFileInputRef.current) replaceFileInputRef.current.value = "";
+    } catch (err: unknown) {
+      toast.dismiss(toastId);
+      toast.error(err instanceof Error ? err.message : "Error replacing résumé.");
     }
   };
 
@@ -468,30 +487,6 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!newFile) {
       toast.error("Please select a PDF file.");
-      return;
-    }
-
-    if (newFile.type !== "application/pdf") {
-      toast.error("Only PDF files are supported.");
-      return;
-    }
-
-    if (newFile.size > 10 * 1024 * 1024) {
-      toast.error("File size cannot exceed 10MB.");
-      return;
-    }
-
-    const resumeLimit = usage?.plan === "pro" ? 3 : 1;
-    if (resumes.length >= resumeLimit) {
-      toast.error(
-        usage?.plan === "pro"
-          ? "Pro accounts can have up to 3 résumé versions. Delete one before adding another."
-          : "Multiple résumé versions are a Pro feature. Please upgrade to Pro."
-      );
-      if (usage?.plan !== "pro") {
-        setShowAddResumeModal(false);
-        setActiveTab("billing");
-      }
       return;
     }
 
@@ -673,34 +668,42 @@ export default function SettingsPage() {
   const tabs = [
     {
       id: "profile" as SettingsTabType,
-      label: "Signature",
+      label: "Signature & Identity",
+      subtitle: "Sign-off & contact details",
       icon: User,
+      status: fullName ? "Configured" : "Needs setup",
       badge: null,
     },
     {
       id: "resume" as SettingsTabType,
-      label: "Résumé",
+      label: "Targeted Résumés & Skills",
+      subtitle: "PDFs & background alignment",
       icon: FileText,
+      status: resume?.file_url ? "Attached" : "No résumé",
       badge: resume?.file_url ? (
-        <span className="h-1.5 w-1.5 rounded-full bg-confirmed shrink-0" title="Active résumé uploaded"></span>
+        <span className="h-1.5 w-1.5 rounded-full bg-confirmed shrink-0" title="Active résumé uploaded" />
       ) : (
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-600 shrink-0" title="No résumé uploaded"></span>
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-600 shrink-0" title="No résumé uploaded" />
       ),
     },
     {
       id: "gmail" as SettingsTabType,
-      label: "Gmail",
+      label: "Gmail Sending Account",
+      subtitle: "Direct personal sending",
       icon: Mail,
+      status: gmailStatus.connected ? "Connected" : "Disconnected",
       badge: gmailStatus.connected ? (
-        <span className="h-1.5 w-1.5 rounded-full bg-confirmed shrink-0" title="Connected"></span>
+        <span className="h-1.5 w-1.5 rounded-full bg-confirmed shrink-0" title="Connected" />
       ) : (
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-600 shrink-0" title="Not connected"></span>
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-600 shrink-0" title="Not connected" />
       ),
     },
     {
       id: "billing" as SettingsTabType,
-      label: "Billing",
+      label: "Plan & Allowances",
+      subtitle: "Monthly quotas & billing",
       icon: CreditCard,
+      status: usage?.plan === "pro" ? "Pro Active" : "Free Plan",
       badge:
         usage?.plan === "pro" ? (
           <span className="rounded-xs border border-seal/40 bg-seal/10 px-1 py-0.2 text-[9px] font-bold text-seal uppercase tracking-wider shrink-0">
@@ -729,18 +732,44 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 pb-36 md:pb-28">
-      <div className="mx-auto w-full max-w-2xl">
-        {/* Page Header */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="font-heading text-xl sm:text-2xl text-ink">Settings</h1>
-          <p className="mt-1 text-xs sm:text-sm text-muted-ink">
-            Configure your active résumé, sending identity, background skills summary, and automatic sender signature.
-          </p>
+    <main className="min-h-[calc(100vh-4rem)] bg-paper px-4 py-8 sm:px-6 sm:py-10 pb-36 md:pb-28">
+      <div className="mx-auto w-full max-w-5xl space-y-8">
+        
+        {/* --- Page Header Section --- */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-hairline/80 pb-6">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs text-muted-ink">
+              <span className="font-heading font-semibold text-ink">Account Settings</span>
+              <span>•</span>
+              <span>Preferences & Integrations</span>
+            </div>
+            <h1 className="font-heading text-2xl sm:text-3xl text-ink font-normal tracking-tight">
+              Settings & Identity
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-ink max-w-2xl leading-relaxed">
+              Configure your sender identity, active résumé, key skills, Gmail connection, and plan allowances.
+            </p>
+          </div>
+
+          {/* User Status Capsule */}
+          <div className="flex items-center gap-2 self-start md:self-end shrink-0">
+            <div className="rounded-sm border border-hairline bg-white/80 px-3 py-1.5 text-xs text-muted-ink shadow-2xs flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full shrink-0 ${usage?.plan === "pro" ? "bg-seal" : "bg-confirmed"}`} />
+              {usage?.plan === "pro" ? (
+                <span className="font-medium text-ink flex items-center gap-1">
+                  <Zap className="h-3 w-3 fill-seal text-seal" /> Pro Plan
+                </span>
+              ) : (
+                <span>
+                  Free plan • <strong className="text-ink font-medium">{usage?.monthlySends ?? 0} of 5</strong> used
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Tab Navigation Bar */}
-        <div className="mb-6 sm:mb-8 border-b border-hairline flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
+        {/* --- Mobile Tab Selector (< lg) --- */}
+        <div className="lg:hidden border-b border-hairline flex items-center gap-1 overflow-x-auto pb-2 no-scrollbar">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -754,118 +783,218 @@ export default function SettingsPage() {
                     window.history.replaceState({}, "", `/settings?tab=${tab.id}`);
                   }
                 }}
-                className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-all cursor-pointer shrink-0 ${
+                className={`inline-flex items-center gap-2 px-3 py-2 text-xs rounded-sm transition-all cursor-pointer shrink-0 ${
                   isActive
-                    ? "border-ink text-ink font-semibold"
-                    : "border-transparent text-muted-ink hover:text-ink hover:border-hairline"
+                    ? "bg-ink text-paper font-medium"
+                    : "border border-hairline bg-white/70 text-muted-ink hover:text-ink"
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 ${isActive ? "text-ink" : "text-muted-ink"}`} />
-                <span>{tab.label}</span>
+                <Icon className="h-3.5 w-3.5" />
+                <span>{tab.label.split(" ")[0]}</span>
                 {tab.badge}
               </button>
             );
           })}
         </div>
 
+        {/* --- Main Settings Workspace (Master-Detail Layout) --- */}
         {isLoading ? (
-          <div className="flex items-center gap-2 py-16 text-xs sm:text-sm text-muted-ink justify-center">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-ink" />
-            <span>Loading your settings...</span>
+          <div className="rounded-md border border-hairline bg-white/50 p-16 text-center space-y-3">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-seal" />
+            <h3 className="font-heading text-lg text-ink font-normal">
+              Loading settings...
+            </h3>
+            <p className="text-xs text-muted-ink max-w-sm mx-auto">
+              Retrieving your sender profile, attached résumés, and sending configuration.
+            </p>
           </div>
         ) : (
-          <form onSubmit={handleSave} className="space-y-6">
-            {/* TAB 1: Profile & Custom Signature */}
-            {activeTab === "profile" && (
-              <SignatureTab
-                fullName={fullName}
-                setFullName={setFullName}
-                signOff={signOff}
-                setSignOff={setSignOff}
-                portfolioUrl={portfolioUrl}
-                setPortfolioUrl={setPortfolioUrl}
-                githubUrl={githubUrl}
-                setGithubUrl={setGithubUrl}
-                linkedinUrl={linkedinUrl}
-                setLinkedinUrl={setLinkedinUrl}
-                phone={phone}
-                setPhone={setPhone}
-                customSignature={customSignature}
-                setCustomSignature={setCustomSignature}
-                activeLayout={activeLayout}
-                applyPreset={applyPreset}
-                setIsCustomDirty={setIsCustomDirty}
-                updateGeneratedSignature={updateGeneratedSignature}
-                migrationRequired={migrationRequired}
-                handleCopySql={handleCopySql}
-                migrationSql={MIGRATION_SQL}
-                isSaving={isSaving}
-              />
-            )}
+          <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Left Sidebar Column: Navigation & Profile Dossier (Desktop) */}
+            <aside aria-label="Settings Navigation" className="hidden lg:block lg:col-span-4 space-y-5">
+              
+              {/* Account Quick Summary Card */}
+              <div className="rounded-md border border-hairline bg-white/70 p-4 shadow-2xs space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-sm bg-seal/10 border border-seal/20 text-seal font-heading font-semibold text-sm flex items-center justify-center shrink-0">
+                    {(fullName || "VN").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-heading text-sm text-ink font-medium truncate">
+                      {fullName || "Sender Profile"}
+                    </p>
+                    <p className="text-[11px] text-muted-ink truncate font-mono">
+                      {gmailStatus.email || "No email linked"}
+                    </p>
+                  </div>
+                </div>
 
-            {/* TAB 2: Resume PDF & Skills Background */}
-            {activeTab === "resume" && (
-              <ResumeTab
-                resumes={resumes}
-                usage={usage}
-                userSkills={userSkills}
-                onSaveSkills={handleSaveSkills}
-                editingResumeId={editingResumeId}
-                setEditingResumeId={setEditingResumeId}
-                editingLabel={editingLabel}
-                setEditingLabel={setEditingLabel}
-                editingSkillsSummary={editingSkillsSummary}
-                setEditingSkillsSummary={setEditingSkillsSummary}
-                isUpdatingResume={isUpdatingResume}
-                handleSetDefaultResume={handleSetDefaultResume}
-                handleDeleteResume={handleDeleteResume}
-                handleStartEdit={handleStartEdit}
-                handleSaveEdit={handleSaveEdit}
-                handleTriggerReplace={handleTriggerReplace}
-                handleReplaceFileSelected={handleReplaceFileSelected}
-                replaceFileInputRef={replaceFileInputRef}
-                fileInputRef={fileInputRef}
-                handleFileChange={handleFileChange}
-                setShowAddResumeModal={setShowAddResumeModal}
-                setActiveTab={setActiveTab}
-              />
-            )}
+                <div className="border-t border-hairline/70 pt-2.5 flex items-center justify-between text-[11px] text-muted-ink">
+                  <span>Connected status:</span>
+                  {gmailStatus.connected ? (
+                    <span className="text-confirmed font-medium flex items-center gap-1">
+                      <Check className="h-3 w-3" /> Gmail active
+                    </span>
+                  ) : (
+                    <span className="text-amber-700 font-medium">Needs connection</span>
+                  )}
+                </div>
+              </div>
 
-            {/* TAB 3: Sending Account (Gmail) */}
-            {activeTab === "gmail" && (
-              <GmailTab
-                gmailStatus={gmailStatus}
-                isDisconnectingGmail={isDisconnectingGmail}
-                setShowDisconnectModal={setShowDisconnectModal}
-                onConnectSuccess={(status) => {
-                  setGmailStatus({
-                    connected: true,
-                    email: status.email,
-                    connectedAt: status.connectedAt,
-                  });
-                }}
-              />
-            )}
+              {/* Vertical Navigation Menu */}
+              <nav aria-label="Settings Sections" className="rounded-md border border-hairline bg-white/70 p-2 shadow-2xs space-y-1">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  const Icon = tab.icon;
 
-            {/* TAB 4: Plan & Membership */}
-            {activeTab === "billing" && (
-              <BillingTab
-                usage={usage}
-                isUpgrading={isUpgrading}
-                handleUpgrade={handleUpgrade}
-                isOpeningPortal={isOpeningPortal}
-                handleManageBilling={handleManageBilling}
-              />
-            )}
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        if (typeof window !== "undefined") {
+                          window.history.replaceState({}, "", `/settings?tab=${tab.id}`);
+                        }
+                      }}
+                      className={`w-full text-left p-3 rounded-sm transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        isActive
+                          ? "bg-ink text-paper shadow-2xs"
+                          : "hover:bg-paper/70 text-ink"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 min-w-0">
+                        <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${isActive ? "text-paper" : "text-muted-ink"}`} />
+                        <div className="min-w-0">
+                          <p className={`text-xs font-medium truncate ${isActive ? "text-paper" : "text-ink"}`}>
+                            {tab.label}
+                          </p>
+                          <p className={`text-[11px] truncate mt-0.5 ${isActive ? "text-paper/75" : "text-muted-ink"}`}>
+                            {tab.subtitle}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        {tab.badge}
+                      </div>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              {/* Security & Verification Guarantee */}
+              <div className="rounded-md border border-hairline bg-[#FAF9F5] p-4 text-[11px] text-muted-ink space-y-1.5 shadow-2xs">
+                <div className="flex items-center gap-1.5 text-ink font-medium">
+                  <ShieldCheck className="h-3.5 w-3.5 text-confirmed shrink-0" />
+                  <span>Privacy & OAuth Security</span>
+                </div>
+                <p className="leading-relaxed">
+                  Vina only sends approved drafts from your personal mailbox. We never index, read, or share your private correspondence.
+                </p>
+              </div>
+
+            </aside>
+
+            {/* Right Main Content Column */}
+            <div className="lg:col-span-8">
+              <div className="rounded-md border border-hairline bg-white/85 p-5 sm:p-7 shadow-2xs">
+                
+                {/* TAB 1: Profile & Custom Signature */}
+                {activeTab === "profile" && (
+                  <SignatureTab
+                    fullName={fullName}
+                    setFullName={setFullName}
+                    signOff={signOff}
+                    setSignOff={setSignOff}
+                    portfolioUrl={portfolioUrl}
+                    setPortfolioUrl={setPortfolioUrl}
+                    githubUrl={githubUrl}
+                    setGithubUrl={setGithubUrl}
+                    linkedinUrl={linkedinUrl}
+                    setLinkedinUrl={setLinkedinUrl}
+                    phone={phone}
+                    setPhone={setPhone}
+                    customSignature={customSignature}
+                    setCustomSignature={setCustomSignature}
+                    activeLayout={activeLayout}
+                    applyPreset={applyPreset}
+                    setIsCustomDirty={setIsCustomDirty}
+                    updateGeneratedSignature={updateGeneratedSignature}
+                    migrationRequired={migrationRequired}
+                    handleCopySql={handleCopySql}
+                    migrationSql={MIGRATION_SQL}
+                    isSaving={isSaving}
+                  />
+                )}
+
+                {/* TAB 2: Resume PDF & Skills Background */}
+                {activeTab === "resume" && (
+                  <ResumeTab
+                    resumes={resumes}
+                    usage={usage}
+                    userSkills={userSkills}
+                    onSaveSkills={handleSaveSkills}
+                    editingResumeId={editingResumeId}
+                    setEditingResumeId={setEditingResumeId}
+                    editingLabel={editingLabel}
+                    setEditingLabel={setEditingLabel}
+                    editingSkillsSummary={editingSkillsSummary}
+                    setEditingSkillsSummary={setEditingSkillsSummary}
+                    isUpdatingResume={isUpdatingResume}
+                    handleSetDefaultResume={handleSetDefaultResume}
+                    handleDeleteResume={handleDeleteResume}
+                    handleStartEdit={handleStartEdit}
+                    handleSaveEdit={handleSaveEdit}
+                    handleTriggerReplace={handleTriggerReplace}
+                    handleReplaceFileSelected={handleReplaceFileSelected}
+                    replaceFileInputRef={replaceFileInputRef}
+                    fileInputRef={fileInputRef}
+                    handleFileChange={handleFileChange}
+                    setShowAddResumeModal={setShowAddResumeModal}
+                    setActiveTab={setActiveTab}
+                  />
+                )}
+
+                {/* TAB 3: Sending Account (Gmail) */}
+                {activeTab === "gmail" && (
+                  <GmailTab
+                    gmailStatus={gmailStatus}
+                    isDisconnectingGmail={isDisconnectingGmail}
+                    setShowDisconnectModal={setShowDisconnectModal}
+                    onConnectSuccess={(status) => {
+                      setGmailStatus({
+                        connected: true,
+                        email: status.email,
+                        connectedAt: status.connectedAt,
+                      });
+                    }}
+                  />
+                )}
+
+                {/* TAB 4: Plan & Membership */}
+                {activeTab === "billing" && (
+                  <BillingTab
+                    usage={usage}
+                    isUpgrading={isUpgrading}
+                    handleUpgrade={handleUpgrade}
+                    isOpeningPortal={isOpeningPortal}
+                    handleManageBilling={handleManageBilling}
+                  />
+                )}
+
+              </div>
+            </div>
 
             {/* Sticky Floating Save Bar: elevated with z-50 and offset on mobile above the mobile navigation dock */}
             {isDirty && (
               <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 z-50 border-t border-hairline bg-paper/95 backdrop-blur-md px-4 py-3 sm:px-6 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] animate-in slide-in-from-bottom duration-200">
-                <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <span className="relative flex h-2 w-2 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600" />
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-ink truncate">
@@ -902,6 +1031,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+
           </form>
         )}
 
@@ -930,6 +1060,7 @@ export default function SettingsPage() {
           isSubmitting={isSubmittingNewResume}
           onSubmit={handleCreateNewResume}
         />
+
       </div>
     </main>
   );
