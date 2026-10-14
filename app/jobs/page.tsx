@@ -33,6 +33,10 @@ import {
   getJobContactStatus,
   type SentEmailSummary,
 } from "@/lib/contact-tracker";
+import {
+  detectSeniority,
+  type SeniorityLevel,
+} from "@/lib/seniority";
 
 export const INCOMING_JOB_STORAGE_KEY = "vina_incoming_job";
 
@@ -53,12 +57,13 @@ export default function JobsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<JobFilter>("all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [seniorityFilter, setSeniorityFilter] = useState<SeniorityLevel>("all");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
-  // Reset pagination window when filters, search, or location change
+  // Reset pagination window when filters, search, location, or seniority change
   useEffect(() => {
     setVisibleCount(INITIAL_VISIBLE_COUNT);
-  }, [searchQuery, activeFilter, sortBy, selectedLocation]);
+  }, [searchQuery, activeFilter, sortBy, selectedLocation, seniorityFilter]);
 
   const fetchData = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
@@ -150,6 +155,13 @@ export default function JobsPage() {
       result = result.filter((j) => matchJobLocation(j.location, selectedLocation));
     }
 
+    // Seniority level filter
+    if (seniorityFilter !== "all") {
+      result = result.filter(
+        (j) => detectSeniority(j.title).level === seniorityFilter
+      );
+    }
+
     // Search query filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -178,7 +190,7 @@ export default function JobsPage() {
     }
 
     return result;
-  }, [jobs, activeFilter, selectedLocation, searchQuery, sortBy, userSkills, sentEmails]);
+  }, [jobs, activeFilter, selectedLocation, seniorityFilter, searchQuery, sortBy, userSkills, sentEmails]);
 
   // Sliced jobs for incremental rendering performance (prevents mounting 400+ DOM cards at once)
   const displayedJobs = useMemo(() => {
@@ -244,6 +256,14 @@ export default function JobsPage() {
       ).length,
     [jobs, sentEmails]
   );
+  const seniorityCounts = useMemo(() => {
+    const counts = { senior: 0, mid: 0, junior: 0 };
+    for (const job of jobs) {
+      const { level } = detectSeniority(job.title);
+      counts[level]++;
+    }
+    return counts;
+  }, [jobs]);
 
   const handleDraftWithJob = (job: JobPosting, mode: "email" | "note") => {
     try {
@@ -450,6 +470,55 @@ export default function JobsPage() {
             )}
           </div>
 
+          {/* Seniority / Experience Filter Row */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-[11px] font-medium text-muted-ink mr-1">Level:</span>
+            <button
+              type="button"
+              onClick={() => setSeniorityFilter("all")}
+              className={`rounded-sm px-2.5 py-0.5 text-[11px] font-medium transition-all cursor-pointer ${
+                seniorityFilter === "all"
+                  ? "bg-ink text-paper font-semibold shadow-2xs"
+                  : "bg-white/60 text-muted-ink hover:text-ink hover:bg-white border border-hairline/70"
+              }`}
+            >
+              All Levels
+            </button>
+            <button
+              type="button"
+              onClick={() => setSeniorityFilter("senior")}
+              className={`rounded-sm px-2.5 py-0.5 text-[11px] font-medium transition-all cursor-pointer ${
+                seniorityFilter === "senior"
+                  ? "bg-purple-800 text-white font-semibold shadow-2xs"
+                  : "bg-white/60 text-muted-ink hover:text-ink hover:bg-white border border-hairline/70"
+              }`}
+            >
+              Senior / Lead ({seniorityCounts.senior})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSeniorityFilter("mid")}
+              className={`rounded-sm px-2.5 py-0.5 text-[11px] font-medium transition-all cursor-pointer ${
+                seniorityFilter === "mid"
+                  ? "bg-stone-800 text-white font-semibold shadow-2xs"
+                  : "bg-white/60 text-muted-ink hover:text-ink hover:bg-white border border-hairline/70"
+              }`}
+            >
+              Mid-Level ({seniorityCounts.mid})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSeniorityFilter("junior")}
+              className={`rounded-sm px-2.5 py-0.5 text-[11px] font-medium transition-all cursor-pointer ${
+                seniorityFilter === "junior"
+                  ? "bg-blue-800 text-white font-semibold shadow-2xs"
+                  : "bg-white/60 text-muted-ink hover:text-ink hover:bg-white border border-hairline/70"
+              }`}
+            >
+              Junior / Entry ({seniorityCounts.junior})
+            </button>
+          </div>
+
           {/* Sort bar & Results count */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-hairline/60">
             <span className="text-[11px] text-muted-ink">
@@ -509,13 +578,14 @@ export default function JobsPage() {
             <p className="mt-1 text-xs sm:text-sm text-muted-ink max-w-md mx-auto">
               We couldn&apos;t find any active listings matching your current search query or filter.
             </p>
-            {(searchQuery || activeFilter !== "all" || selectedLocation !== "all") && (
+            {(searchQuery || activeFilter !== "all" || selectedLocation !== "all" || seniorityFilter !== "all") && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery("");
                   setActiveFilter("all");
                   setSelectedLocation("all");
+                  setSeniorityFilter("all");
                 }}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-hairline bg-white px-3 py-1.5 text-xs font-medium text-ink shadow-2xs hover:border-ink/20 transition-all cursor-pointer"
               >
@@ -536,6 +606,7 @@ export default function JobsPage() {
                 const contactStatus = hasEmail
                   ? getJobContactStatus(job, sentEmails)
                   : null;
+                const seniority = detectSeniority(job.title);
 
                 return (
                   <div
@@ -549,6 +620,17 @@ export default function JobsPage() {
                           <h2 className="font-heading text-lg sm:text-xl font-medium text-ink">
                             {job.title}
                           </h2>
+                          <span
+                            className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[10px] font-medium border ${
+                              seniority.level === "senior"
+                                ? "bg-purple-50 text-purple-700 border-purple-200/60"
+                                : seniority.level === "junior"
+                                ? "bg-blue-50 text-blue-700 border-blue-200/60"
+                                : "bg-stone-100/80 text-stone-600 border-stone-200/60"
+                            }`}
+                          >
+                            {seniority.badgeLabel}
+                          </span>
                           {job.isRemote && (
                             <span className="inline-flex items-center rounded-sm bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200/60">
                               Remote
