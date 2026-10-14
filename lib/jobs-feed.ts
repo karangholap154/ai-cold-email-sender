@@ -256,6 +256,57 @@ async function fetchArbeitnowJobs(): Promise<JobPosting[]> {
 }
 
 /**
+ * Fetches latest remote tech postings from Remotive API
+ */
+async function fetchRemotiveJobs(): Promise<JobPosting[]> {
+  try {
+    const res = await fetch("https://remotive.com/api/remote-jobs", {
+      next: { revalidate: 3600 },
+      headers: {
+        "User-Agent": "VinaJobAggregator/1.0",
+      },
+    });
+
+    if (!res.ok) {
+      console.warn("Remotive API returned error status:", res.status);
+      return [];
+    }
+
+    const data = await res.json();
+    const items = data?.jobs || [];
+    const jobs: JobPosting[] = [];
+
+    for (const item of items) {
+      const plainDescription = cleanHtml(item.description || "");
+      const contactEmail = extractEmail(plainDescription);
+
+      jobs.push({
+        id: `remotive-${item.id || Math.random().toString(36).substring(7)}`,
+        title: item.title || "Software Engineer",
+        company: item.company_name?.trim() || "Technology Company",
+        companyUrl: undefined,
+        location: item.candidate_required_location || "Worldwide Remote",
+        isRemote: true,
+        salary: item.salary?.trim() || undefined,
+        postedAt: item.publication_date
+          ? new Date(item.publication_date).toISOString()
+          : new Date().toISOString(),
+        description: plainDescription,
+        skills: Array.isArray(item.tags) && item.tags.length > 0 ? item.tags.slice(0, 6) : ["Tech"],
+        contactEmail,
+        applyUrl: item.url,
+        source: "Remotive",
+      });
+    }
+
+    return jobs;
+  } catch (err) {
+    console.error("Error fetching Remotive jobs:", err);
+    return [];
+  }
+}
+
+/**
  * Returns merged and deduplicated list of active jobs, caching results
  */
 export async function getLiveJobs(): Promise<JobPosting[]> {
@@ -264,13 +315,14 @@ export async function getLiveJobs(): Promise<JobPosting[]> {
     return jobsCache.data;
   }
 
-  // Fetch concurrently from both free sources
-  const [hnJobs, arbeitnowJobs] = await Promise.all([
+  // Fetch concurrently from all free sources
+  const [hnJobs, arbeitnowJobs, remotiveJobs] = await Promise.all([
     fetchHackerNewsJobs(),
     fetchArbeitnowJobs(),
+    fetchRemotiveJobs(),
   ]);
 
-  const allJobs = [...hnJobs, ...arbeitnowJobs];
+  const allJobs = [...hnJobs, ...arbeitnowJobs, ...remotiveJobs];
 
   // Sort by freshness (newest first)
   allJobs.sort((a, b) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
@@ -303,6 +355,8 @@ export function filterJobs(
     filtered = filtered.filter((job) => job.source === "Hacker News");
   } else if (options.filter === "arbeitnow") {
     filtered = filtered.filter((job) => job.source === "Arbeitnow");
+  } else if (options.filter === "remotive") {
+    filtered = filtered.filter((job) => job.source === "Remotive");
   }
 
   if (options.query && options.query.trim()) {

@@ -123,6 +123,8 @@ export default function JobsPage() {
       result = result.filter((j) => j.source === "Hacker News");
     } else if (activeFilter === "arbeitnow") {
       result = result.filter((j) => j.source === "Arbeitnow");
+    } else if (activeFilter === "remotive") {
+      result = result.filter((j) => j.source === "Remotive");
     }
 
     // Location / Country filter
@@ -207,6 +209,10 @@ export default function JobsPage() {
   );
   const arbeitnowJobsCount = useMemo(
     () => jobs.filter((j) => j.source === "Arbeitnow").length,
+    [jobs]
+  );
+  const remotiveJobsCount = useMemo(
+    () => jobs.filter((j) => j.source === "Remotive").length,
     [jobs]
   );
   const remoteJobsCount = useMemo(
@@ -379,6 +385,19 @@ export default function JobsPage() {
 
             <button
               type="button"
+              onClick={() => setActiveFilter("remotive")}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
+                activeFilter === "remotive"
+                  ? "bg-ink text-paper shadow-xs font-semibold"
+                  : "border border-hairline/80 bg-white/60 text-muted-ink hover:text-ink hover:bg-white"
+              }`}
+            >
+              <Globe className="h-3 w-3 text-[#B8823A]" />
+              <span>Remotive ({remotiveJobsCount})</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveFilter("remote")}
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
                 activeFilter === "remote"
@@ -490,6 +509,11 @@ export default function JobsPage() {
                         {job.isRemote && (
                           <span className="inline-flex items-center rounded-sm bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-200/60">
                             Remote
+                          </span>
+                        )}
+                        {job.salary && (
+                          <span className="inline-flex items-center rounded-sm bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200/60">
+                            {job.salary}
                           </span>
                         )}
                       </div>

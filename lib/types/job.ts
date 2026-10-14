@@ -1,4 +1,4 @@
-export type JobSource = "Hacker News" | "Arbeitnow" | "Company ATS";
+export type JobSource = "Hacker News" | "Arbeitnow" | "Remotive" | "Company ATS";
 
 export interface JobPosting {
   id: string;
@@ -7,6 +7,7 @@ export interface JobPosting {
   companyUrl?: string;
   location: string;
   isRemote: boolean;
+  salary?: string;
   postedAt: string;
   description: string;
   skills: string[];
@@ -24,4 +25,4 @@ export interface JobsResponse {
   fetchedAt: string;
 }
 
-export type JobFilter = "all" | "email" | "remote" | "hn" | "arbeitnow";
+export type JobFilter = "all" | "email" | "remote" | "hn" | "arbeitnow" | "remotive";

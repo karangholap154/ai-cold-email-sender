@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       {
         jobs: filteredJobs,
         total: filteredJobs.length,
-        sources: ["Hacker News Who is Hiring", "Arbeitnow"],
+        sources: ["Hacker News Who is Hiring", "Arbeitnow", "Remotive"],
         fetchedAt: new Date().toISOString(),
       },
       {
