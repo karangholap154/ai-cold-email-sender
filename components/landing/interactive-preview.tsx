@@ -112,7 +112,7 @@ export function InteractivePreview() {
                 Subject Line
               </span>
               <div className="font-heading text-base sm:text-lg md:text-xl text-ink leading-snug">
-                Linear Staff Frontend Engineer — background in high-performance design systems
+                Linear Staff Frontend Engineer - background in high-performance design systems
               </div>
             </div>
 

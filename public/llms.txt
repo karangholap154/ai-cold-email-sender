@@ -6,7 +6,7 @@ Vina (https://www.meetvina.app) is an AI application designed specifically for i
 ## Core Features & Capabilities
 
 - **Job Description Analysis**: Extracts essential requirements, technical skills, seniority, and target company context from any pasted job description.
-- **Cliché-Free Letter Generation**: Writes plain-spoken, thoughtful letters that sound like a competent colleague writing a note—strictly avoiding corporate clichés ("I hope this finds you well", "thrilled to apply", "perfect candidate").
+- **Cliché-Free Letter Generation**: Writes plain-spoken, thoughtful letters that sound like a competent colleague writing a note-strictly avoiding corporate clichés ("I hope this finds you well", "thrilled to apply", "perfect candidate").
 - **Direct Gmail Sending**: Outbound letters and threaded replies are dispatched directly through the user's authenticated personal Google account via Google's official SMTP servers (`smtp.gmail.com`).
 - **Automated Résumé Attachment**: Stores user's PDF résumé securely in private storage and attaches it to the outbound email automatically.
 - **Native Follow-Up Threads**: Generates concise, polite follow-ups (50–85 words) with authentic RFC 2822 `In-Reply-To` and `References` headers for native conversation nesting in the recruiter's inbox.

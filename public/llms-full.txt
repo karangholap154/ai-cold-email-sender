@@ -1,4 +1,4 @@
-# Vina — Complete Technical, Product & Architectural Documentation
+# Vina - Complete Technical, Product & Architectural Documentation
 > Production URL: https://www.meetvina.app
 > Summary: AI-assisted personal correspondence for thoughtful job applications. Vina reads job postings, drafts genuine tailored letters, attaches user résumés, and dispatches directly from personal Gmail.
 

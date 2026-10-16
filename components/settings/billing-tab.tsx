@@ -40,7 +40,7 @@ export function BillingTab({
                 <p className="text-xs sm:text-sm font-medium text-ink">
                   {usage?.plan === "pro"
                     ? "You're on Pro."
-                    : `You're on the free plan — ${FREE_MONTHLY_LIMIT} letters this month.`}
+                    : `You're on the free plan - ${FREE_MONTHLY_LIMIT} letters this month.`}
                 </p>
                 {usage?.plan === "pro" ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-seal bg-[#FAF6EE] px-1.5 py-0.5 rounded-sm border border-seal/30">

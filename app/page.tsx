@@ -32,14 +32,14 @@ import { Footer } from "@/components/footer";
 import { FaqAccordion } from "@/components/landing/faq-accordion";
 
 export const metadata: Metadata = {
-  title: "Vina — Turn a Job Description into a Letter Worth Sending",
+  title: "Vina - Turn a Job Description into a Letter Worth Sending",
   description:
     "A personal correspondence desk for thoughtful job seekers. Paste any job posting to draft concise, tailored letters with your PDF résumé attached, sent directly from your own Gmail.",
   alternates: {
     canonical: "https://www.meetvina.app",
   },
   openGraph: {
-    title: "Vina — Turn a Job Description into a Letter Worth Sending",
+    title: "Vina - Turn a Job Description into a Letter Worth Sending",
     description:
       "Vina reads the job description, drafts a short, specific letter to go with your résumé, and hands it back to you to review before anything is sent.",
     url: "https://www.meetvina.app",

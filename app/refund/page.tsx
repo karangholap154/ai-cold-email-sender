@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "https://www.meetvina.app/refund",
   },
   openGraph: {
-    title: "Refund & Cancellation Policy — Vina",
+    title: "Refund & Cancellation Policy - Vina",
     description:
       "14-day money-back guarantee and cancellation details for Vina Pro.",
     url: "https://www.meetvina.app/refund",
@@ -52,7 +52,7 @@ export default function RefundPolicyPage() {
             <span>14-Day Money-Back Guarantee for New Subscribers</span>
           </div>
           <p className="text-xs leading-relaxed text-muted-ink">
-            We want you to be completely satisfied with your cold outreach. If you upgrade to Vina Pro and find that the tailored letters or follow-up tools do not suit your job search workflow, you can request a full refund within <strong>14 days of your initial purchase</strong>—no interrogation, no hurdles.
+            We want you to be completely satisfied with your cold outreach. If you upgrade to Vina Pro and find that the tailored letters or follow-up tools do not suit your job search workflow, you can request a full refund within <strong>14 days of your initial purchase</strong>-no interrogation, no hurdles.
           </p>
           <div className="pt-1 flex flex-wrap gap-x-6 gap-y-2 text-[11px] text-muted-ink">
             <div className="flex items-center gap-1.5">

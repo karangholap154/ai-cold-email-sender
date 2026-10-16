@@ -44,7 +44,7 @@ const SAMPLE_JOBS: SampleJob[] = [
     skills: ["Next.js", "WebGL & Canvas", "Design Systems", "Sub-50ms Latency"],
     snippet:
       "We're expanding our web client team to rebuild core keyboard interactions and canvas-rendered timeline views. Looking for a Staff engineer obsessed with zero-latency desktop feel and robust state management.",
-    subject: "Linear Staff Frontend Engineer — background in high-performance design systems",
+    subject: "Linear Staff Frontend Engineer - background in high-performance design systems",
     body: [
       "Hi Tuomas,",
       "I saw Linear's post looking for a Staff Frontend Engineer to scale your canvas views and keyboard-driven workflows. Given your focus on sub-50ms interaction latency, I wanted to reach out directly.",
@@ -62,7 +62,7 @@ const SAMPLE_JOBS: SampleJob[] = [
     skills: ["Go", "Distributed Consensus", "PostgreSQL", "High Throughput"],
     snippet:
       "Help us build next-gen global ledger primitives handling $1T+ in annual volume. Strong experience in idempotent state machines, Raft consensus, and zero-downtime database migrations required.",
-    subject: "Stripe Ledger Systems — experience with idempotent settlement engines",
+    subject: "Stripe Ledger Systems - experience with idempotent settlement engines",
     body: [
       "Hi Stripe Team,",
       "I noticed your opening for the Core Ledger team focusing on idempotent transaction processing at scale. Having spent the last three years designing high-throughput payment settlement pipelines, I wanted to introduce myself.",
@@ -80,10 +80,10 @@ const SAMPLE_JOBS: SampleJob[] = [
     skills: ["Rust", "Linux Containers", "eBPF", "Kubernetes Internals"],
     snippet:
       "We run serverless containers with cold starts under 800ms for AI workloads. Seeking low-level Linux systems engineers with deep experience in namespaces, cgroups v2, and container runtimes.",
-    subject: "Modal Infrastructure Engineer — container sandboxing & low-latency boot",
+    subject: "Modal Infrastructure Engineer - container sandboxing & low-latency boot",
     body: [
       "Hi Erik,",
-      "I follow Modal's technical writeups closely—especially your work around fast-boot microVMs and custom cgroup schedulers. Seeing your open systems role, I wanted to reach out directly.",
+      "I follow Modal's technical writeups closely-especially your work around fast-boot microVMs and custom cgroup schedulers. Seeing your open systems role, I wanted to reach out directly.",
       "In my current role, I built a custom container isolation layer in Rust using Linux namespaces and eBPF network telemetry, bringing average container cold-start latency down from 4.2s to 390ms for real-time inference.",
       "I have attached my résumé with the repository link and benchmarks. I'd appreciate 10 minutes to connect if you are currently interviewing candidates with low-level systems backgrounds.",
     ],

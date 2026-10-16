@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "https://www.meetvina.app/terms",
   },
   openGraph: {
-    title: "Terms of Service — Vina",
+    title: "Terms of Service - Vina",
     description:
       "Terms of service, fair use guidelines, and acceptable correspondence policies for Vina.",
     url: "https://www.meetvina.app/terms",

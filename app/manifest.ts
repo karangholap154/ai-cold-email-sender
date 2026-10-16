@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Vina — Tailored Job Application Letters",
+    name: "Vina - Tailored Job Application Letters",
     short_name: "Vina",
     description:
       "Vina turns a job description into a tailored letter worth sending, delivered from your own Gmail account with your résumé attached.",

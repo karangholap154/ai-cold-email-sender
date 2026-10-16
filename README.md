@@ -1,4 +1,4 @@
-# Vina — Thoughtful, Tailored Job Application Letters
+# Vina - Thoughtful, Tailored Job Application Letters
 
 > **Production URL:** [https://meetvina.app](https://meetvina.app)  
 > Personal correspondence for thoughtful job applications. Vina reads the job posting, drafts a genuine, targeted letter to go with your résumé, and hands it back to you to review and edit before sending directly from your personal Gmail.

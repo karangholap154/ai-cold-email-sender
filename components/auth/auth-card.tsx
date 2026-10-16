@@ -319,7 +319,7 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
                 />
                 {mode === "signup" && (
                   <p className="text-[11px] text-muted-ink">
-                    We&apos;ll only use this to sign you in — no marketing emails.
+                    We&apos;ll only use this to sign you in - no marketing emails.
                   </p>
                 )}
                 {mode === "forgot" && (

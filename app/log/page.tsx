@@ -782,7 +782,7 @@ export default function LogPage() {
                 className="inline-flex items-center justify-center gap-1.5 rounded-sm bg-seal px-5 py-2 text-xs font-medium text-paper hover:bg-seal/90 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
               >
                 {isUpgrading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>Upgrade to Pro — {PRO_PLAN.priceFormatted} {PRO_PLAN.periodText}</span>
+                <span>Upgrade to Pro - {PRO_PLAN.priceFormatted} {PRO_PLAN.periodText}</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>

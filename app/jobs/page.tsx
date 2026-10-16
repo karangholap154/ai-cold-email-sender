@@ -770,7 +770,7 @@ export default function JobsPage() {
                         </span>
                       </div>
                       <span className="text-[11px] text-muted-ink">
-                        Pitch directly — bypass applicant tracking queues
+                        Pitch directly - bypass applicant tracking queues
                       </span>
                     </div>
                   )}

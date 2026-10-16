@@ -522,7 +522,7 @@ export default function DraftPage() {
         window.history.replaceState({}, "", "/draft");
       }
     } catch {
-      toast.error("That didn't go through. Nothing was sent — try again.");
+      toast.error("That didn't go through. Nothing was sent - try again.");
     } finally {
       setIsSending(false);
     }
@@ -564,7 +564,7 @@ export default function DraftPage() {
             <p className="text-xs sm:text-sm text-muted-ink max-w-2xl leading-relaxed">
               {step === "input"
                 ? "Paste the target job description and recipient email. Vina extracts key requirements and drafts a tailored pitch referencing your background."
-                : "Carefully inspect your letter before dispatch. You can refine any phrasing directly — nothing leaves your Gmail without your approval."}
+                : "Carefully inspect your letter before dispatch. You can refine any phrasing directly - nothing leaves your Gmail without your approval."}
             </p>
           </div>
 
@@ -629,7 +629,7 @@ export default function DraftPage() {
                   {/* Pro Value Props Checklist */}
                   <div className="rounded-sm border border-hairline bg-paper/80 p-4 sm:p-5 space-y-2.5 text-xs">
                     <p className="text-[11px] font-semibold text-ink uppercase tracking-wider">
-                      Included with Vina Pro — $9 / month (₹499)
+                      Included with Vina Pro - $9 / month (₹499)
                     </p>
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-ink">
                       <li className="flex items-center gap-2">
@@ -667,7 +667,7 @@ export default function DraftPage() {
                       ) : (
                         <>
                           <Sparkles className="h-4 w-4" />
-                          <span>Upgrade to Pro — $9 / month</span>
+                          <span>Upgrade to Pro - $9 / month</span>
                           <ArrowRight className="h-4 w-4 ml-1" />
                         </>
                       )}

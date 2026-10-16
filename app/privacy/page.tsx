@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "https://www.meetvina.app/privacy",
   },
   openGraph: {
-    title: "Privacy Policy — Vina",
+    title: "Privacy Policy - Vina",
     description:
       "Privacy policy and data protection details for Vina. We do not read inboxes or sell applicant data.",
     url: "https://www.meetvina.app/privacy",
