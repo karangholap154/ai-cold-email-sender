@@ -53,6 +53,27 @@ export async function updateSession(request: NextRequest) {
     pathname === "/jobs" ||
     pathname.startsWith("/jobs/");
 
+  const isResetPasswordPage =
+    pathname === "/reset-password" || pathname.startsWith("/reset-password/");
+
+  // Allow users on /reset-password only if they have an active recovery session
+  if (isResetPasswordPage) {
+    if (!user) {
+      url.pathname = "/login";
+      url.searchParams.set("mode", "forgot");
+      url.searchParams.set(
+        "error",
+        "Your password reset link is invalid or has expired. Please request a new one."
+      );
+      const redirectResponse = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie);
+      });
+      return redirectResponse;
+    }
+    return supabaseResponse;
+  }
+
   // If user is not authenticated or has not confirmed their email, block protected pages
   if (isProtectedPage) {
     if (!user) {

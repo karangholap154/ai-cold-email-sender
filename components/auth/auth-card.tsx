@@ -8,8 +8,10 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
+export type AuthMode = "signin" | "signup" | "forgot";
+
 interface AuthCardProps {
-  initialMode?: "signin" | "signup";
+  initialMode?: AuthMode;
 }
 
 export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
@@ -17,9 +19,9 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
   const searchParams = useSearchParams();
 
   // Mode state: prioritize query param ?mode= if present, otherwise initialMode
-  const urlMode = searchParams.get("mode");
-  const [mode, setMode] = useState<"signin" | "signup">(
-    urlMode === "signup" || urlMode === "signin" ? urlMode : initialMode
+  const urlMode = searchParams.get("mode") as AuthMode | null;
+  const [mode, setMode] = useState<AuthMode>(
+    urlMode === "signup" || urlMode === "signin" || urlMode === "forgot" ? urlMode : initialMode
   );
 
   const [email, setEmail] = useState("");
@@ -32,7 +34,7 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
 
   if (urlMode !== prevUrlMode) {
     setPrevUrlMode(urlMode);
-    if (urlMode === "signup" || urlMode === "signin") {
+    if (urlMode === "signup" || urlMode === "signin" || urlMode === "forgot") {
       setMode(urlMode);
     }
   }
@@ -45,7 +47,7 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
     }
   }, [searchParams]);
 
-  const switchMode = (newMode: "signin" | "signup") => {
+  const switchMode = (newMode: AuthMode) => {
     if (mode === newMode) return;
     setMode(newMode);
     setIsSuccess(false);
@@ -60,6 +62,37 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === "forgot") {
+      if (!email.trim() || !email.includes("@")) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const supabase = createClient();
+        const origin = window.location.origin;
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${origin}/auth/callback?next=/reset-password`,
+        });
+
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+
+        setIsSuccess(true);
+        toast.success("Recovery email sent. Please check your inbox.");
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to send password recovery link.";
+        toast.error(message);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     if (!email.trim() || !password) {
       toast.error("Please enter both email and password.");
@@ -173,12 +206,18 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
             />
           </Link>
           <h1 className="font-heading text-xl sm:text-2xl text-ink">
-            {mode === "signin" ? "Welcome back" : "Create your account"}
+            {mode === "signin"
+              ? "Welcome back"
+              : mode === "signup"
+              ? "Create your account"
+              : "Reset your password"}
           </h1>
           <p className="mt-1.5 text-xs text-muted-ink">
             {mode === "signin"
               ? "Sign in to review your drafts and sent letters."
-              : "Turn a job description into a letter worth sending."}
+              : mode === "signup"
+              ? "Turn a job description into a letter worth sending."
+              : "Enter your email to receive a secure recovery link."}
           </p>
         </div>
 
@@ -187,11 +226,23 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
           <div className="border border-hairline bg-paper p-5 sm:p-6 rounded-sm text-center">
             <CheckCircle2 className="mx-auto h-8 w-8 text-confirmed mb-3" />
             <h2 className="text-sm font-medium text-ink">
-              Check your inbox to confirm your email before you continue.
+              {mode === "forgot"
+                ? "Password recovery email sent"
+                : "Check your inbox to confirm your email before you continue."}
             </h2>
             <p className="mt-1.5 text-xs text-muted-ink leading-relaxed">
-              We&apos;ve sent a confirmation link to{" "}
-              <strong className="font-medium text-ink break-all">{email}</strong>.
+              {mode === "forgot" ? (
+                <>
+                  We&apos;ve sent a password reset link to{" "}
+                  <strong className="font-medium text-ink break-all">{email}</strong>.
+                  Click the link in the email to choose a new password.
+                </>
+              ) : (
+                <>
+                  We&apos;ve sent a confirmation link to{" "}
+                  <strong className="font-medium text-ink break-all">{email}</strong>.
+                </>
+              )}
             </p>
             <div className="mt-5 border-t border-hairline pt-4">
               <button
@@ -207,30 +258,45 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
           /* Form Card */
           <div className="border border-hairline bg-paper p-5 sm:p-6 rounded-sm shadow-none">
             {/* Segmented Mode Switcher */}
-            <div className="grid grid-cols-2 p-1 bg-subtle rounded-sm border border-hairline mb-5 text-xs">
-              <button
-                type="button"
-                onClick={() => switchMode("signin")}
-                className={`py-1.5 font-medium rounded-sm transition-all cursor-pointer text-center ${
-                  mode === "signin"
-                    ? "bg-paper text-ink shadow-sm border border-hairline"
-                    : "text-muted-ink hover:text-ink border border-transparent"
-                }`}
-              >
-                Sign in
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode("signup")}
-                className={`py-1.5 font-medium rounded-sm transition-all cursor-pointer text-center ${
-                  mode === "signup"
-                    ? "bg-paper text-ink shadow-sm border border-hairline"
-                    : "text-muted-ink hover:text-ink border border-transparent"
-                }`}
-              >
-                Create account
-              </button>
-            </div>
+            {mode === "forgot" ? (
+              <div className="flex items-center justify-between mb-5 pb-3 border-b border-hairline">
+                <span className="text-xs font-medium text-ink">
+                  Account Recovery
+                </span>
+                <button
+                  type="button"
+                  onClick={() => switchMode("signin")}
+                  className="text-xs text-seal hover:underline cursor-pointer font-medium"
+                >
+                  Back to Sign in
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 p-1 bg-subtle rounded-sm border border-hairline mb-5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => switchMode("signin")}
+                  className={`py-1.5 font-medium rounded-sm transition-all cursor-pointer text-center ${
+                    mode === "signin"
+                      ? "bg-paper text-ink shadow-sm border border-hairline"
+                      : "text-muted-ink hover:text-ink border border-transparent"
+                  }`}
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className={`py-1.5 font-medium rounded-sm transition-all cursor-pointer text-center ${
+                    mode === "signup"
+                      ? "bg-paper text-ink shadow-sm border border-hairline"
+                      : "text-muted-ink hover:text-ink border border-transparent"
+                  }`}
+                >
+                  Create account
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleAuth} className="space-y-4">
               {/* Email Address */}
@@ -256,29 +322,45 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
                     We&apos;ll only use this to sign you in — no marketing emails.
                   </p>
                 )}
+                {mode === "forgot" && (
+                  <p className="text-[11px] text-muted-ink">
+                    We&apos;ll send a one-time link to securely reset your password.
+                  </p>
+                )}
               </div>
 
-              {/* Password */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="password"
-                    className="block text-xs font-medium text-ink"
-                  >
-                    Password
-                  </label>
+              {/* Password (only in signin and signup modes) */}
+              {mode !== "forgot" && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="password"
+                      className="block text-xs font-medium text-ink"
+                    >
+                      Password
+                    </label>
+                    {mode === "signin" && (
+                      <button
+                        type="button"
+                        onClick={() => switchMode("forgot")}
+                        className="text-[11px] text-seal hover:underline cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    id="password"
+                    type="password"
+                    required
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
+                    className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 sm:py-2 text-sm sm:text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors min-h-[40px]"
+                  />
                 </div>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
-                  className="w-full rounded-sm border border-hairline bg-paper px-3.5 py-2.5 sm:py-2 text-sm sm:text-xs text-ink placeholder:text-muted-ink/50 focus:border-seal focus:outline-none transition-colors min-h-[40px]"
-                />
-              </div>
+              )}
 
               {/* Confirm Password (only in signup mode) */}
               {mode === "signup" && (
@@ -313,10 +395,14 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
                   {isLoading
                     ? mode === "signin"
                       ? "Signing in..."
-                      : "Creating account..."
+                      : mode === "signup"
+                      ? "Creating account..."
+                      : "Sending link..."
                     : mode === "signin"
                     ? "Sign in"
-                    : "Create account"}
+                    : mode === "signup"
+                    ? "Create account"
+                    : "Send recovery link"}
                 </span>
               </button>
 
@@ -365,7 +451,7 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
                   Create one
                 </button>
               </>
-            ) : (
+            ) : mode === "signup" ? (
               <>
                 Already have an account?{" "}
                 <button
@@ -374,6 +460,17 @@ export function AuthCard({ initialMode = "signin" }: AuthCardProps) {
                   className="text-ink underline underline-offset-4 hover:opacity-80 transition-opacity py-1 cursor-pointer font-medium"
                 >
                   Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signin")}
+                  className="text-ink underline underline-offset-4 hover:opacity-80 transition-opacity py-1 cursor-pointer font-medium"
+                >
+                  Back to Sign in
                 </button>
               </>
             )}
