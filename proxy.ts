@@ -15,6 +15,6 @@ export const config = {
      * - auth/callback (auth callback route)
      * - static assets
      */
-    "/((?!_next/static|_next/image|favicon.ico|auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/callback|supabase|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
