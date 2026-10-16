@@ -337,8 +337,25 @@ export default function DraftPage() {
     return () => clearTimeout(timer);
   }, [hrEmail, followUpContext]);
 
+  const handleUpgrade = async () => {
+    setIsUpgrading(true);
+    try {
+      await initiateCheckout({ onFallback: () => router.push("/settings") });
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isMonthlyCapped) {
+      toast.error(
+        "You've reached your free limit of 5 letters this month. Please upgrade to Pro to continue drafting."
+      );
+      await handleUpgrade();
+      return;
+    }
 
     if (!jdText.trim() || jdText.trim().length < 30) {
       toast.error("Please paste a more detailed Job Description (at least 30 characters).");
@@ -588,9 +605,84 @@ export default function DraftPage() {
         {step === "input" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
             
-            {/* Left Main Form Column */}
+            {/* Left Main Form Column or Monthly Limit Upgrade Card */}
             <div className="lg:col-span-8">
-              <form onSubmit={handleGenerate} className="rounded-md border border-hairline bg-white/85 p-5 sm:p-7 shadow-2xs space-y-6">
+              {isMonthlyCapped ? (
+                <div className="rounded-md border border-seal/30 bg-[#FAF7F0] p-6 sm:p-8 shadow-xs space-y-6">
+                  <div className="flex items-start gap-3.5">
+                    <div className="rounded-full bg-seal/15 p-2.5 text-seal shrink-0 mt-0.5">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs text-[11px] font-medium bg-amber-100 text-amber-900 border border-amber-300/60 mb-1">
+                        Free Monthly Limit Reached (5 of 5 Sent)
+                      </div>
+                      <h2 className="font-heading text-xl sm:text-2xl text-ink font-normal tracking-tight">
+                        You&apos;ve reached your limit of 5 free letters
+                      </h2>
+                      <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
+                        Free accounts include 5 sent letters per calendar month. To continue drafting and sending tailored applications directly from your Gmail, upgrade to <strong>Vina Pro</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Pro Value Props Checklist */}
+                  <div className="rounded-sm border border-hairline bg-paper/80 p-4 sm:p-5 space-y-2.5 text-xs">
+                    <p className="text-[11px] font-semibold text-ink uppercase tracking-wider">
+                      Included with Vina Pro — $9 / month (₹499)
+                    </p>
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-ink">
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-confirmed shrink-0" />
+                        <span><strong>Unlimited</strong> tailored letters</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-confirmed shrink-0" />
+                        <span><strong>1-Click follow-ups</strong> in same thread</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-confirmed shrink-0" />
+                        <span><strong>Up to 3</strong> résumé versions</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-confirmed shrink-0" />
+                        <span><strong>Unlimited</strong> AI regenerations</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Upgrade Actions */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+                    <button
+                      type="button"
+                      disabled={isUpgrading}
+                      onClick={handleUpgrade}
+                      className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-6 py-3 text-xs sm:text-sm font-medium text-white hover:bg-seal/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer min-h-[44px]"
+                    >
+                      {isUpgrading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Connecting to secure checkout...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          <span>Upgrade to Pro — $9 / month</span>
+                          <ArrowRight className="h-4 w-4 ml-1" />
+                        </>
+                      )}
+                    </button>
+
+                    <Link
+                      href="/log"
+                      className="text-xs text-muted-ink hover:text-ink underline underline-offset-4 text-center sm:text-right py-1 font-medium"
+                    >
+                      View your sent letters in History →
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleGenerate} className="rounded-md border border-hairline bg-white/85 p-5 sm:p-7 shadow-2xs space-y-6">
                 
                 {/* Send To Input */}
                 <div className="space-y-2">
@@ -683,6 +775,7 @@ export default function DraftPage() {
                 </div>
 
               </form>
+              )}
             </div>
 
             {/* Right Sidebar: Sender Profile & Readiness Checklist */}
@@ -815,14 +908,7 @@ export default function DraftPage() {
                     ) : isMonthlyCapped ? (
                       <button
                         type="button"
-                        onClick={async () => {
-                          setIsUpgrading(true);
-                          try {
-                            await initiateCheckout({ onFallback: () => router.push("/settings") });
-                          } finally {
-                            setIsUpgrading(false);
-                          }
-                        }}
+                        onClick={handleUpgrade}
                         className="text-[11px] text-seal hover:underline font-medium cursor-pointer"
                       >
                         Upgrade →

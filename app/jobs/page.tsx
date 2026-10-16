@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { JobPosting, JobFilter } from "@/lib/types/job";
+import type { UserUsage } from "@/lib/types/database";
 import { calculateJobMatch } from "@/lib/matcher";
 import {
   resolveJobCountry,
@@ -53,6 +54,7 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [userSkills, setUserSkills] = useState<string[]>([]);
   const [hasSkills, setHasSkills] = useState(false);
+  const [usage, setUsage] = useState<UserUsage | null>(null);
   const [sentEmails, setSentEmails] = useState<SentEmailSummary[]>([]);
   const [sortBy, setSortBy] = useState<"match" | "newest">("match");
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
@@ -87,6 +89,9 @@ export default function JobsPage() {
         const pData = await profileRes.json();
         if (Array.isArray(pData.profile?.skills) && pData.profile.skills.length > 0) {
           skills = pData.profile.skills;
+        }
+        if (pData.usage) {
+          setUsage(pData.usage);
         }
       }
 
@@ -279,6 +284,14 @@ export default function JobsPage() {
   }, [jobs]);
 
   const handleDraftWithJob = (job: JobPosting, mode: "email" | "note") => {
+    if (usage?.plan === "free" && usage.monthlySends >= (usage.monthlyLimit ?? 5)) {
+      toast.error(
+        "You've sent all 5 free letters this month. Please upgrade to Pro to draft new letters."
+      );
+      router.push("/draft");
+      return;
+    }
+
     try {
       sessionStorage.setItem(
         INCOMING_JOB_STORAGE_KEY,
