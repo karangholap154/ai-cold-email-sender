@@ -117,7 +117,7 @@ async function fetchHackerNewsJobs(): Promise<JobPosting[]> {
     // 1. First retrieve the latest "Ask HN: Who is hiring?" story ID
     const storyRes = await fetch(
       "https://hn.algolia.com/api/v1/search_by_date?query=Ask%20HN:%20Who%20is%20hiring&tags=story,author_whoishiring&hitsPerPage=1",
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 3600 }, signal: AbortSignal.timeout(8000) }
     );
 
     if (!storyRes.ok) {
@@ -135,7 +135,7 @@ async function fetchHackerNewsJobs(): Promise<JobPosting[]> {
     // 2. Fetch the top job posting comments belonging to that story
     const commentsRes = await fetch(
       `https://hn.algolia.com/api/v1/search?tags=comment,story_${storyId}&hitsPerPage=150`,
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 3600 }, signal: AbortSignal.timeout(8000) }
     );
 
     if (!commentsRes.ok) {
@@ -215,6 +215,7 @@ async function fetchArbeitnowJobs(): Promise<JobPosting[]> {
   try {
     const res = await fetch("https://www.arbeitnow.com/api/job-board-api", {
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
@@ -262,6 +263,7 @@ async function fetchRemotiveJobs(): Promise<JobPosting[]> {
   try {
     const res = await fetch("https://remotive.com/api/remote-jobs", {
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(8000),
       headers: {
         "User-Agent": "VinaJobAggregator/1.0",
       },

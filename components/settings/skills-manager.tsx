@@ -34,14 +34,16 @@ export function SkillsManager({
   isSaving = false,
 }: SkillsManagerProps) {
   const [skills, setSkills] = useState<string[]>(initialSkills);
+  const [prevInitialSkills, setPrevInitialSkills] = useState(initialSkills);
   const [inputValue, setInputValue] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [localSaving, setLocalSaving] = useState(false);
 
-  useEffect(() => {
+  if (initialSkills !== prevInitialSkills) {
+    setPrevInitialSkills(initialSkills);
     setSkills(initialSkills);
     setHasChanges(false);
-  }, [initialSkills]);
+  }
 
   const addSkill = (newSkill: string) => {
     const trimmed = newSkill.trim().replace(/^[,./;]+|[,./;]+$/g, "");
@@ -93,9 +95,10 @@ export function SkillsManager({
         toast.success("Skills updated successfully!");
       }
       setHasChanges(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message || "Could not save skills.");
+      const message = err instanceof Error ? err.message : "Could not save skills.";
+      toast.error(message);
     } finally {
       setLocalSaving(false);
     }

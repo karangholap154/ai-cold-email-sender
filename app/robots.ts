@@ -20,6 +20,7 @@ export default function robots(): MetadataRoute.Robots {
           "/llms-full.txt",
         ],
         disallow: [
+          "/jobs",
           "/draft",
           "/log",
           "/settings",
@@ -48,6 +49,7 @@ export default function robots(): MetadataRoute.Robots {
           "/llms-full.txt",
         ],
         disallow: [
+          "/jobs",
           "/draft",
           "/log",
           "/settings",

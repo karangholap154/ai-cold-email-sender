@@ -65,14 +65,15 @@ export default function JobsPage() {
   const [seniorityFilter, setSeniorityFilter] = useState<SeniorityLevel>("all");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
-  // Reset pagination window when filters, search, location, or seniority change
-  useEffect(() => {
+  const [prevFilterKey, setPrevFilterKey] = useState("");
+  const currentFilterKey = `${searchQuery}|${activeFilter}|${sortBy}|${selectedLocation}|${seniorityFilter}`;
+  if (currentFilterKey !== prevFilterKey) {
+    setPrevFilterKey(currentFilterKey);
     setVisibleCount(INITIAL_VISIBLE_COUNT);
-  }, [searchQuery, activeFilter, sortBy, selectedLocation, seniorityFilter]);
+  }
 
   const fetchData = async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
-    else setIsLoading(true);
 
     try {
       const [jobsRes, profileRes, emailsRes] = await Promise.all([
@@ -131,7 +132,14 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    let active = true;
+    const run = async () => {
+      await fetchData();
+    };
+    void run();
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Filtered and sorted jobs calculation

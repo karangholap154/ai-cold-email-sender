@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       skills,
     } = body;
 
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       full_name: typeof full_name === "string" ? full_name.trim() : null,
       sign_off: typeof sign_off === "string" && sign_off.trim() ? sign_off.trim() : "Best regards,",
       portfolio_url: typeof portfolio_url === "string" ? portfolio_url.trim() : null,
