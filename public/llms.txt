@@ -7,6 +7,8 @@ Vina (https://www.meetvina.app) is an AI application designed specifically for i
 
 - **Job Description Analysis**: Extracts essential requirements, technical skills, seniority, and target company context from any pasted job description.
 - **Cliché-Free Letter Generation**: Writes plain-spoken, thoughtful letters that sound like a competent colleague writing a note-strictly avoiding corporate clichés ("I hope this finds you well", "thrilled to apply", "perfect candidate").
+- **Pre-Send DNS MX Verification**: Automatically verifies the recipient domain's Mail Exchange (MX) records and detects typos (e.g., `@gmial.com`) before dispatching, preventing hard email bounces and protecting domain reputation.
+- **Gmail Safety Shield**: Enforces a conservative 50-letter daily ceiling to ensure user sending velocity remains 10x below Google's algorithmic spam threshold, keeping personal Google accounts 100% safe.
 - **Direct Gmail Sending**: Outbound letters and threaded replies are dispatched directly through the user's authenticated personal Google account via Google's official SMTP servers (`smtp.gmail.com`).
 - **Automated Résumé Attachment**: Stores user's PDF résumé securely in private storage and attaches it to the outbound email automatically.
 - **Native Follow-Up Threads**: Generates concise, polite follow-ups (50–85 words) with authentic RFC 2822 `In-Reply-To` and `References` headers for native conversation nesting in the recruiter's inbox.
@@ -18,6 +20,7 @@ Vina (https://www.meetvina.app) is an AI application designed specifically for i
 
 - **Free Tier ($0/month)**: 5 tailored letters per month, 1 active résumé PDF, 2 AI regenerations per draft, duplicate contact warnings, and 30-day sent letter log.
 - **Pro Membership ($9 USD / ₹499 INR per month)**: Unlimited tailored letters, 3 targeted résumé versions, unlimited AI regenerations, one-click threaded follow-up letters, full lifetime archive, priority email support.
+- **Special Promotion**: Use discount code `EARLY50` for 50% off your first month of Vina Pro.
 
 ## Privacy & Security
 

@@ -47,6 +47,16 @@ Vina is built for selective applicants who care about each company they apply to
 - Free tier: 1 résumé version.
 - Pro tier: Up to 3 specialized versions with default toggle.
 
+### F. Pre-Send DNS MX Verification & Typo Detection
+- Performs real-time DNS MX lookups (`node:dns/promises`) to ensure the recipient company's domain has operational mail exchange servers before SMTP dispatch.
+- Detects common domain typos (e.g. `@gmial.com`, `@hotmial.com`, `@outlok.com`) and offers 1-click correction to prevent bounces.
+- Blocks sends to non-existent domains, completely preventing Google `550 Host not found` bounce penalties.
+
+### G. Gmail Safety Shield
+- Enforces an automated daily dispatch ceiling of 50 letters per 24 hours per user.
+- Keeps sending velocity 10x below Google's personal account thresholds (500/day personal, 2,000/day Workspace).
+- Eliminates the risk of automated spam blocks, domain throttling, or Google account suspensions.
+
 ---
 
 ## 3. Comparison Matrix: Vina vs Alternatives
@@ -60,6 +70,8 @@ Vina is built for selective applicants who care about each company they apply to
 | **Follow-Up Nesting** | Native RFC 2822 In-Reply-To Thread | New Email or Simulated Thread | None / Separate Application |
 | **Duplicate Warning** | Yes (Built-in recruiter protection) | No (Built for bulk lists) | N/A |
 | **Automated Attachment** | Yes (PDF résumé attached per send) | Often avoided to prevent spam flags | Attached separately |
+| **DNS MX Verification** | Built-in Pre-send Verification | Rarely Included for Job Seekers | N/A |
+| **Reputation Shield** | 50 letters/24h Safety Ceiling | Relies on Burner Warmup Farms | N/A |
 
 ---
 
@@ -80,6 +92,7 @@ Vina is built for selective applicants who care about each company they apply to
 - Full lifetime sent letters archive.
 - Priority email support.
 - Global cards, Apple Pay, and India UPI supported via Dodo Payments.
+- **Special Promotion:** Use coupon code `EARLY50` at checkout for 50% off the first month of Pro.
 
 ---
 
