@@ -6,26 +6,14 @@ import {
   Mail,
   FileText,
   ShieldCheck,
-  Zap,
   Lock,
   Sparkles,
   Check,
   Briefcase,
-  ChevronRight,
   PenLine,
-  SlidersHorizontal,
-  History,
   FileCheck2,
   Building2,
   BadgeCheck,
-  Search,
-  ExternalLink,
-  MapPin,
-  Clock,
-  Send,
-  AlertCircle,
-  HelpCircle,
-  RefreshCw,
 } from "lucide-react";
 import { FREE_PLAN, PRO_PLAN } from "@/lib/constants/plans";
 import { Footer } from "@/components/footer";
@@ -51,6 +39,14 @@ const faqs = [
   {
     q: "Does Vina send emails automatically without my review?",
     a: "Never. The fundamental principle of Vina is that every single outreach letter must be reviewed, edited, and approved by you in the Letter Frame before anything is dispatched. There are no automated bots or background queues sending mail on your behalf.",
+  },
+  {
+    q: "Can my personal Gmail get banned or flagged for using Vina?",
+    a: "No. Unlike mass email tools that blast hundreds of automated messages through burner domains, Vina is built for high-touch 1-to-1 correspondence. We enforce the Gmail Safety Shield - a hard ceiling of 50 letters per 24 hours - keeping your volume 10x below Google's personal thresholds (500/day for personal @gmail.com, 2,000/day for Google Workspace). Because every letter is uniquely tailored and sent with authentic personal SMTP credentials, Google views your activity as natural, organic email.",
+  },
+  {
+    q: "What happens if a recipient email has a typo or the domain is invalid?",
+    a: "Vina performs real-time DNS MX lookups before sending. If the company domain has no operational mail exchange servers or if you typed a common typo (such as @gmial.com or @hotmial.com), Vina alerts you right in the Letter Frame, offers a 1-click correction, and blocks the send. This eliminates 550 Host Not Found hard bounces and protects your sender reputation.",
   },
   {
     q: "How does Vina send from my personal Gmail?",
@@ -242,26 +238,33 @@ export default function LandingPage() {
           </div>
 
           {/* Core Product Trust Tenets */}
-          <div className="mt-10 sm:mt-12 pt-6 border-t border-hairline grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 text-xs text-muted-ink">
+          <div className="mt-10 sm:mt-12 pt-6 border-t border-hairline grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 text-xs text-muted-ink">
             <div className="flex items-start gap-2.5">
               <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
               <div>
                 <strong className="text-ink font-medium block">Sent from your own Gmail</strong>
-                <span className="leading-relaxed">Preserves your authentic sender reputation and reaches the primary inbox.</span>
+                <span className="leading-relaxed">Reaches the primary inbox with authentic personal identity.</span>
               </div>
             </div>
             <div className="flex items-start gap-2.5">
               <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
               <div>
-                <strong className="text-ink font-medium block">Résumé attached automatically</strong>
-                <span className="leading-relaxed">Upload your PDF once; Vina attaches it to every approved letter.</span>
+                <strong className="text-ink font-medium block">Gmail Safety Shield</strong>
+                <span className="leading-relaxed">50-letter daily ceiling keeps your velocity 10x below spam thresholds.</span>
               </div>
             </div>
-            <div className="flex items-start gap-2.5 sm:col-span-2 lg:col-span-1">
+            <div className="flex items-start gap-2.5">
+              <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-ink font-medium block">DNS MX Verification</strong>
+                <span className="leading-relaxed">Live checks recipient mail servers to eliminate hard bounce penalties.</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
               <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
               <div>
                 <strong className="text-ink font-medium block">Duplicate recruiter warning</strong>
-                <span className="leading-relaxed">Never accidentally reach out to the same contact twice.</span>
+                <span className="leading-relaxed">Prevents double-emailing the same contact across multiple days.</span>
               </div>
             </div>
           </div>
@@ -368,8 +371,8 @@ export default function LandingPage() {
                 <span className="text-muted-ink">114 words</span>
                 <span className="text-hairline">|</span>
                 <span className="text-confirmed font-medium flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Ready to send
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  MX Verified &bull; Safety Shield Active
                 </span>
               </div>
             </div>
@@ -596,15 +599,15 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="text-amber-800 font-bold shrink-0">&times;</span>
-                  <span><strong>Obvious boilerplate tokens:</strong> Mail-merged templates like &ldquo;I admire your work at [Company]&rdquo; that recruiters flag and delete instantly.</span>
+                  <span><strong>Zero DNS pre-verification:</strong> Blasts dead email addresses and invalid domains, accumulating hard 550 bounces that trigger Google spam penalties.</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="text-amber-800 font-bold shrink-0">&times;</span>
-                  <span><strong>No review or oversight:</strong> Fluffy claims and hallucinated skills sent autonomously under your name without you seeing the text.</span>
+                  <span><strong>Uncapped blast velocity:</strong> Sends hundreds of identical messages an hour, quickly causing personal Google accounts to get suspended or rate-limited.</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <span className="text-amber-800 font-bold shrink-0">&times;</span>
-                  <span><strong>Accidental duplicate outreach:</strong> Blasts 3 different engineers at the same startup with the same template on the same day.</span>
+                  <span><strong>Obvious boilerplate tokens:</strong> Mail-merged templates like &ldquo;I admire your work at [Company]&rdquo; that recruiters delete instantly.</span>
                 </li>
               </ul>
             </div>
@@ -622,15 +625,15 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
-                  <span><strong>Problem-specific pitch:</strong> Reads the exact technical challenges mentioned in the JD and connects them directly to your actual achievements.</span>
+                  <span><strong>Pre-send DNS MX verification:</strong> Live checks recipient mail exchange servers and catches typos (@gmial.com) - eliminating hard bounce penalties.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
+                  <span><strong>Gmail Safety Shield (50/day):</strong> Automated daily dispatch ceiling keeps your sending velocity 10x below Google spam thresholds.</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
                   <span><strong>Deliberate Letter Frame review:</strong> Full control to refine wording, tone, and signature before anything leaves your mailbox.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <Check className="h-4 w-4 text-confirmed shrink-0 mt-0.5" />
-                  <span><strong>Correspondence ledger protection:</strong> Real-time lookup detects if you&apos;ve reached out to this recruiter before and shows previous send dates.</span>
                 </li>
               </ul>
             </div>
@@ -639,19 +642,24 @@ export default function LandingPage() {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────
-          6. SECURITY, OAUTH, & PRIVACY TENETS
-          Card grid wrapping neatly on small mobile screens
+          6. DELIVERABILITY & ACCOUNT SAFETY ARCHITECTURE
           ───────────────────────────────────────────────────────────── */}
       <section className="border-b border-hairline bg-[#FAF9F5] px-4 py-10 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-5xl rounded-sm border border-hairline bg-white p-5 sm:p-7 lg:p-8 space-y-6 shadow-2xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
             <div className="space-y-1">
-              <h3 className="font-heading text-lg sm:text-xl text-ink font-medium flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-confirmed animate-pulse shrink-0" />
+                <span className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-ink">
+                  Deliverability &amp; Account Protection
+                </span>
+              </div>
+              <h3 className="font-heading text-lg sm:text-2xl text-ink font-medium flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-seal shrink-0" />
-                <span>Our Privacy &amp; Deliverability Pledge</span>
+                <span>The Gmail Safety &amp; Deliverability Architecture</span>
               </h3>
-              <p className="text-xs text-muted-ink">
-                We believe job correspondence requires strict technical restraint.
+              <p className="text-xs sm:text-sm text-muted-ink max-w-2xl leading-relaxed">
+                Vina protects your personal Google account with the same defensive engineering used by high-reputation senders.
               </p>
             </div>
             <Link
@@ -663,29 +671,41 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 text-xs text-muted-ink">
-            <div className="space-y-1.5">
-              <span className="font-mono text-[10px] sm:text-[11px] text-ink font-semibold uppercase block">
-                No Autonomous Sending
-              </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 text-xs text-muted-ink">
+            <div className="space-y-1.5 p-3.5 rounded-xs border border-hairline/80 bg-paper/50">
+              <div className="flex items-center gap-1.5 text-ink font-semibold font-mono text-[11px] uppercase">
+                <ShieldCheck className="h-4 w-4 text-seal shrink-0" />
+                <span>50/Day Safety Shield</span>
+              </div>
               <p className="leading-relaxed">
-                Vina only ever sends messages that you explicitly review and approve. Nothing is sent on a timer, in the background, or without your manual click.
+                Enforces a strict 50-letter daily ceiling per user - keeping your velocity 10x below Google&apos;s personal limits (500/day) so your account is never flagged or throttled.
               </p>
             </div>
-            <div className="space-y-1.5">
-              <span className="font-mono text-[10px] sm:text-[11px] text-ink font-semibold uppercase block">
-                We Never Read Your Inbox
-              </span>
+            <div className="space-y-1.5 p-3.5 rounded-xs border border-hairline/80 bg-paper/50">
+              <div className="flex items-center gap-1.5 text-ink font-semibold font-mono text-[11px] uppercase">
+                <FileCheck2 className="h-4 w-4 text-confirmed shrink-0" />
+                <span>DNS MX Verification</span>
+              </div>
               <p className="leading-relaxed">
-                We request minimal Gmail permissions solely to transmit your approved letters and detect thread IDs for replies. We never read or store incoming private mail.
+                Queries recipient mail exchange records before SMTP dispatch. Blocks non-existent domains and flags typos (like @gmial.com), eliminating hard bounce penalties.
               </p>
             </div>
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
-              <span className="font-mono text-[10px] sm:text-[11px] text-ink font-semibold uppercase block">
-                Zero AI Training on Your Résumé
-              </span>
+            <div className="space-y-1.5 p-3.5 rounded-xs border border-hairline/80 bg-paper/50">
+              <div className="flex items-center gap-1.5 text-ink font-semibold font-mono text-[11px] uppercase">
+                <Mail className="h-4 w-4 text-seal shrink-0" />
+                <span>100% Primary Inbox</span>
+              </div>
               <p className="leading-relaxed">
-                Your résumé PDF and correspondence history are private to your user account and are strictly never used to train public machine learning models.
+                Dispatches directly from your authenticated Google credentials with authentic RFC 2822 headers. Bypasses shared marketing IP pools and promotional tabs.
+              </p>
+            </div>
+            <div className="space-y-1.5 p-3.5 rounded-xs border border-hairline/80 bg-paper/50">
+              <div className="flex items-center gap-1.5 text-ink font-semibold font-mono text-[11px] uppercase">
+                <Lock className="h-4 w-4 text-ink shrink-0" />
+                <span>Zero Inbox Snooping</span>
+              </div>
+              <p className="leading-relaxed">
+                We never inspect incoming private emails or sell data. We only transmit your explicitly approved letters, and never train AI models on your résumé.
               </p>
             </div>
           </div>
