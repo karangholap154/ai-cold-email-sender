@@ -241,3 +241,119 @@ export async function validateEmailWithDns(email: string): Promise<EmailValidati
     return { isValid: true };
   }
 }
+
+export const COMMON_DOMAIN_TYPOS: Record<string, string> = {
+  "gmial.com": "gmail.com",
+  "gmai.com": "gmail.com",
+  "gamil.com": "gmail.com",
+  "gmaill.com": "gmail.com",
+  "gmail.co": "gmail.com",
+  "hotmial.com": "hotmail.com",
+  "hotmaill.com": "hotmail.com",
+  "outlok.com": "outlook.com",
+  "outloo.com": "outlook.com",
+  "yaho.com": "yahoo.com",
+  "yahooo.com": "yahoo.com",
+  "iclud.com": "icloud.com",
+  "iclou.com": "icloud.com",
+  "prton.me": "proton.me",
+  "protonmai.com": "protonmail.com",
+};
+
+export interface RecipientValidationResult {
+  isValid: boolean;
+  error?: string;
+  suggestion?: string;
+  mxHost?: string;
+  domain?: string;
+}
+
+/**
+ * Pre-send recipient email and DNS MX verification
+ * Verifies recipient syntax, checks for domain typos, and confirms the receiving domain
+ * has active mail exchange (MX) servers configured before attempting SMTP dispatch.
+ */
+export async function validateRecipientEmail(email: string): Promise<RecipientValidationResult> {
+  const trimmed = email.trim().toLowerCase();
+
+  if (!trimmed) {
+    return { isValid: false, error: "Recipient email is required." };
+  }
+
+  if (!EMAIL_REGEX.test(trimmed)) {
+    return { isValid: false, error: "Please enter a valid email address (e.g. name@company.com)." };
+  }
+
+  const parts = trimmed.split("@");
+  if (parts.length !== 2) {
+    return { isValid: false, error: "Invalid email address format." };
+  }
+
+  const [localPart, domain] = parts;
+
+  if (!domain.includes(".")) {
+    return { isValid: false, error: "Email domain must include a valid top-level domain." };
+  }
+
+  // Check for common domain typos (e.g. gmial.com -> gmail.com)
+  if (COMMON_DOMAIN_TYPOS[domain]) {
+    const suggestedDomain = COMMON_DOMAIN_TYPOS[domain];
+    return {
+      isValid: false,
+      suggestion: `${localPart}@${suggestedDomain}`,
+      error: `Did you mean ${localPart}@${suggestedDomain}? (Found likely typo in @${domain})`,
+    };
+  }
+
+  try {
+    // Query DNS MX records with a 2500ms safety timeout
+    const mxRecordsPromise = dns.resolveMx(domain);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("DNS_TIMEOUT")), 2500)
+    );
+
+    const mxRecords = await Promise.race([mxRecordsPromise, timeoutPromise]);
+
+    if (!mxRecords || mxRecords.length === 0) {
+      return {
+        isValid: false,
+        domain,
+        error: `The domain @${domain} has no active mail servers (MX records). Emails sent here will bounce.`,
+      };
+    }
+
+    // Check for Null MX record (RFC 7505)
+    for (const record of mxRecords) {
+      const exchange = (record.exchange || "").toLowerCase().trim();
+      if (!exchange || exchange === ".") {
+        return {
+          isValid: false,
+          domain,
+          error: `The domain @${domain} announces that it does not accept incoming emails (RFC 7505 Null MX).`,
+        };
+      }
+    }
+
+    return {
+      isValid: true,
+      domain,
+      mxHost: mxRecords[0]?.exchange,
+    };
+  } catch (err: unknown) {
+    const error = err as { code?: string; message?: string };
+
+    if (error.code === "ENOTFOUND" || error.code === "ENODATA") {
+      return {
+        isValid: false,
+        domain,
+        error: `The domain @${domain} does not exist or has no mail servers configured. Please check for typos.`,
+      };
+    }
+
+    // On network lookup timeouts or transient DNS errors, fail open so legitimate recipients aren't blocked
+    return {
+      isValid: true,
+      domain,
+    };
+  }
+}

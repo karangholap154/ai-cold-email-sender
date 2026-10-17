@@ -48,6 +48,15 @@ export default function DraftPage() {
   const [usage, setUsage] = useState<UserUsage | null>(null);
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [isCapped, setIsCapped] = useState(false);
+  const [isDailyCapped, setIsDailyCapped] = useState(false);
+  const [recipientValidation, setRecipientValidation] = useState<{
+    isValid: boolean;
+    error?: string;
+    suggestion?: string;
+    domain?: string;
+    mxHost?: string;
+  } | null>(null);
+  const [isValidatingEmail, setIsValidatingEmail] = useState(false);
 
   // Gmail connection state
   const [isGmailConnected, setIsGmailConnected] = useState(false);
@@ -90,6 +99,13 @@ export default function DraftPage() {
             setUsage(pData.usage);
             if (pData.usage.plan === "free" && pData.usage.monthlySends >= (pData.usage.monthlyLimit ?? 5)) {
               setIsCapped(true);
+            }
+            if (
+              typeof pData.usage.dailySends === "number" &&
+              typeof pData.usage.dailyLimit === "number" &&
+              pData.usage.dailySends >= pData.usage.dailyLimit
+            ) {
+              setIsDailyCapped(true);
             }
           }
         }
@@ -304,33 +320,50 @@ export default function DraftPage() {
     loadFollowUp(fId);
   }, [router]);
 
-  // Check duplicate email when hrEmail changes
+  // Check duplicate email & validate recipient MX when hrEmail changes
   useEffect(() => {
-    if (followUpContext) {
-      // In follow-up mode, duplicate check against previous email is intended
-      const timer = setTimeout(() => setIsDuplicateEmail(false), 0);
+    if (!hrEmail || !hrEmail.includes("@") || hrEmail.length < 5) {
+      const timer = setTimeout(() => {
+        setIsDuplicateEmail(false);
+        setRecipientValidation(null);
+        setIsValidatingEmail(false);
+      }, 0);
       return () => clearTimeout(timer);
     }
 
-    if (!hrEmail || !hrEmail.includes("@")) {
-      const timer = setTimeout(() => setIsDuplicateEmail(false), 0);
-      return () => clearTimeout(timer);
-    }
-
-    // Check duplicate against existing sent emails
     const timer = setTimeout(async () => {
+      setIsValidatingEmail(true);
       try {
-        const res = await fetch(`/api/emails?email=${encodeURIComponent(hrEmail.trim())}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.exists) {
-            setIsDuplicateEmail(true);
-          } else {
-            setIsDuplicateEmail(false);
-          }
+        const trimmed = hrEmail.trim();
+        const promises: Promise<Response>[] = [
+          fetch("/api/validate-recipient", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: trimmed }),
+          }),
+        ];
+
+        if (!followUpContext) {
+          promises.push(fetch(`/api/emails?email=${encodeURIComponent(trimmed)}`));
+        }
+
+        const [valRes, dupRes] = await Promise.all(promises);
+
+        if (valRes && valRes.ok) {
+          const vData = await valRes.json();
+          setRecipientValidation(vData);
+        }
+
+        if (dupRes && dupRes.ok) {
+          const dData = await dupRes.json();
+          setIsDuplicateEmail(Boolean(dData.exists));
+        } else if (!dupRes) {
+          setIsDuplicateEmail(false);
         }
       } catch {
-        // Silently continue if route isn't set up yet
+        // Silently continue if network check fails
+      } finally {
+        setIsValidatingEmail(false);
       }
     }, 400);
 
@@ -357,6 +390,13 @@ export default function DraftPage() {
       return;
     }
 
+    if (isSafetyDailyCapped) {
+      toast.error(
+        "Gmail Safety Shield: Safe daily limit reached (50/50 letters). Dispatches pause to protect your account reputation and will resume tomorrow."
+      );
+      return;
+    }
+
     if (!jdText.trim() || jdText.trim().length < 30) {
       toast.error("Please paste a more detailed Job Description (at least 30 characters).");
       return;
@@ -364,6 +404,15 @@ export default function DraftPage() {
 
     if (!hrEmail.trim() || !hrEmail.includes("@")) {
       toast.error("Please enter a valid recipient HR / hiring manager email address.");
+      return;
+    }
+
+    if (recipientValidation && !recipientValidation.isValid) {
+      if (recipientValidation.suggestion) {
+        toast.error(`Please check the recipient address: Did you mean ${recipientValidation.suggestion}?`);
+      } else {
+        toast.error(recipientValidation.error || "Please verify the recipient email address.");
+      }
       return;
     }
 
@@ -530,6 +579,7 @@ export default function DraftPage() {
 
   const isFreePlan = usage ? usage.plan === "free" : true;
   const isMonthlyCapped = isCapped || (isFreePlan && usage ? usage.monthlySends >= (usage.monthlyLimit ?? FREE_MONTHLY_LIMIT) : false);
+  const isSafetyDailyCapped = isDailyCapped || (usage && typeof usage.dailySends === "number" && typeof usage.dailyLimit === "number" && usage.dailySends >= usage.dailyLimit);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-paper px-4 py-8 sm:px-6 sm:py-10 pb-24 md:pb-12">
@@ -607,7 +657,38 @@ export default function DraftPage() {
             
             {/* Left Main Form Column or Monthly Limit Upgrade Card */}
             <div className="lg:col-span-8">
-              {isMonthlyCapped ? (
+              {isSafetyDailyCapped ? (
+                <div className="rounded-md border border-amber-300/80 bg-[#FAF7F0] p-6 sm:p-8 shadow-xs space-y-5">
+                  <div className="flex items-start gap-3.5">
+                    <div className="rounded-full bg-amber-500/15 p-2.5 text-amber-800 shrink-0 mt-0.5">
+                      <ShieldCheck className="h-5 w-5 text-amber-800" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs text-[11px] font-medium bg-amber-100 text-amber-900 border border-amber-300/60 mb-1">
+                        Gmail Safety Shield Active (50 of 50 Dispatched)
+                      </div>
+                      <h2 className="font-heading text-xl sm:text-2xl text-ink font-normal tracking-tight">
+                        Safe daily sending ceiling reached
+                      </h2>
+                      <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
+                        To guarantee your personal Google account reputation is protected against algorithmic spam flags and bulk throttling, Vina caps dispatches at <strong>50 letters per 24 hours</strong>.
+                      </p>
+                      <p className="text-xs text-muted-ink pt-1">
+                        Your safe daily window resets automatically in a few hours. In the meantime, you can review past conversations or prepare notes.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-hairline flex items-center justify-between">
+                    <Link
+                      href="/log"
+                      className="text-xs text-ink hover:text-seal underline underline-offset-4 font-medium"
+                    >
+                      View your sent letters in History →
+                    </Link>
+                  </div>
+                </div>
+              ) : isMonthlyCapped ? (
                 <div className="rounded-md border border-seal/30 bg-[#FAF7F0] p-6 sm:p-8 shadow-xs space-y-6">
                   <div className="flex items-start gap-3.5">
                     <div className="rounded-full bg-seal/15 p-2.5 text-seal shrink-0 mt-0.5">
@@ -704,6 +785,53 @@ export default function DraftPage() {
                       className="w-full rounded-sm border border-hairline bg-paper/60 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-ink placeholder:text-muted-ink/60 focus:bg-white focus:border-seal focus:outline-none transition-colors font-mono"
                     />
                   </div>
+
+                  {isValidatingEmail && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-ink pt-0.5">
+                      <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                      <span>Checking recipient mail server (DNS MX)...</span>
+                    </div>
+                  )}
+
+                  {recipientValidation?.suggestion && (
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-amber-900 bg-amber-50/90 border border-amber-200/80 px-2.5 py-1.5 rounded-sm">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-700" />
+                        <span className="truncate">
+                          Did you mean{" "}
+                          <button
+                            type="button"
+                            onClick={() => setHrEmail(recipientValidation.suggestion!)}
+                            className="font-mono font-semibold underline hover:text-amber-950 cursor-pointer"
+                          >
+                            {recipientValidation.suggestion}
+                          </button>
+                          ?
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHrEmail(recipientValidation.suggestion!)}
+                        className="text-[10px] font-semibold text-amber-900 hover:text-amber-950 underline shrink-0 cursor-pointer"
+                      >
+                        Apply fix
+                      </button>
+                    </div>
+                  )}
+
+                  {recipientValidation && !recipientValidation.isValid && !recipientValidation.suggestion && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-red-700 bg-red-50/80 border border-red-200/70 px-2.5 py-1.5 rounded-sm">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{recipientValidation.error}</span>
+                    </div>
+                  )}
+
+                  {recipientValidation?.isValid && !isDuplicateEmail && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-confirmed pt-0.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-confirmed" />
+                      <span>Mail server verified (active MX records found)</span>
+                    </div>
+                  )}
 
                   {isDuplicateEmail && (
                     <div className="flex items-center gap-1.5 text-[11px] text-amber-700 pt-0.5">

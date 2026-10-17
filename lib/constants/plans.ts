@@ -27,6 +27,7 @@ export const FREE_REGEN_LIMIT = 2;
 export const FREE_RESUME_LIMIT = 1;
 export const PRO_RESUME_LIMIT = 3;
 export const FREE_RETENTION_DAYS = 30;
+export const DAILY_SAFETY_LIMIT = 50; // Maximum safe letters sent in 24h per user to protect Gmail sender reputation
 
 export const PLANS: Record<UserPlan, PlanConfig> = {
   free: {

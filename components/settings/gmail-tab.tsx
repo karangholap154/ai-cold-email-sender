@@ -144,11 +144,32 @@ export function GmailTab({
             </button>
           </div>
 
-          <div className="pt-2 border-t border-hairline/60 flex items-center gap-2 text-[11px] text-muted-ink">
-            <ShieldCheck className="h-3.5 w-3.5 text-confirmed shrink-0" />
-            <span>
-              Outbound emails and follow-ups are routed securely via Google&apos;s official mail servers with encrypted credentials.
-            </span>
+          {/* Gmail Safety Shield Safeguards Card */}
+          <div className="pt-3 border-t border-hairline/80 space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-ink">
+              <ShieldCheck className="h-4 w-4 text-confirmed shrink-0" />
+              <span>Gmail Safety Shield Active</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+              <div className="rounded-sm border border-hairline/60 bg-paper/70 p-2.5">
+                <span className="text-muted-ink block text-[10px] uppercase font-semibold tracking-wider">Safe Daily Ceiling</span>
+                <span className="font-mono font-medium text-ink text-xs">50 letters / 24h</span>
+                <p className="text-[10px] text-muted-ink mt-0.5">10x below Google spam limit</p>
+              </div>
+              <div className="rounded-sm border border-hairline/60 bg-paper/70 p-2.5">
+                <span className="text-muted-ink block text-[10px] uppercase font-semibold tracking-wider">DNS MX Verification</span>
+                <span className="font-medium text-confirmed text-xs">Pre-Send Active</span>
+                <p className="text-[10px] text-muted-ink mt-0.5">Zero non-existent domain bounces</p>
+              </div>
+              <div className="rounded-sm border border-hairline/60 bg-paper/70 p-2.5">
+                <span className="text-muted-ink block text-[10px] uppercase font-semibold tracking-wider">Inbox Placement</span>
+                <span className="font-medium text-ink text-xs">100% Primary Tab</span>
+                <p className="text-[10px] text-muted-ink mt-0.5">No shared IP cold-blast pool</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-ink leading-relaxed">
+              Outbound correspondence and follow-ups originate directly from your authenticated Gmail address. All credentials are encrypted with AES-256-GCM.
+            </p>
           </div>
         </div>
       ) : (

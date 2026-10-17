@@ -4,6 +4,8 @@ export type UserPlan = "free" | "pro";
 export interface UserUsage {
   monthlySends: number;
   monthlyLimit: number | null; // null for unlimited (Pro)
+  dailySends?: number;
+  dailyLimit?: number;
   plan: UserPlan;
 }
 

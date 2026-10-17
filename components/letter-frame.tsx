@@ -20,9 +20,10 @@ import {
   Copy,
   Check,
   Lock,
+  ShieldCheck,
 } from "lucide-react";
 import type { AnalyzeResponse, UserUsage } from "@/lib/types/database";
-import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
+import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
 
 export interface LetterFrameProps {
   initialData: AnalyzeResponse;
@@ -87,6 +88,14 @@ export function LetterFrame({
     isDuplicateEmail ? hrEmail : ""
   );
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+  const [recipientValidation, setRecipientValidation] = useState<{
+    isValid: boolean;
+    error?: string;
+    suggestion?: string;
+    domain?: string;
+    mxHost?: string;
+  } | null>(null);
+  const [isValidatingEmail, setIsValidatingEmail] = useState(false);
 
   const [subject, setSubject] = useState(initialData.subject);
   const [body, setBody] = useState(initialData.body);
@@ -122,7 +131,10 @@ export function LetterFrame({
   const isFreePlan = usage ? usage.plan === "free" : true;
   const monthlyLimit = usage?.monthlyLimit ?? 5;
   const monthlySends = usage?.monthlySends ?? 0;
-  const reachedSendCap = isCapped || (isFreePlan && monthlySends >= monthlyLimit);
+  const dailyLimit = usage?.dailyLimit ?? DAILY_SAFETY_LIMIT;
+  const dailySends = usage?.dailySends ?? 0;
+  const reachedDailyCap = dailySends >= dailyLimit;
+  const reachedSendCap = isCapped || (isFreePlan && monthlySends >= monthlyLimit) || reachedDailyCap;
 
   const reachedRegenCap =
     isFreePlan &&
@@ -151,16 +163,27 @@ export function LetterFrame({
       const timer = setTimeout(() => {
         setIsDuplicate(false);
         setDuplicateEmailMatched("");
+        setRecipientValidation(null);
+        setIsValidatingEmail(false);
       }, 0);
       return () => clearTimeout(timer);
     }
 
     const timer = setTimeout(async () => {
       setIsCheckingDuplicate(true);
+      setIsValidatingEmail(true);
       try {
-        const res = await fetch(`/api/emails?email=${encodeURIComponent(trimmed)}`);
-        if (res.ok) {
-          const data = await res.json();
+        const [emailRes, valRes] = await Promise.all([
+          fetch(`/api/emails?email=${encodeURIComponent(trimmed)}`),
+          fetch("/api/validate-recipient", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: trimmed }),
+          }),
+        ]);
+
+        if (emailRes.ok) {
+          const data = await emailRes.json();
           if (data.exists) {
             setIsDuplicate(true);
             setDuplicateEmailMatched(trimmed);
@@ -169,12 +192,18 @@ export function LetterFrame({
             setDuplicateEmailMatched("");
           }
         }
+
+        if (valRes && valRes.ok) {
+          const vData = await valRes.json();
+          setRecipientValidation(vData);
+        }
       } catch {
         // Silently continue if network check fails
       } finally {
         setIsCheckingDuplicate(false);
+        setIsValidatingEmail(false);
       }
-    }, 350);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [recipientEmail, onEmailChange]);
@@ -245,9 +274,23 @@ export function LetterFrame({
   const handleInitiateSend = useCallback(() => {
     if (isSending || isRegenerating || reachedSendCap || countdown !== null) return;
 
+    if (reachedDailyCap) {
+      toast.error(`Gmail Safety Shield: Safe daily limit reached (${dailyLimit}/${dailyLimit} letters). Dispatches pause to protect your Google account reputation and will resume tomorrow.`);
+      return;
+    }
+
     const targetEmail = recipientEmail.trim();
     if (!targetEmail || !targetEmail.includes("@")) {
       toast.error("Please provide a valid recipient email address.");
+      return;
+    }
+
+    if (recipientValidation && !recipientValidation.isValid) {
+      if (recipientValidation.suggestion) {
+        toast.error(`Please check recipient address: Did you mean ${recipientValidation.suggestion}?`);
+      } else {
+        toast.error(recipientValidation.error || "Please verify the recipient email address.");
+      }
       return;
     }
 
@@ -465,15 +508,25 @@ export function LetterFrame({
             ) : <div />}
 
             {usage && (
-              <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-ink self-start sm:self-auto">
-                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${reachedSendCap ? "bg-amber-700" : "bg-seal"}`}></span>
-                {usage.plan === "pro" ? (
-                  <span className="font-medium text-ink">Pro Plan • Unlimited</span>
-                ) : (
-                  <span>
-                    Monthly quota: <strong className="font-medium text-ink">{monthlySends} of {monthlyLimit}</strong> used
-                  </span>
-                )}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] text-muted-ink self-start sm:self-auto">
+                <div className="inline-flex items-center gap-1.5">
+                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${reachedSendCap ? "bg-amber-700" : "bg-seal"}`}></span>
+                  {usage.plan === "pro" ? (
+                    <span className="font-medium text-ink">Pro Plan • Unlimited</span>
+                  ) : (
+                    <span>
+                      Monthly: <strong className="font-medium text-ink">{monthlySends}/{monthlyLimit}</strong>
+                    </span>
+                  )}
+                </div>
+                <span className="text-muted-ink/40 hidden sm:inline">•</span>
+                <div
+                  title="Gmail Safety Shield caps dispatches at 50 letters per 24 hours to keep your Google account reputation 100% safe from spam filters."
+                  className="inline-flex items-center gap-1 text-[10px] text-muted-ink bg-black/5 px-2 py-0.5 rounded-full cursor-help"
+                >
+                  <ShieldCheck className="h-3 w-3 text-confirmed shrink-0" />
+                  <span>Shield: <strong className="font-medium text-ink">{dailySends}/{dailyLimit}</strong> today</span>
+                </div>
               </div>
             )}
           </div>
@@ -489,7 +542,7 @@ export function LetterFrame({
                 title="Edit recipient email address"
                 className="w-full max-w-xs sm:max-w-md bg-transparent border-b border-dashed border-hairline hover:border-muted-ink focus:border-seal focus:outline-none pb-0.5 font-mono font-medium text-ink transition-colors text-xs"
               />
-              {isCheckingDuplicate && (
+              {(isCheckingDuplicate || isValidatingEmail) && (
                 <Loader2 className="h-3 w-3 animate-spin text-muted-ink shrink-0" />
               )}
             </div>
@@ -517,6 +570,47 @@ export function LetterFrame({
               </button>
             </div>
           </div>
+
+          {/* Recipient MX Verification & Typo Suggestion */}
+          {recipientValidation?.suggestion && (
+            <div className="flex items-center justify-between gap-2 text-[11px] text-amber-900 bg-amber-50/90 border border-amber-200/80 px-2.5 py-1.5 rounded-sm">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-700" />
+                <span className="truncate">
+                  Did you mean{" "}
+                  <button
+                    type="button"
+                    onClick={() => handleEmailChange(recipientValidation.suggestion!)}
+                    className="font-mono font-semibold underline hover:text-amber-950 cursor-pointer"
+                  >
+                    {recipientValidation.suggestion}
+                  </button>
+                  ?
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleEmailChange(recipientValidation.suggestion!)}
+                className="text-[10px] font-semibold text-amber-900 hover:text-amber-950 underline shrink-0 cursor-pointer"
+              >
+                Apply fix
+              </button>
+            </div>
+          )}
+
+          {recipientValidation && !recipientValidation.isValid && !recipientValidation.suggestion && (
+            <div className="flex items-center gap-1.5 text-[11px] text-red-700 bg-red-50/80 border border-red-200/70 px-2.5 py-1.5 rounded-sm">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{recipientValidation.error}</span>
+            </div>
+          )}
+
+          {recipientValidation?.isValid && !isDuplicate && (
+            <div className="flex items-center gap-1.5 text-[11px] text-confirmed pt-0.5">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-confirmed" />
+              <span>Mail server verified (active MX records found)</span>
+            </div>
+          )}
 
           {isDuplicate && !isFollowUp && (
             <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-amber-700 font-sans">
@@ -718,7 +812,9 @@ export function LetterFrame({
                 !recipientEmail.trim()
               }
               title={
-                reachedSendCap
+                reachedDailyCap
+                  ? `Gmail Safety Shield: Safe daily sending ceiling reached (${dailyLimit}/${dailyLimit} letters). Dispatches pause to protect your Google account reputation.`
+                  : reachedSendCap
                   ? `You've sent ${FREE_MONTHLY_LIMIT} letters this month on the free plan. Upgrade to Pro to send more.`
                   : isFollowUp
                   ? "Send follow-up letter directly via Gmail"
@@ -740,6 +836,8 @@ export function LetterFrame({
               <span>
                 {isSending
                   ? "Sending..."
+                  : reachedDailyCap
+                  ? "Daily limit (50/50)"
                   : reachedSendCap
                   ? "Limit reached"
                   : isFollowUp

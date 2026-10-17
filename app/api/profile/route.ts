@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
 
 export async function GET() {
   try {
@@ -31,12 +32,25 @@ export async function GET() {
 
     const now = new Date();
     const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-    const { count: monthlySends } = await supabase
-      .from("sent_emails")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "sent")
-      .gte("created_at", startOfMonth);
+    const past24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const [monthlyResult, dailyResult] = await Promise.all([
+      supabase
+        .from("sent_emails")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "sent")
+        .gte("created_at", startOfMonth),
+      supabase
+        .from("sent_emails")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "sent")
+        .gte("created_at", past24Hours),
+    ]);
+
+    const monthlySends = monthlyResult.count ?? 0;
+    const dailySends = dailyResult.count ?? 0;
 
     if (error) {
       // If columns don't exist yet in the database, return graceful fallback
@@ -57,6 +71,8 @@ export async function GET() {
           usage: {
             monthlySends: monthlySends ?? 0,
             monthlyLimit: 5,
+            dailySends,
+            dailyLimit: DAILY_SAFETY_LIMIT,
             plan: "free",
           },
           migrationRequired: true,
@@ -82,6 +98,8 @@ export async function GET() {
       usage: {
         monthlySends: monthlySends ?? 0,
         monthlyLimit: plan === "pro" ? null : 5,
+        dailySends,
+        dailyLimit: DAILY_SAFETY_LIMIT,
         plan,
       },
       migrationRequired: false,

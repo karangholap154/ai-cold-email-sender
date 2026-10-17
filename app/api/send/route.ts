@@ -3,7 +3,8 @@ import nodemailer, { type SendMailOptions } from "nodemailer";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto";
-import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
+import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
+import { validateRecipientEmail } from "@/lib/email-validator";
 
 interface SendRequestBody {
   hrEmail?: string;
@@ -47,19 +48,48 @@ export async function POST(req: NextRequest) {
       resumeId = null,
     } = bodyData;
 
-    if (!hrEmail || !hrEmail.includes("@")) {
+    const normalizedEmail = (hrEmail || "").trim().toLowerCase();
+
+    // Deep Pre-Send Recipient Validation (Syntax, Typos, DNS MX Records)
+    const recipientValidation = await validateRecipientEmail(normalizedEmail);
+    if (!recipientValidation.isValid) {
       return NextResponse.json(
-        { error: "Please provide a valid recipient email." },
+        {
+          error: recipientValidation.error || "Please provide a valid recipient email address.",
+          code: "INVALID_RECIPIENT_EMAIL",
+          suggestion: recipientValidation.suggestion,
+        },
         { status: 400 }
       );
     }
-
-    const normalizedEmail = hrEmail.trim().toLowerCase();
 
     if (!subject || !body) {
       return NextResponse.json(
         { error: "Subject and email body are required." },
         { status: 400 }
+      );
+    }
+
+    // Gmail Safety Shield: 50 letters per rolling 24-hour window per user
+    // Keeps sending behavior 10x below Google's algorithmic spam threshold
+    const past24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: dailyCount, error: dailyCountError } = await supabase
+      .from("sent_emails")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "sent")
+      .gte("created_at", past24Hours);
+
+    const dailySentCount = dailyCount ?? 0;
+    if (!dailyCountError && dailySentCount >= DAILY_SAFETY_LIMIT) {
+      return NextResponse.json(
+        {
+          error: `Gmail Safety Shield: You have reached the safe daily sending limit (${DAILY_SAFETY_LIMIT} letters / 24 hours). This ceiling protects your personal Google account reputation from spam flags. Please try again tomorrow.`,
+          code: "DAILY_SAFETY_LIMIT_REACHED",
+          dailySentCount,
+          limit: DAILY_SAFETY_LIMIT,
+        },
+        { status: 429 }
       );
     }
 
