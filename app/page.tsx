@@ -693,10 +693,10 @@ export default function LandingPage() {
             <div className="space-y-1.5 p-3.5 rounded-xs border border-hairline/80 bg-paper/50">
               <div className="flex items-center gap-1.5 text-ink font-semibold font-mono text-[11px] uppercase">
                 <Mail className="h-4 w-4 text-seal shrink-0" />
-                <span>100% Primary Inbox</span>
+                <span>Zero Tracking Pixels</span>
               </div>
               <p className="leading-relaxed">
-                Dispatches directly from your authenticated Google credentials with authentic RFC 2822 headers. Bypasses shared marketing IP pools and promotional tabs.
+                Dispatches pure RFC 2822 plain text without hidden 1x1 spy pixels or redirect URLs that trigger Gmail spam filters. Lands straight in the primary inbox.
               </p>
             </div>
             <div className="space-y-1.5 p-3.5 rounded-xs border border-hairline/80 bg-paper/50">

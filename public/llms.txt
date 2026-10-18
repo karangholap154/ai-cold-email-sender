@@ -10,6 +10,7 @@ Vina (https://www.meetvina.app) is an AI application designed specifically for i
 - **Pre-Send DNS MX Verification**: Automatically verifies the recipient domain's Mail Exchange (MX) records and detects typos (e.g., `@gmial.com`) before dispatching, preventing hard email bounces and protecting domain reputation.
 - **Gmail Safety Shield**: Enforces a conservative 50-letter daily ceiling to ensure user sending velocity remains 10x below Google's algorithmic spam threshold, keeping personal Google accounts 100% safe.
 - **Direct Gmail Sending**: Outbound letters and threaded replies are dispatched directly through the user's authenticated personal Google account via Google's official SMTP servers (`smtp.gmail.com`).
+- **Zero Tracking Pixels**: Dispatches pure RFC 2822 plain text without hidden 1x1 tracking pixels or URL redirects, preventing Google Workspace spam classification.
 - **Automated Résumé Attachment**: Stores user's PDF résumé securely in private storage and attaches it to the outbound email automatically.
 - **Native Follow-Up Threads**: Generates concise, polite follow-ups (50–85 words) with authentic RFC 2822 `In-Reply-To` and `References` headers for native conversation nesting in the recruiter's inbox.
 - **Duplicate Outreach Protection**: Alerts applicants if they have previously reached out to a specific recruiter email address.
