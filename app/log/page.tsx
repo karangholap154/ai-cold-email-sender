@@ -22,11 +22,7 @@ import {
   ChevronUp,
   CornerDownRight,
   MessageSquare,
-  Mail,
-  Send,
   X,
-  ShieldCheck,
-  Building2,
 } from "lucide-react";
 import type { SentEmail } from "@/lib/types/database";
 import { toast } from "sonner";
@@ -40,8 +36,11 @@ import {
 import { initiateCheckout } from "@/lib/billing";
 import { PRO_PLAN, FREE_RETENTION_DAYS } from "@/lib/constants/plans";
 
-function formatRelativeDays(dateString: string): string {
-  const diffMs = Date.now() - new Date(dateString).getTime();
+// Outreach follow-up threshold (in calendar days)
+const STALE_FOLLOWUP_DAYS = 5;
+
+function formatRelativeDays(dateString: string, now: number): string {
+  const diffMs = now - new Date(dateString).getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   if (diffDays <= 0) return "Today";
   if (diffDays === 1) return "1 day ago";
@@ -52,6 +51,7 @@ function formatRelativeDays(dateString: string): string {
 interface ConversationThread {
   threadKey: string;
   initialEmail: SentEmail;
+  latestEmail: SentEmail;
   followUps: SentEmail[];
   allEmails: SentEmail[];
   companyName: string;
@@ -59,14 +59,19 @@ interface ConversationThread {
   hrEmail: string;
   latestDate: string;
   hasFailure: boolean;
+  daysSinceLatest: number;
+  needsFollowUp: boolean;
 }
 
 export default function LogPage() {
   const router = useRouter();
+  const [currentTime] = useState(() => Date.now());
   const [emails, setEmails] = useState<SentEmail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "initial" | "followup" | "failed">("all");
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "needs_followup" | "initial" | "followup" | "failed"
+  >("all");
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [plan, setPlan] = useState<"free" | "pro">("free");
@@ -119,47 +124,19 @@ export default function LogPage() {
     loadEmails();
   }, []);
 
-  // Filter emails based on search query and active tab filter
-  const filteredEmails = useMemo(() => {
-    let result = emails;
-
-    // Filter by type or status
-    if (activeFilter === "initial") {
-      result = result.filter((item) => item.email_type !== "followup");
-    } else if (activeFilter === "followup") {
-      result = result.filter((item) => item.email_type === "followup");
-    } else if (activeFilter === "failed") {
-      result = result.filter((item) => item.status === "failed");
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        (item) =>
-          item.hr_email.toLowerCase().includes(query) ||
-          (item.company_name && item.company_name.toLowerCase().includes(query)) ||
-          (item.role_title && item.role_title.toLowerCase().includes(query)) ||
-          item.final_subject.toLowerCase().includes(query) ||
-          item.final_body.toLowerCase().includes(query)
-      );
-    }
-
-    return result;
-  }, [emails, searchQuery, activeFilter]);
-
-  // Aggregate into threaded conversations
-  const conversations = useMemo(() => {
+  // Aggregate all emails into threaded conversations
+  const allConversations = useMemo(() => {
     const threadMap = new Map<string, ConversationThread>();
     const followUpsWithoutParent: SentEmail[] = [];
 
     // Step 1: Create threads for initial emails
-    for (const email of filteredEmails) {
+    for (const email of emails) {
       if (email.email_type !== "followup") {
         const key = email.gmail_thread_id || email.id;
         threadMap.set(key, {
           threadKey: key,
           initialEmail: email,
+          latestEmail: email,
           followUps: [],
           allEmails: [email],
           companyName: email.company_name || "Unknown Company",
@@ -167,12 +144,14 @@ export default function LogPage() {
           hrEmail: email.hr_email,
           latestDate: email.created_at,
           hasFailure: email.status === "failed",
+          daysSinceLatest: 0,
+          needsFollowUp: false,
         });
       }
     }
 
     // Step 2: Associate follow-ups with their parent thread
-    for (const email of filteredEmails) {
+    for (const email of emails) {
       if (email.email_type === "followup") {
         let attached = false;
 
@@ -183,6 +162,7 @@ export default function LogPage() {
           thread.allEmails.push(email);
           if (new Date(email.created_at) > new Date(thread.latestDate)) {
             thread.latestDate = email.created_at;
+            thread.latestEmail = email;
           }
           if (email.status === "failed") thread.hasFailure = true;
           attached = true;
@@ -191,11 +171,15 @@ export default function LogPage() {
         // Try attaching by parent_email_id
         if (!attached && email.parent_email_id) {
           for (const thread of threadMap.values()) {
-            if (thread.initialEmail.id === email.parent_email_id || thread.followUps.some((f) => f.id === email.parent_email_id)) {
+            if (
+              thread.initialEmail.id === email.parent_email_id ||
+              thread.followUps.some((f) => f.id === email.parent_email_id)
+            ) {
               thread.followUps.push(email);
               thread.allEmails.push(email);
               if (new Date(email.created_at) > new Date(thread.latestDate)) {
                 thread.latestDate = email.created_at;
+                thread.latestEmail = email;
               }
               if (email.status === "failed") thread.hasFailure = true;
               attached = true;
@@ -204,7 +188,7 @@ export default function LogPage() {
           }
         }
 
-        // If parent wasn't found in current filtered set, treat as standalone
+        // If parent wasn't found, treat as standalone
         if (!attached) {
           followUpsWithoutParent.push(email);
         }
@@ -217,6 +201,7 @@ export default function LogPage() {
       threadMap.set(key, {
         threadKey: key,
         initialEmail: email,
+        latestEmail: email,
         followUps: [],
         allEmails: [email],
         companyName: email.company_name || "Unknown Company",
@@ -224,14 +209,35 @@ export default function LogPage() {
         hrEmail: email.hr_email,
         latestDate: email.created_at,
         hasFailure: email.status === "failed",
+        daysSinceLatest: 0,
+        needsFollowUp: false,
       });
     }
 
+    const threads = Array.from(threadMap.values());
+    for (const thread of threads) {
+      // Sort emails in each thread chronologically
+      thread.allEmails.sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      // Ensure latestEmail points to the newest chronologically
+      thread.latestEmail = thread.allEmails[thread.allEmails.length - 1] || thread.initialEmail;
+      thread.latestDate = thread.latestEmail.created_at;
+
+      const diffMs = currentTime - new Date(thread.latestDate).getTime();
+      const daysSinceLatest = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      thread.daysSinceLatest = daysSinceLatest;
+      thread.needsFollowUp =
+        daysSinceLatest >= STALE_FOLLOWUP_DAYS &&
+        thread.latestEmail.status === "sent" &&
+        thread.followUps.length < 2;
+    }
+
     // Sort conversations by latest activity descending
-    return Array.from(threadMap.values()).sort(
+    return threads.sort(
       (a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime()
     );
-  }, [filteredEmails]);
+  }, [emails, currentTime]);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -241,8 +247,55 @@ export default function LogPage() {
     const initialCount = total - followUpsCount;
     const failedCount = emails.filter((e) => e.status === "failed").length;
     const deliveryRate = total > 0 ? Math.round((sentCount / total) * 100) : 100;
-    return { total, sentCount, followUpsCount, initialCount, failedCount, deliveryRate };
-  }, [emails]);
+    const needsFollowUpCount = allConversations.filter((t) => t.needsFollowUp).length;
+    return {
+      total,
+      sentCount,
+      followUpsCount,
+      initialCount,
+      failedCount,
+      deliveryRate,
+      needsFollowUpCount,
+    };
+  }, [emails, allConversations]);
+
+  // Filter conversations based on search query and active tab filter
+  const conversations = useMemo(() => {
+    let result = allConversations;
+
+    // Filter by active tab
+    if (activeFilter === "needs_followup") {
+      result = result.filter((thread) => thread.needsFollowUp);
+    } else if (activeFilter === "initial") {
+      result = result.filter(
+        (thread) => thread.followUps.length === 0 && thread.initialEmail.email_type !== "followup"
+      );
+    } else if (activeFilter === "followup") {
+      result = result.filter(
+        (thread) => thread.followUps.length > 0 || thread.initialEmail.email_type === "followup"
+      );
+    } else if (activeFilter === "failed") {
+      result = result.filter((thread) => thread.hasFailure);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (thread) =>
+          thread.hrEmail.toLowerCase().includes(query) ||
+          thread.companyName.toLowerCase().includes(query) ||
+          (thread.roleTitle && thread.roleTitle.toLowerCase().includes(query)) ||
+          thread.allEmails.some(
+            (item) =>
+              item.final_subject.toLowerCase().includes(query) ||
+              item.final_body.toLowerCase().includes(query)
+          )
+      );
+    }
+
+    return result;
+  }, [allConversations, activeFilter, searchQuery]);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-paper px-4 py-8 sm:px-6 sm:py-10 pb-24 md:pb-12">
@@ -350,6 +403,33 @@ export default function LogPage() {
           </div>
         )}
 
+        {/* --- Stale Applications Follow-Up Reminder Banner --- */}
+        {!isLoading && stats.needsFollowUpCount > 0 && activeFilter !== "needs_followup" && (
+          <div className="rounded-md border border-amber-300/80 bg-amber-50/70 p-3.5 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-full bg-amber-200/70 text-amber-900 shrink-0">
+                <Clock className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="font-medium text-ink">
+                  {stats.needsFollowUpCount} application{stats.needsFollowUpCount > 1 ? "s" : ""} waiting for a follow-up
+                </span>
+                <p className="text-[11px] text-amber-900/80 mt-0.5">
+                  Sent 5+ days ago without a follow-up. Polishing a brief follow-up significantly improves response rates.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveFilter("needs_followup")}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-950 underline underline-offset-4 hover:text-ink self-start sm:self-auto cursor-pointer"
+            >
+              <span>Review pending outreach ({stats.needsFollowUpCount})</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* --- Search & Filter Bar --- */}
         <div className="rounded-md border border-hairline bg-white/80 p-4 shadow-2xs space-y-3.5">
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
@@ -377,7 +457,7 @@ export default function LogPage() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1.5 shrink-0 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-xs">
               <button
                 type="button"
                 onClick={() => setActiveFilter("all")}
@@ -389,6 +469,20 @@ export default function LogPage() {
               >
                 All ({emails.length})
               </button>
+              {stats.needsFollowUpCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter("needs_followup")}
+                  className={`rounded-sm px-3 py-2 text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+                    activeFilter === "needs_followup"
+                      ? "bg-amber-900 text-paper font-medium"
+                      : "border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 font-medium"
+                  }`}
+                >
+                  <Clock className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Needs Follow-up ({stats.needsFollowUpCount})</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setActiveFilter("initial")}
@@ -512,7 +606,42 @@ export default function LogPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px]">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      {/* Stale application indicator badge */}
+                      {thread.needsFollowUp && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-amber-300 bg-amber-50 text-amber-900 font-medium text-[11px] shadow-2xs">
+                          <Clock className="h-3 w-3 text-amber-700 shrink-0" />
+                          <span>
+                            {thread.daysSinceLatest}d ago · Follow-up recommended
+                          </span>
+                        </span>
+                      )}
+
+                      {/* Direct 1-Click Follow-Up Action */}
+                      {thread.needsFollowUp && (
+                        plan === "pro" ? (
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/draft?followUpId=${thread.latestEmail.id}`)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm bg-seal text-paper font-medium text-[11px] hover:bg-seal/90 shadow-2xs transition-all cursor-pointer"
+                            title="Draft a threaded follow-up letter to this recipient"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>Write follow-up</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setShowUpgradeModal(true)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm border border-seal/30 bg-seal/10 text-seal font-medium text-[11px] hover:bg-seal/20 transition-colors cursor-pointer"
+                            title="Follow-ups are a Pro feature"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>Follow-up (Pro)</span>
+                          </button>
+                        )
+                      )}
+
                       {hasMultiple && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xs border border-seal/30 bg-seal/10 text-seal font-medium text-[11px]">
                           <MessageSquare className="h-3 w-3" />
@@ -667,7 +796,7 @@ export default function LogPage() {
                               {isSent && (
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-hairline/70">
                                   <div className="flex items-center gap-3 text-[11px] text-muted-ink">
-                                    <span>Sent {formatRelativeDays(item.created_at)}</span>
+                                    <span>Sent {formatRelativeDays(item.created_at, currentTime)}</span>
                                     {item.gmail_thread_id && (
                                       <button
                                         type="button"
