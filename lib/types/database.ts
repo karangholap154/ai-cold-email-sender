@@ -60,6 +60,8 @@ export interface SentEmail {
   resume_id?: string | null;
   gmail_message_id?: string | null;
   gmail_thread_id?: string | null;
+  is_responded?: boolean;
+  responded_at?: string | null;
   created_at: string;
 }
 

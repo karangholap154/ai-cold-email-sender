@@ -121,3 +121,45 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id, isResponded } = await req.json();
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing email id" }, { status: 400 });
+    }
+
+    const { error: updateError } = await supabase
+      .from("sent_emails")
+      .update({
+        is_responded: Boolean(isResponded),
+        responded_at: isResponded ? new Date().toISOString() : null,
+      })
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      id,
+      isResponded: Boolean(isResponded),
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to update email status";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

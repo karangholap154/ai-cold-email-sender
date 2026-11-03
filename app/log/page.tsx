@@ -23,6 +23,7 @@ import {
   CornerDownRight,
   MessageSquare,
   X,
+  RefreshCw,
 } from "lucide-react";
 import type { SentEmail } from "@/lib/types/database";
 import { toast } from "sonner";
@@ -61,6 +62,8 @@ interface ConversationThread {
   hasFailure: boolean;
   daysSinceLatest: number;
   needsFollowUp: boolean;
+  isResponded: boolean;
+  respondedAt?: string | null;
 }
 
 export default function LogPage() {
@@ -68,9 +71,10 @@ export default function LogPage() {
   const [currentTime] = useState(() => Date.now());
   const [emails, setEmails] = useState<SentEmail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncingReplies, setIsSyncingReplies] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<
-    "all" | "needs_followup" | "initial" | "followup" | "failed"
+    "all" | "needs_followup" | "responded" | "initial" | "followup" | "failed"
   >("all");
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -85,6 +89,64 @@ export default function LogPage() {
     setCopiedId(id);
     toast.success("Letter content copied to clipboard");
     setTimeout(() => setCopiedId((prev) => (prev === id ? null : prev)), 2000);
+  };
+
+  const handleSyncReplies = async () => {
+    setIsSyncingReplies(true);
+    try {
+      const res = await fetch("/api/emails/sync-replies", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to check Gmail for replies.");
+      }
+      if (data.newRepliesCount > 0) {
+        toast.success(
+          `Detected ${data.newRepliesCount} new recruiter repl${data.newRepliesCount > 1 ? "ies" : "y"}!`
+        );
+      } else {
+        toast.info(data.message || `Checked ${data.checkedCount || 0} applications. No new replies detected.`);
+      }
+
+      // Refresh email log records
+      const refreshRes = await fetch("/api/emails");
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        setEmails(refreshData.emails || []);
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error checking Gmail for replies");
+    } finally {
+      setIsSyncingReplies(false);
+    }
+  };
+
+  const handleToggleResponded = async (emailId: string, currentStatus: boolean) => {
+    const nextStatus = !currentStatus;
+    try {
+      const res = await fetch("/api/emails", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: emailId, isResponded: nextStatus }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update response status");
+      }
+      toast.success(nextStatus ? "Marked as responded" : "Response mark cleared");
+      setEmails((prev) =>
+        prev.map((e) =>
+          e.id === emailId
+            ? {
+                ...e,
+                is_responded: nextStatus,
+                responded_at: nextStatus ? new Date().toISOString() : null,
+              }
+            : e
+        )
+      );
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error updating response status");
+    }
   };
 
   const handleOpenGmailThread = (threadId?: string | null) => {
@@ -146,6 +208,8 @@ export default function LogPage() {
           hasFailure: email.status === "failed",
           daysSinceLatest: 0,
           needsFollowUp: false,
+          isResponded: Boolean(email.is_responded),
+          respondedAt: email.responded_at || null,
         });
       }
     }
@@ -211,6 +275,8 @@ export default function LogPage() {
         hasFailure: email.status === "failed",
         daysSinceLatest: 0,
         needsFollowUp: false,
+        isResponded: Boolean(email.is_responded),
+        respondedAt: email.responded_at || null,
       });
     }
 
@@ -224,10 +290,16 @@ export default function LogPage() {
       thread.latestEmail = thread.allEmails[thread.allEmails.length - 1] || thread.initialEmail;
       thread.latestDate = thread.latestEmail.created_at;
 
+      // Thread is responded if any message within it has been flagged as responded
+      thread.isResponded = thread.allEmails.some((e) => Boolean(e.is_responded));
+      const respondedEmail = thread.allEmails.find((e) => Boolean(e.is_responded));
+      thread.respondedAt = respondedEmail?.responded_at || null;
+
       const diffMs = currentTime - new Date(thread.latestDate).getTime();
       const daysSinceLatest = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
       thread.daysSinceLatest = daysSinceLatest;
       thread.needsFollowUp =
+        !thread.isResponded &&
         daysSinceLatest >= STALE_FOLLOWUP_DAYS &&
         thread.latestEmail.status === "sent" &&
         thread.followUps.length < 2;
@@ -248,6 +320,7 @@ export default function LogPage() {
     const failedCount = emails.filter((e) => e.status === "failed").length;
     const deliveryRate = total > 0 ? Math.round((sentCount / total) * 100) : 100;
     const needsFollowUpCount = allConversations.filter((t) => t.needsFollowUp).length;
+    const respondedCount = allConversations.filter((t) => t.isResponded).length;
     return {
       total,
       sentCount,
@@ -256,6 +329,7 @@ export default function LogPage() {
       failedCount,
       deliveryRate,
       needsFollowUpCount,
+      respondedCount,
     };
   }, [emails, allConversations]);
 
@@ -266,6 +340,8 @@ export default function LogPage() {
     // Filter by active tab
     if (activeFilter === "needs_followup") {
       result = result.filter((thread) => thread.needsFollowUp);
+    } else if (activeFilter === "responded") {
+      result = result.filter((thread) => thread.isResponded);
     } else if (activeFilter === "initial") {
       result = result.filter(
         (thread) => thread.followUps.length === 0 && thread.initialEmail.email_type !== "followup"
@@ -318,6 +394,21 @@ export default function LogPage() {
           </div>
 
           <div className="flex items-center gap-2.5 self-start md:self-end shrink-0">
+            <button
+              type="button"
+              disabled={isSyncingReplies || isLoading}
+              onClick={handleSyncReplies}
+              className="inline-flex items-center gap-1.5 rounded-sm border border-hairline bg-white px-3.5 py-2 text-xs font-medium text-ink shadow-2xs hover:bg-paper transition-all cursor-pointer disabled:opacity-50"
+              title="Query Gmail IMAP for replies from target HR contacts"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${
+                  isSyncingReplies ? "animate-spin text-seal" : "text-muted-ink"
+                }`}
+              />
+              <span>{isSyncingReplies ? "Syncing..." : "Sync Replies"}</span>
+            </button>
+
             <Link
               href="/draft"
               className="inline-flex items-center gap-1.5 rounded-sm bg-seal px-4 py-2 text-xs font-medium text-paper shadow-2xs hover:bg-seal/90 transition-all cursor-pointer"
@@ -483,6 +574,20 @@ export default function LogPage() {
                   <span>Needs Follow-up ({stats.needsFollowUpCount})</span>
                 </button>
               )}
+              {stats.respondedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter("responded")}
+                  className={`rounded-sm px-3 py-2 text-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 ${
+                    activeFilter === "responded"
+                      ? "bg-confirmed text-paper font-medium"
+                      : "border border-confirmed/30 bg-confirmed/10 text-confirmed hover:bg-confirmed/15 font-medium"
+                  }`}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-confirmed" />
+                  <span>Responded ({stats.respondedCount})</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setActiveFilter("initial")}
@@ -607,15 +712,21 @@ export default function LogPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                      {/* Stale application indicator badge */}
-                      {thread.needsFollowUp && (
+                      {/* Responded status badge */}
+                      {thread.isResponded ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-confirmed/30 bg-confirmed/10 text-confirmed font-medium text-[11px] shadow-2xs">
+                          <CheckCircle2 className="h-3 w-3 text-confirmed shrink-0" />
+                          <span>Responded</span>
+                        </span>
+                      ) : thread.needsFollowUp ? (
+                        /* Stale application indicator badge */
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-amber-300 bg-amber-50 text-amber-900 font-medium text-[11px] shadow-2xs">
                           <Clock className="h-3 w-3 text-amber-700 shrink-0" />
                           <span>
                             {thread.daysSinceLatest}d ago · Follow-up recommended
                           </span>
                         </span>
-                      )}
+                      ) : null}
 
                       {/* Direct 1-Click Follow-Up Action */}
                       {thread.needsFollowUp && (
@@ -809,29 +920,54 @@ export default function LogPage() {
                                     )}
                                   </div>
 
-                                  {plan === "pro" ? (
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <button
                                       type="button"
-                                      onClick={() => router.push(`/draft?followUpId=${item.id}`)}
-                                      className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-sm text-xs font-medium bg-seal text-paper hover:bg-seal/90 shadow-2xs transition-all cursor-pointer"
+                                      onClick={() => handleToggleResponded(item.id, Boolean(item.is_responded))}
+                                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs transition-colors cursor-pointer ${
+                                        item.is_responded
+                                          ? "border-confirmed/30 bg-confirmed/10 text-confirmed hover:bg-confirmed/15"
+                                          : "border-hairline bg-white text-muted-ink hover:text-ink hover:border-ink/40"
+                                      }`}
+                                      title="Toggle response status"
                                     >
-                                      <RotateCcw className="h-3.5 w-3.5" />
-                                      <span>Write a follow-up</span>
+                                      {item.is_responded ? (
+                                        <>
+                                          <Check className="h-3.5 w-3.5 text-confirmed" />
+                                          <span>Responded (Click to unmark)</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <MessageSquare className="h-3.5 w-3.5 text-muted-ink" />
+                                          <span>Mark as responded</span>
+                                        </>
+                                      )}
                                     </button>
-                                  ) : (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[11px] text-muted-ink">
-                                        Follow-ups are a Pro feature.
-                                      </span>
+
+                                    {plan === "pro" ? (
                                       <button
                                         type="button"
-                                        onClick={() => setShowUpgradeModal(true)}
-                                        className="text-xs font-medium text-seal hover:underline cursor-pointer"
+                                        onClick={() => router.push(`/draft?followUpId=${item.id}`)}
+                                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-sm text-xs font-medium bg-seal text-paper hover:bg-seal/90 shadow-2xs transition-all cursor-pointer"
                                       >
-                                        Upgrade →
+                                        <RotateCcw className="h-3.5 w-3.5" />
+                                        <span>Write a follow-up</span>
                                       </button>
-                                    </div>
-                                  )}
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[11px] text-muted-ink">
+                                          Follow-ups are a Pro feature.
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => setShowUpgradeModal(true)}
+                                          className="text-xs font-medium text-seal hover:underline cursor-pointer"
+                                        >
+                                          Upgrade →
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 

@@ -179,6 +179,8 @@ create table if not exists public.sent_emails (
   final_body text not null,
   status email_status default 'sent' not null,
   error_message text,
+  is_responded boolean default false,
+  responded_at timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -197,6 +199,20 @@ do $$ begin
   ) then
     alter table public.sent_emails add column resume_id uuid references public.resume(id) on delete set null;
   end if;
+
+  if not exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'sent_emails' and column_name = 'is_responded'
+  ) then
+    alter table public.sent_emails add column is_responded boolean default false;
+  end if;
+
+  if not exists (
+    select 1 from information_schema.columns 
+    where table_schema = 'public' and table_name = 'sent_emails' and column_name = 'responded_at'
+  ) then
+    alter table public.sent_emails add column responded_at timestamp with time zone;
+  end if;
 end $$;
 
 -- Indices for user queries, searching, and duplicate checking
@@ -204,6 +220,7 @@ create index if not exists idx_sent_emails_user_id on public.sent_emails(user_id
 create index if not exists idx_sent_emails_hr_email on public.sent_emails(user_id, hr_email);
 create index if not exists idx_sent_emails_company_name on public.sent_emails(user_id, company_name);
 create index if not exists idx_sent_emails_created_at on public.sent_emails(user_id, created_at desc);
+create index if not exists idx_sent_emails_responded on public.sent_emails(user_id, is_responded, status);
 
 -- 5. Create gmail_connections table
 create table if not exists public.gmail_connections (
@@ -237,6 +254,7 @@ drop policy if exists "Users can update own resume" on public.resume;
 drop policy if exists "Users can delete own resume" on public.resume;
 drop policy if exists "Users can view own sent emails" on public.sent_emails;
 drop policy if exists "Users can insert own sent emails" on public.sent_emails;
+drop policy if exists "Users can update own sent emails" on public.sent_emails;
 drop policy if exists "Users can view their own gmail connection" on public.gmail_connections;
 drop policy if exists "Users can insert their own gmail connection" on public.gmail_connections;
 drop policy if exists "Users can update their own gmail connection" on public.gmail_connections;
@@ -284,6 +302,11 @@ create policy "Users can insert own sent emails"
   on public.sent_emails for insert
   to authenticated
   with check (auth.uid() = user_id);
+
+create policy "Users can update own sent emails"
+  on public.sent_emails for update
+  to authenticated
+  using (auth.uid() = user_id);
 
 -- Gmail connections policies
 create policy "Users can view their own gmail connection"
