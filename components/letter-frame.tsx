@@ -26,6 +26,7 @@ import type { AnalyzeResponse, UserUsage } from "@/lib/types/database";
 import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
 import { isProPlan, isMonthlyCapped, isDailySafetyCapped } from "@/lib/usage";
 import { useRecipientValidation } from "@/hooks/use-recipient-validation";
+import { type OutreachTone } from "@/lib/tone";
 
 export interface LetterFrameProps {
   initialData: AnalyzeResponse;
@@ -39,6 +40,7 @@ export interface LetterFrameProps {
   isCapped?: boolean;
   isFollowUp?: boolean;
   originalSentDate?: string;
+  tone?: OutreachTone;
   onRegenerate: () => void;
   isRegenerating: boolean;
   onBack: () => void;
@@ -73,6 +75,7 @@ export function LetterFrame({
   isCapped = false,
   isFollowUp = false,
   originalSentDate,
+  tone = "crisp",
   onRegenerate,
   isRegenerating,
   onBack,
@@ -624,6 +627,15 @@ export function LetterFrame({
                 </span>
               );
             })()}
+
+            {tone && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xs border border-seal/30 bg-seal/5 text-[10px] text-seal font-medium">
+                {tone === "crisp" && "⚡ Direct & Crisp"}
+                {tone === "technical" && "🛠️ Deep Technical"}
+                {tone === "startup" && "🚀 Startup & Builder"}
+                {tone === "warm" && "🤝 Warm & Collaborative"}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-ink">

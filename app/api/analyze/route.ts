@@ -203,10 +203,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const tone = ["crisp", "technical", "startup", "warm"].includes(body?.tone)
+      ? body.tone
+      : "crisp";
+
     const result = await analyzeJdAndDraftEmail({
       jdText: jdText.trim(),
       skillsSummary,
       senderSignature,
+      tone,
     });
 
     return NextResponse.json(result);

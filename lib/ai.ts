@@ -2,11 +2,13 @@ import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import type { AnalyzeResponse } from "./types/database";
+import { type OutreachTone, getTonePromptDirective } from "./tone";
 
 export interface GenerateEmailParams {
   jdText: string;
   skillsSummary?: string;
   senderSignature?: string;
+  tone?: OutreachTone;
 }
 
 export interface GenerateFollowUpParams {
@@ -19,7 +21,10 @@ export interface GenerateFollowUpParams {
   senderSignature?: string;
 }
 
-const SYSTEM_PROMPT = `You are a careful, literate colleague helping someone draft an important job application letter for Vina (meetvina.app). Your task is to analyze a job description (JD) and the applicant's background/skills summary, and:
+function buildSystemPrompt(tone: OutreachTone = "crisp"): string {
+  const directive = getTonePromptDirective(tone);
+
+  return `You are a careful, literate colleague helping someone draft an important job application letter for Vina (meetvina.app). Your task is to analyze a job description (JD) and the applicant's background/skills summary, and:
 
 1. Extract key details about the role:
    - companyName: Company name if identifiable or mentioned (null if unknown)
@@ -27,10 +32,9 @@ const SYSTEM_PROMPT = `You are a careful, literate colleague helping someone dra
    - skills: 2 to 4 key required technical or domain skills highlighted in the JD
    - seniority: Seniority level (e.g., "Senior", "Mid", "Lead", "Staff", "Junior", or "Not specified")
 
-2. Write a thoughtful, genuine, and concise letter directly to the hiring team or recruiter:
+2. Write a thoughtful, genuine, and tailored letter directly to the hiring team or recruiter:
    - Greeting: Always start with a natural, polite greeting on the very first line: "Hi [Company Name] Hiring Team," or "Hi [Company Name] Team," (or "Hi there," if company is unknown), followed by a blank line.
-   - Tone: Restrained, confident, and direct. Plain language. Sounds like a thoughtful, competent professional writing a personal note-never like a sales template, AI generated hype, or generic filler. Avoid breathless adjectives.
-   - Length: Between 80 and 130 words. Respect the recipient's time.
+   - ${directive.replace(/\n/g, "\n   - ")}
    - Content:
      - Start right away with an authentic connection between the company/role and your focus.
      - Reference 2-3 specific technical skills or problem areas from the JD that match your experience.
@@ -48,6 +52,7 @@ You must respond ONLY with valid JSON in this exact structure:
   "subject": string,
   "body": string
 }`;
+}
 
 const FOLLOWUP_SYSTEM_PROMPT = `You are a careful, literate colleague helping someone draft a brief, respectful follow-up letter regarding a job application for Vina (meetvina.app).
 
@@ -264,6 +269,7 @@ export async function analyzeJdAndDraftEmail({
   jdText,
   skillsSummary = "",
   senderSignature = "",
+  tone = "crisp",
 }: GenerateEmailParams): Promise<AnalyzeResponse> {
   // Truncate excessively long JD text to ~3500 chars to avoid burning tokens on repetitive legal/benefit boilerplate
   const trimmedJd =
@@ -280,7 +286,8 @@ ${senderSignature ? `Applicant Signature Block (attach this exact block at the b
 Job Description:
 ${trimmedJd.trim()}`;
 
-  const responseText = await callAiJson(SYSTEM_PROMPT, userPrompt);
+  const systemPrompt = buildSystemPrompt(tone);
+  const responseText = await callAiJson(systemPrompt, userPrompt);
   return parseAiJson(responseText, senderSignature);
 }
 

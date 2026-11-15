@@ -18,6 +18,10 @@ import {
   RotateCcw,
   Check,
   FileCheck,
+  Zap,
+  Terminal,
+  Rocket,
+  HeartHandshake,
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
@@ -26,6 +30,7 @@ import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 import { isMonthlyCapped as checkMonthlyCapped, isDailySafetyCapped } from "@/lib/usage";
 import { formatShortDate } from "@/lib/date";
 import { useRecipientValidation } from "@/hooks/use-recipient-validation";
+import { type OutreachTone, TONE_LIST } from "@/lib/tone";
 
 const DRAFT_STORAGE_KEY = "cold_email_draft_session";
 
@@ -34,6 +39,7 @@ export default function DraftPage() {
   const [step, setStep] = useState<"input" | "review">("input");
   const [jdText, setJdText] = useState("");
   const [hrEmail, setHrEmail] = useState("");
+  const [tone, setTone] = useState<OutreachTone>("crisp");
   const [resume, setResume] = useState<Resume | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
@@ -169,6 +175,9 @@ export default function DraftPage() {
             setTimeout(() => {
               if (parsed.jdText) setJdText(parsed.jdText);
               if (parsed.hrEmail) setHrEmail(parsed.hrEmail);
+              if (parsed.tone && ["crisp", "technical", "startup", "warm"].includes(parsed.tone)) {
+                setTone(parsed.tone);
+              }
               if (parsed.step === "review" && parsed.analyzedData) {
                 setAnalyzedData(parsed.analyzedData);
                 setStep("review");
@@ -205,6 +214,7 @@ export default function DraftPage() {
         step,
         jdText,
         hrEmail,
+        tone,
         analyzedData,
         savedAt: Date.now(),
       };
@@ -212,7 +222,7 @@ export default function DraftPage() {
     } catch (err) {
       console.warn("Could not save draft session to sessionStorage:", err);
     }
-  }, [step, jdText, hrEmail, analyzedData, followUpContext]);
+  }, [step, jdText, hrEmail, tone, analyzedData, followUpContext]);
 
   const handleDiscardDraft = () => {
     setJdText("");
@@ -371,6 +381,7 @@ export default function DraftPage() {
           jdText,
           type: "initial",
           resumeId: selectedResume?.id,
+          tone,
         }),
       });
 
@@ -410,6 +421,7 @@ export default function DraftPage() {
             resumeId: selectedResume?.id,
             isRegeneration: true,
             regenerationCount,
+            tone,
           }
         : {
             type: "initial",
@@ -417,6 +429,7 @@ export default function DraftPage() {
             resumeId: selectedResume?.id,
             isRegeneration: true,
             regenerationCount,
+            tone,
           };
 
       const res = await fetch("/api/analyze", {
@@ -821,6 +834,74 @@ export default function DraftPage() {
                   </p>
                 </div>
 
+                {/* Tone & Persona Directive Selector */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <label className="block text-xs font-semibold text-ink">
+                      Letter Persona & Tone
+                    </label>
+                    <span className="text-[11px] text-muted-ink">
+                      Tailor signal and length to your recipient
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {TONE_LIST.map((t) => {
+                      const isSelected = tone === t.id;
+                      const Icon =
+                        t.id === "crisp"
+                          ? Zap
+                          : t.id === "technical"
+                          ? Terminal
+                          : t.id === "startup"
+                          ? Rocket
+                          : HeartHandshake;
+
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setTone(t.id)}
+                          className={`relative flex flex-col items-start p-3 rounded-sm border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? "border-seal bg-seal/5 shadow-2xs"
+                              : "border-hairline bg-paper/40 hover:bg-paper/80 hover:border-ink/20"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <Icon
+                                className={`h-3.5 w-3.5 ${
+                                  isSelected ? "text-seal" : "text-muted-ink"
+                                }`}
+                              />
+                              <span
+                                className={`text-xs font-medium ${
+                                  isSelected ? "text-seal font-semibold" : "text-ink"
+                                }`}
+                              >
+                                {t.label}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-xs font-mono font-medium ${
+                                isSelected
+                                  ? "bg-seal text-paper"
+                                  : "bg-ink/5 text-muted-ink"
+                              }`}
+                            >
+                              {t.wordCountRange}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-ink leading-snug">
+                            {t.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Submit Action Strip */}
                 <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-hairline/80">
                   <div className="text-[11px] text-muted-ink flex items-center gap-1.5">
@@ -1038,6 +1119,7 @@ export default function DraftPage() {
               isCapped={isCapped}
               isFollowUp={Boolean(followUpContext)}
               originalSentDate={followUpContext?.originalSentDate}
+              tone={tone}
               onRegenerate={handleRegenerate}
               isRegenerating={isRegenerating}
               onBack={() => {
