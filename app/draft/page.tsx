@@ -1,36 +1,19 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
-import {
-  PenLine,
-  Loader2,
-  AlertCircle,
-  Mail,
-  ArrowRight,
-  CheckCircle2,
-  FileText,
-  Sparkles,
-  ShieldCheck,
-  RotateCcw,
-  Check,
-  FileCheck,
-  Zap,
-  Terminal,
-  Rocket,
-  HeartHandshake,
-} from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";
+import { DraftHeader } from "@/components/draft/draft-header";
+import { DraftInputForm } from "@/components/draft/draft-input-form";
+import { DraftReadinessSidebar } from "@/components/draft/draft-readiness-sidebar";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
 import { initiateCheckout } from "@/lib/billing";
-import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 import { isMonthlyCapped as checkMonthlyCapped, isDailySafetyCapped } from "@/lib/usage";
 import { formatShortDate } from "@/lib/date";
 import { useRecipientValidation } from "@/hooks/use-recipient-validation";
-import { type OutreachTone, TONE_LIST } from "@/lib/tone";
+import { type OutreachTone } from "@/lib/tone";
+import { INCOMING_JOB_STORAGE_KEY } from "@/app/jobs/page";
 
 const DRAFT_STORAGE_KEY = "cold_email_draft_session";
 
@@ -90,49 +73,61 @@ export default function DraftPage() {
 
   // Load active resume, user usage & Gmail connection status
   useEffect(() => {
-    async function loadStatus() {
+    async function loadResume() {
       try {
-        const [profileRes, resumeRes, gmailRes] = await Promise.all([
-          fetch("/api/profile"),
-          fetch("/api/resume"),
-          fetch("/api/gmail/status"),
-        ]);
-
-        if (profileRes.ok) {
-          const pData = await profileRes.json();
-          if (pData.usage) {
-            setUsage(pData.usage);
-            if (pData.usage.plan === "free" && pData.usage.monthlySends >= (pData.usage.monthlyLimit ?? 5)) {
-              setIsCapped(true);
-            }
-            if (
-              typeof pData.usage.dailySends === "number" &&
-              typeof pData.usage.dailyLimit === "number" &&
-              pData.usage.dailySends >= pData.usage.dailyLimit
-            ) {
-              setIsDailyCapped(true);
-            }
+        const res = await fetch("/api/resume");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.resumes && Array.isArray(data.resumes)) {
+            setResumes(data.resumes);
+            const def = data.resumes.find((r: Resume) => r.is_default) || data.resumes[0];
+            setSelectedResume(def || null);
+            setResume(def || null);
+          } else if (data.resume) {
+            setResume(data.resume);
+            setSelectedResume(data.resume);
+            setResumes([data.resume]);
           }
         }
-
-        if (resumeRes.ok) {
-          const data = await resumeRes.json();
-          const list = data.resumes || (data.resume ? [data.resume] : []);
-          setResumes(list);
-          const active = data.activeResume || list[0] || null;
-          setSelectedResume(active);
-          setResume(active);
-        }
-
-        if (gmailRes.ok) {
-          const gData = await gmailRes.json();
-          setIsGmailConnected(Boolean(gData.connected));
-          setGmailAddress(gData.email);
-        }
       } catch (err) {
-        console.warn("Could not check settings status:", err);
+        console.error("Failed to load user resume:", err);
       } finally {
         setIsResumeLoading(false);
+      }
+    }
+
+    async function loadUsage() {
+      try {
+        const res = await fetch("/api/emails");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.usage) {
+            setUsage(data.usage);
+            if (data.usage.isCapped) setIsCapped(true);
+            if (data.usage.isDailyCapped) setIsDailyCapped(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load usage status:", err);
+      }
+    }
+
+    loadResume();
+    loadUsage();
+  }, []);
+
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        const res = await fetch("/api/gmail/status");
+        if (res.ok) {
+          const data = await res.json();
+          setIsGmailConnected(data.connected);
+          setGmailAddress(data.emailAddress);
+        }
+      } catch (err) {
+        console.error("Failed to check Gmail status:", err);
+      } finally {
         setIsGmailLoading(false);
       }
     }
@@ -148,9 +143,9 @@ export default function DraftPage() {
     if (!fId) {
       try {
         // Check if user clicked "Draft & Send Letter" from the Opportunities / Jobs feed
-        const incomingJobRaw = sessionStorage.getItem("vina_incoming_job");
+        const incomingJobRaw = sessionStorage.getItem(INCOMING_JOB_STORAGE_KEY);
         if (incomingJobRaw) {
-          sessionStorage.removeItem("vina_incoming_job");
+          sessionStorage.removeItem(INCOMING_JOB_STORAGE_KEY);
           const incoming = JSON.parse(incomingJobRaw);
           if (incoming?.jdText) {
             setTimeout(() => {
@@ -238,27 +233,30 @@ export default function DraftPage() {
     toast.info("Draft discarded.");
   };
 
-  const handleDraftChange = useCallback((updated: {
-    subject: string;
-    body: string;
-    companyName?: string;
-    roleTitle?: string;
-    hrEmail?: string;
-  }) => {
-    if (updated.hrEmail && updated.hrEmail !== hrEmail) {
-      setHrEmail(updated.hrEmail);
-    }
-    setAnalyzedData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        subject: updated.subject,
-        body: updated.body,
-        companyName: updated.companyName ?? prev.companyName,
-        roleTitle: updated.roleTitle ?? prev.roleTitle,
-      };
-    });
-  }, [hrEmail]);
+  const handleDraftChange = useCallback(
+    (updated: {
+      subject: string;
+      body: string;
+      companyName?: string;
+      roleTitle?: string;
+      hrEmail?: string;
+    }) => {
+      if (updated.hrEmail && updated.hrEmail !== hrEmail) {
+        setHrEmail(updated.hrEmail);
+      }
+      setAnalyzedData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          subject: updated.subject,
+          body: updated.body,
+          companyName: updated.companyName !== undefined ? updated.companyName : prev.companyName,
+          roleTitle: updated.roleTitle !== undefined ? updated.roleTitle : prev.roleTitle,
+        };
+      });
+    },
+    [hrEmail]
+  );
 
   // Check URL for followUpId to trigger One-Click Follow-Up generation
   useEffect(() => {
@@ -303,6 +301,7 @@ export default function DraftPage() {
           body: JSON.stringify({
             type: "followup",
             parentEmailId: email.id,
+            tone,
           }),
         });
 
@@ -323,8 +322,7 @@ export default function DraftPage() {
     }
 
     loadFollowUp(fId);
-  }, [router]);
-
+  }, [router, tone]);
 
   const handleUpgrade = async () => {
     setIsUpgrading(true);
@@ -334,6 +332,9 @@ export default function DraftPage() {
       setIsUpgrading(false);
     }
   };
+
+  const isMonthlyCapped = isCapped || checkMonthlyCapped(usage);
+  const isSafetyDailyCapped = isDailyCapped || isDailySafetyCapped(usage);
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -365,7 +366,9 @@ export default function DraftPage() {
 
     if (recipientValidation && !recipientValidation.isValid) {
       if (recipientValidation.suggestion) {
-        toast.error(`Please check the recipient address: Did you mean ${recipientValidation.suggestion}?`);
+        toast.error(
+          `Please check the recipient address: Did you mean ${recipientValidation.suggestion}?`
+        );
       } else {
         toast.error(recipientValidation.error || "Please verify the recipient email address.");
       }
@@ -408,7 +411,9 @@ export default function DraftPage() {
     const maxRegens = isFreePlan ? 2 : Infinity;
 
     if (regenerationCount >= maxRegens) {
-      toast.error("You've used both free rewrites for this draft. Send this version, or upgrade for unlimited rewrites.");
+      toast.error(
+        "You've used both free rewrites for this draft. Send this version, or upgrade for unlimited rewrites."
+      );
       return;
     }
 
@@ -488,7 +493,9 @@ export default function DraftPage() {
           hrEmail: targetEmail,
           subject: finalData.subject,
           body: finalData.body,
-          jdText: jdText || (followUpContext ? `Follow-up regarding ${followUpContext.originalSubject}` : ""),
+          jdText:
+            jdText ||
+            (followUpContext ? `Follow-up regarding ${followUpContext.originalSubject}` : ""),
           companyName: finalData.companyName,
           roleTitle: finalData.roleTitle,
           emailType: followUpContext ? "followup" : "initial",
@@ -510,9 +517,7 @@ export default function DraftPage() {
 
       toast.success(`Sent. It's on its way to ${targetEmail}.`);
       // Increment local monthly sends count
-      setUsage((prev) =>
-        prev ? { ...prev, monthlySends: prev.monthlySends + 1 } : null
-      );
+      setUsage((prev) => (prev ? { ...prev, monthlySends: prev.monthlySends + 1 } : null));
       // Clear session storage on successful send
       try {
         sessionStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -536,574 +541,61 @@ export default function DraftPage() {
     }
   };
 
-  const isMonthlyCapped = isCapped || checkMonthlyCapped(usage);
-  const isSafetyDailyCapped = isDailyCapped || isDailySafetyCapped(usage);
-
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-paper px-4 py-8 sm:px-6 sm:py-10 pb-24 md:pb-12">
       <div className="mx-auto w-full max-w-5xl space-y-8">
-        
-        {/* --- Studio Header & Progression Indicator --- */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-hairline/80 pb-6">
-          <div className="space-y-1.5">
-            {/* Step Breadcrumbs */}
-            <div className="flex items-center gap-2 text-xs font-medium">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs transition-colors ${
-                step === "input"
-                  ? "bg-ink text-paper"
-                  : "bg-confirmed/10 text-confirmed border border-confirmed/30"
-              }`}>
-                {step === "review" && <Check className="h-3 w-3" />}
-                1. Role & Recruiter
-              </span>
-              <span className="text-muted-ink/40">→</span>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-xs transition-colors ${
-                step === "review"
-                  ? "bg-seal text-paper"
-                  : "text-muted-ink border border-hairline bg-paper/60"
-              }`}>
-                2. Review & Dispatch
-              </span>
-            </div>
+        {/* Top Header & Breadcrumbs */}
+        <DraftHeader
+          step={step}
+          usage={usage}
+          isMonthlyCapped={isMonthlyCapped}
+          restoredNotice={restoredNotice}
+          onDiscardDraft={handleDiscardDraft}
+        />
 
-            <h1 className="font-heading text-2xl sm:text-3xl text-ink font-normal tracking-tight">
-              {step === "input" ? "New Letter" : "Review Letter"}
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-ink max-w-2xl leading-relaxed">
-              {step === "input"
-                ? "Paste the target job description and recipient email. Vina extracts key requirements and drafts a tailored pitch referencing your background."
-                : "Carefully inspect your letter before dispatch. You can refine any phrasing directly - nothing leaves your Gmail without your approval."}
-            </p>
-          </div>
-
-          {/* Quick Quota Pill */}
-          {usage && (
-            <div className="self-start sm:self-auto shrink-0 inline-flex items-center gap-2 rounded-sm border border-hairline bg-white/80 px-3 py-1.5 text-xs text-muted-ink shadow-2xs">
-              <span className={`h-2 w-2 rounded-full shrink-0 ${isMonthlyCapped ? "bg-amber-600" : "bg-seal"}`} />
-              {usage.plan === "pro" ? (
-                <span className="font-medium text-ink">Pro Plan • Unlimited Letters</span>
-              ) : (
-                <span>
-                  <strong className="text-ink font-medium">{usage.monthlySends} of {usage.monthlyLimit ?? FREE_MONTHLY_LIMIT}</strong> sent this month
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* --- Restored Notice Strip (if present) --- */}
-        {restoredNotice && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-seal/30 bg-[#FAF7F0] p-3.5 sm:px-4 sm:py-3 rounded-sm text-xs shadow-2xs">
-            <div className="flex items-center gap-2.5 text-ink min-w-0">
-              <Sparkles className="h-4 w-4 text-seal shrink-0" />
-              <span className="font-medium text-ink">{restoredNotice}</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleDiscardDraft}
-              className="inline-flex items-center gap-1 text-muted-ink hover:text-ink underline underline-offset-4 text-xs shrink-0 self-start sm:self-auto cursor-pointer"
-            >
-              <RotateCcw className="h-3 w-3" />
-              <span>Discard & start fresh</span>
-            </button>
-          </div>
-        )}
-
-        {/* --- STEP 1: INPUT WORKSPACE --- */}
+        {/* STEP 1: INPUT WORKSPACE */}
         {step === "input" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
-            
-            {/* Left Main Form Column or Monthly Limit Upgrade Card */}
             <div className="lg:col-span-8">
-              {isSafetyDailyCapped ? (
-                <div className="rounded-md border border-amber-300/80 bg-[#FAF7F0] p-6 sm:p-8 shadow-xs space-y-5">
-                  <div className="flex items-start gap-3.5">
-                    <div className="rounded-full bg-amber-500/15 p-2.5 text-amber-800 shrink-0 mt-0.5">
-                      <ShieldCheck className="h-5 w-5 text-amber-800" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs text-[11px] font-medium bg-amber-100 text-amber-900 border border-amber-300/60 mb-1">
-                        Gmail Safety Shield Active (50 of 50 Dispatched)
-                      </div>
-                      <h2 className="font-heading text-xl sm:text-2xl text-ink font-normal tracking-tight">
-                        Safe daily sending ceiling reached
-                      </h2>
-                      <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-                        To guarantee your personal Google account reputation is protected against algorithmic spam flags and bulk throttling, Vina caps dispatches at <strong>50 letters per 24 hours</strong>.
-                      </p>
-                      <p className="text-xs text-muted-ink pt-1">
-                        Your safe daily window resets automatically in a few hours. In the meantime, you can review past conversations or prepare notes.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-hairline flex items-center justify-between">
-                    <Link
-                      href="/log"
-                      className="text-xs text-ink hover:text-seal underline underline-offset-4 font-medium"
-                    >
-                      View your sent letters in History →
-                    </Link>
-                  </div>
-                </div>
-              ) : isMonthlyCapped ? (
-                <div className="rounded-md border border-seal/30 bg-[#FAF7F0] p-6 sm:p-8 shadow-xs space-y-6">
-                  <div className="flex items-start gap-3.5">
-                    <div className="rounded-full bg-seal/15 p-2.5 text-seal shrink-0 mt-0.5">
-                      <Sparkles className="h-5 w-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs text-[11px] font-medium bg-amber-100 text-amber-900 border border-amber-300/60 mb-1">
-                        Free Monthly Limit Reached (5 of 5 Sent)
-                      </div>
-                      <h2 className="font-heading text-xl sm:text-2xl text-ink font-normal tracking-tight">
-                        You&apos;ve reached your limit of 5 free letters
-                      </h2>
-                      <p className="text-xs sm:text-sm text-muted-ink leading-relaxed">
-                        Free accounts include 5 sent letters per calendar month. To continue drafting and sending tailored applications directly from your Gmail, upgrade to <strong>Vina Pro</strong>.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Pro Value Props Checklist */}
-                  <div className="rounded-sm border border-hairline bg-paper/80 p-4 sm:p-5 space-y-2.5 text-xs">
-                    <p className="text-[11px] font-semibold text-ink uppercase tracking-wider">
-                      Included with Vina Pro - $9 / month (₹499)
-                    </p>
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-ink">
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-confirmed shrink-0" />
-                        <span><strong>Unlimited</strong> tailored letters</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-confirmed shrink-0" />
-                        <span><strong>1-Click follow-ups</strong> in same thread</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-confirmed shrink-0" />
-                        <span><strong>Up to 3</strong> résumé versions</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-confirmed shrink-0" />
-                        <span><strong>Unlimited</strong> AI regenerations</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  {/* Upgrade Actions */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
-                    <button
-                      type="button"
-                      disabled={isUpgrading}
-                      onClick={handleUpgrade}
-                      className="inline-flex items-center justify-center gap-2 rounded-sm bg-seal px-6 py-3 text-xs sm:text-sm font-medium text-white hover:bg-seal/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer min-h-[44px]"
-                    >
-                      {isUpgrading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Connecting to secure checkout...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          <span>Upgrade to Pro - $9 / month</span>
-                          <ArrowRight className="h-4 w-4 ml-1" />
-                        </>
-                      )}
-                    </button>
-
-                    <Link
-                      href="/log"
-                      className="text-xs text-muted-ink hover:text-ink underline underline-offset-4 text-center sm:text-right py-1 font-medium"
-                    >
-                      View your sent letters in History →
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleGenerate} className="rounded-md border border-hairline bg-white/85 p-5 sm:p-7 shadow-2xs space-y-6">
-                
-                {/* Send To Input */}
-                <div className="space-y-2">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <label htmlFor="hr-email" className="block text-xs font-semibold text-ink">
-                      Send to <span className="text-seal">*</span>
-                    </label>
-                    <span className="text-[11px] text-muted-ink">Recruiter, founder, or hiring manager</span>
-                  </div>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-ink/70" />
-                    <input
-                      id="hr-email"
-                      type="email"
-                      value={hrEmail}
-                      onChange={(e) => setHrEmail(e.target.value)}
-                      placeholder="e.g. alex@company.com or hiring@startup.io"
-                      required
-                      className="w-full rounded-sm border border-hairline bg-paper/60 pl-10 pr-4 py-2.5 text-xs sm:text-sm text-ink placeholder:text-muted-ink/60 focus:bg-white focus:border-seal focus:outline-none transition-colors font-mono"
-                    />
-                  </div>
-
-                  {isValidatingEmail && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-ink pt-0.5">
-                      <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                      <span>Checking recipient mail server (DNS MX)...</span>
-                    </div>
-                  )}
-
-                  {recipientValidation?.suggestion && (
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-amber-900 bg-amber-50/90 border border-amber-200/80 px-2.5 py-1.5 rounded-sm">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-700" />
-                        <span className="truncate">
-                          Did you mean{" "}
-                          <button
-                            type="button"
-                            onClick={() => setHrEmail(recipientValidation.suggestion!)}
-                            className="font-mono font-semibold underline hover:text-amber-950 cursor-pointer"
-                          >
-                            {recipientValidation.suggestion}
-                          </button>
-                          ?
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setHrEmail(recipientValidation.suggestion!)}
-                        className="text-[10px] font-semibold text-amber-900 hover:text-amber-950 underline shrink-0 cursor-pointer"
-                      >
-                        Apply fix
-                      </button>
-                    </div>
-                  )}
-
-                  {recipientValidation && !recipientValidation.isValid && !recipientValidation.suggestion && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-red-700 bg-red-50/80 border border-red-200/70 px-2.5 py-1.5 rounded-sm">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span>{recipientValidation.error}</span>
-                    </div>
-                  )}
-
-                  {recipientValidation?.isValid && !isDuplicateEmail && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-confirmed pt-0.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-confirmed" />
-                      <span>Mail server verified (active MX records found)</span>
-                    </div>
-                  )}
-
-                  {isDuplicateEmail && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-amber-700 pt-0.5">
-                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                      <span>Note: You have previously sent a letter to this recipient address.</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Job Description Textarea */}
-                <div className="space-y-2">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <label htmlFor="jd-text" className="block text-xs font-semibold text-ink">
-                      Job Description <span className="text-seal">*</span>
-                    </label>
-                    <div className="flex items-center gap-3 text-[11px] text-muted-ink">
-                      {jdText.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setJdText("")}
-                          className="hover:text-ink underline underline-offset-2 cursor-pointer"
-                        >
-                          Clear
-                        </button>
-                      )}
-                      <span>
-                        {jdText.length > 0 ? `${jdText.length} characters` : "Full posting"}
-                      </span>
-                    </div>
-                  </div>
-                  <TextareaAutosize
-                    id="jd-text"
-                    minRows={10}
-                    value={jdText}
-                    onChange={(e) => setJdText(e.target.value)}
-                    placeholder="Paste the full job posting here (responsibilities, required qualifications, tech stack, company context)..."
-                    required
-                    className="w-full resize-none rounded-sm border border-hairline bg-paper/60 p-3.5 text-xs sm:text-sm text-ink placeholder:text-muted-ink/60 focus:bg-white focus:border-seal focus:outline-none transition-colors leading-relaxed"
-                  />
-                  <p className="text-[11px] text-muted-ink">
-                    Vina reads the entire JD to identify the specific problems this team is hiring to solve.
-                  </p>
-                </div>
-
-                {/* Tone & Persona Directive Selector */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <label className="block text-xs font-semibold text-ink">
-                      Letter Persona & Tone
-                    </label>
-                    <span className="text-[11px] text-muted-ink">
-                      Tailor signal and length to your recipient
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {TONE_LIST.map((t) => {
-                      const isSelected = tone === t.id;
-                      const Icon =
-                        t.id === "crisp"
-                          ? Zap
-                          : t.id === "technical"
-                          ? Terminal
-                          : t.id === "startup"
-                          ? Rocket
-                          : HeartHandshake;
-
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setTone(t.id)}
-                          className={`relative flex flex-col items-start p-3 rounded-sm border text-left transition-all cursor-pointer ${
-                            isSelected
-                              ? "border-seal bg-seal/5 shadow-2xs"
-                              : "border-hairline bg-paper/40 hover:bg-paper/80 hover:border-ink/20"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full mb-1">
-                            <div className="flex items-center gap-1.5">
-                              <Icon
-                                className={`h-3.5 w-3.5 ${
-                                  isSelected ? "text-seal" : "text-muted-ink"
-                                }`}
-                              />
-                              <span
-                                className={`text-xs font-medium ${
-                                  isSelected ? "text-seal font-semibold" : "text-ink"
-                                }`}
-                              >
-                                {t.label}
-                              </span>
-                            </div>
-                            <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded-xs font-mono font-medium ${
-                                isSelected
-                                  ? "bg-seal text-paper"
-                                  : "bg-ink/5 text-muted-ink"
-                              }`}
-                            >
-                              {t.wordCountRange}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-muted-ink leading-snug">
-                            {t.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Submit Action Strip */}
-                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-hairline/80">
-                  <div className="text-[11px] text-muted-ink flex items-center gap-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-confirmed" />
-                    <span>Nothing is sent automatically. You review everything first.</span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isAnalyzing || !jdText.trim() || !hrEmail.trim()}
-                    className="inline-flex items-center justify-center gap-2 rounded-sm bg-ink px-6 py-2.5 text-xs font-medium text-paper hover:bg-ink/90 disabled:opacity-50 transition-all shadow-xs cursor-pointer min-h-[42px]"
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Reading the job description...</span>
-                      </>
-                    ) : (
-                      <>
-                        <PenLine className="h-3.5 w-3.5" />
-                        <span>Draft this letter</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-              </form>
-              )}
+              <DraftInputForm
+                isSafetyDailyCapped={isSafetyDailyCapped}
+                isMonthlyCapped={isMonthlyCapped}
+                isUpgrading={isUpgrading}
+                onUpgrade={handleUpgrade}
+                hrEmail={hrEmail}
+                onHrEmailChange={setHrEmail}
+                isValidatingEmail={isValidatingEmail}
+                recipientValidation={recipientValidation}
+                isDuplicateEmail={isDuplicateEmail}
+                jdText={jdText}
+                onJdTextChange={setJdText}
+                tone={tone}
+                onToneChange={setTone}
+                isAnalyzing={isAnalyzing}
+                onSubmit={handleGenerate}
+              />
             </div>
 
-            {/* Right Sidebar: Sender Profile & Readiness Checklist */}
-            <aside aria-label="Sending Setup and Readiness" className="lg:col-span-4 space-y-4">
-              
-              {/* Sender Setup Card */}
-              <div className="rounded-md border border-hairline bg-white/70 p-5 shadow-2xs space-y-4">
-                <div className="border-b border-hairline/80 pb-3">
-                  <h2 className="font-heading text-sm text-ink font-medium">
-                    Dispatch Readiness
-                  </h2>
-                  <p className="text-[11px] text-muted-ink mt-0.5">
-                    Verified configuration for outgoing correspondence.
-                  </p>
-                </div>
-
-                {/* 1. Gmail Status */}
-                <div className="flex items-start justify-between gap-3 text-xs">
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <Mail className="h-4 w-4 text-muted-ink mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-ink">Gmail Account</p>
-                      {isGmailLoading ? (
-                        <p className="text-[11px] text-muted-ink">Checking connection...</p>
-                      ) : isGmailConnected ? (
-                        <p className="text-[11px] text-muted-ink truncate font-mono">
-                          {gmailAddress || "Connected"}
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-amber-700">Not connected</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 pt-0.5">
-                    {isGmailConnected ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-confirmed bg-confirmed/10 px-1.5 py-0.5 rounded-xs border border-confirmed/25 font-medium">
-                        <Check className="h-2.5 w-2.5" /> Ready
-                      </span>
-                    ) : (
-                      <Link
-                        href="/settings?tab=gmail"
-                        className="text-[11px] text-seal hover:underline font-medium"
-                      >
-                        Connect →
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* 2. Résumé Status */}
-                <div className="flex items-start justify-between gap-3 text-xs border-t border-hairline/60 pt-3">
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <FileText className="h-4 w-4 text-muted-ink mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-ink">Attached Résumé</p>
-                      {isResumeLoading ? (
-                        <p className="text-[11px] text-muted-ink">Loading résumé...</p>
-                      ) : resume?.file_url ? (
-                        <div className="mt-1">
-                          {resumes.length > 1 ? (
-                            <select
-                              value={selectedResume?.id || ""}
-                              onChange={(e) => {
-                                const target = resumes.find((r) => r.id === e.target.value);
-                                if (target) {
-                                  setSelectedResume(target);
-                                  setResume(target);
-                                }
-                              }}
-                              className="w-full bg-paper border border-hairline rounded-xs px-2 py-1 text-[11px] text-ink focus:border-seal focus:outline-none cursor-pointer truncate"
-                            >
-                              {resumes.map((r) => (
-                                <option key={r.id} value={r.id}>
-                                  {r.label || "Primary"} ({r.file_name || "PDF"})
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <p className="text-[11px] text-muted-ink truncate">
-                              {selectedResume?.label || selectedResume?.file_name || "Uploaded PDF"}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-amber-700">No résumé uploaded</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 pt-0.5">
-                    {resume?.file_url ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-confirmed bg-confirmed/10 px-1.5 py-0.5 rounded-xs border border-confirmed/25 font-medium">
-                        <Check className="h-2.5 w-2.5" /> Attached
-                      </span>
-                    ) : (
-                      <Link
-                        href="/settings?tab=resume"
-                        className="text-[11px] text-seal hover:underline font-medium"
-                      >
-                        Upload →
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* 3. Monthly Sends Quota */}
-                <div className="flex items-start justify-between gap-3 text-xs border-t border-hairline/60 pt-3">
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <FileCheck className="h-4 w-4 text-muted-ink mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-ink">Monthly Dispatch Quota</p>
-                      {usage ? (
-                        <p className="text-[11px] text-muted-ink">
-                          {usage.plan === "pro"
-                            ? "Unlimited letters on Pro"
-                            : `${usage.monthlySends} of ${usage.monthlyLimit ?? FREE_MONTHLY_LIMIT} letters used`}
-                        </p>
-                      ) : (
-                        <p className="text-[11px] text-muted-ink">5 free letters / month</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 pt-0.5">
-                    {usage?.plan === "pro" ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-confirmed bg-confirmed/10 px-1.5 py-0.5 rounded-xs border border-confirmed/25 font-medium">
-                        Pro Active
-                      </span>
-                    ) : isMonthlyCapped ? (
-                      <button
-                        type="button"
-                        onClick={handleUpgrade}
-                        className="text-[11px] text-seal hover:underline font-medium cursor-pointer"
-                      >
-                        Upgrade →
-                      </button>
-                    ) : (
-                      <span className="text-[11px] text-muted-ink">
-                        {(usage?.monthlyLimit ?? FREE_MONTHLY_LIMIT) - (usage?.monthlySends ?? 0)} left
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Informative Guidance Card */}
-              <div className="rounded-md border border-hairline bg-[#FAF9F5] p-5 shadow-2xs space-y-2.5 text-xs">
-                <h3 className="font-heading text-xs font-semibold text-ink">
-                  How Vina drafts your letter
-                </h3>
-                <ul className="space-y-2 text-[11px] text-muted-ink leading-relaxed">
-                  <li className="flex items-start gap-2">
-                    <span className="text-seal font-semibold shrink-0">•</span>
-                    <span>Extracts the exact hiring team requirements and core responsibilities from the posting.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-seal font-semibold shrink-0">•</span>
-                    <span>Correlates your actual work history and skills from your uploaded résumé.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-seal font-semibold shrink-0">•</span>
-                    <span>Formats an executive, concise note (75–125 words) that respects hiring managers&apos; time.</span>
-                  </li>
-                </ul>
-              </div>
-
-            </aside>
-
+            <DraftReadinessSidebar
+              isGmailLoading={isGmailLoading}
+              isGmailConnected={isGmailConnected}
+              gmailAddress={gmailAddress}
+              isResumeLoading={isResumeLoading}
+              resume={resume}
+              resumes={resumes}
+              selectedResume={selectedResume}
+              onSelectResume={(target) => {
+                setSelectedResume(target);
+                setResume(target);
+              }}
+              usage={usage}
+              isMonthlyCapped={isMonthlyCapped}
+              onUpgrade={handleUpgrade}
+            />
           </div>
         )}
 
-        {/* --- STEP 2: REVIEW WORKSPACE --- */}
+        {/* STEP 2: REVIEW WORKSPACE */}
         {step === "review" && analyzedData && (
           <div className="space-y-6">
             <LetterFrame
@@ -1137,18 +629,13 @@ export default function DraftPage() {
                 }
               }}
               onSend={handleSend}
-              onEmailChange={setHrEmail}
+              onEmailChange={(newEmail) => setHrEmail(newEmail)}
               onDraftChange={handleDraftChange}
               isSending={isSending}
-              resumeLabel={
-                selectedResume?.label
-                  ? `${selectedResume.label}`
-                  : selectedResume?.file_name || undefined
-              }
+              resumeLabel={selectedResume?.label || selectedResume?.file_name || undefined}
             />
           </div>
         )}
-
       </div>
     </main>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { RecipientValidationResult } from "@/lib/email-validator";
+export type { RecipientValidationResult };
 
 export interface UseRecipientValidationOptions {
   skipDuplicateCheck?: boolean;
