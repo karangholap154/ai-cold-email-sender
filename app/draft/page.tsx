@@ -23,6 +23,9 @@ import { LetterFrame } from "@/components/letter-frame";
 import type { AnalyzeResponse, Resume, UserUsage } from "@/lib/types/database";
 import { initiateCheckout } from "@/lib/billing";
 import { FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
+import { isMonthlyCapped as checkMonthlyCapped, isDailySafetyCapped } from "@/lib/usage";
+import { formatShortDate } from "@/lib/date";
+import { useRecipientValidation } from "@/hooks/use-recipient-validation";
 
 const DRAFT_STORAGE_KEY = "cold_email_draft_session";
 
@@ -45,14 +48,6 @@ export default function DraftPage() {
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [isCapped, setIsCapped] = useState(false);
   const [isDailyCapped, setIsDailyCapped] = useState(false);
-  const [recipientValidation, setRecipientValidation] = useState<{
-    isValid: boolean;
-    error?: string;
-    suggestion?: string;
-    domain?: string;
-    mxHost?: string;
-  } | null>(null);
-  const [isValidatingEmail, setIsValidatingEmail] = useState(false);
 
   // Gmail connection state
   const [isGmailConnected, setIsGmailConnected] = useState(false);
@@ -74,9 +69,17 @@ export default function DraftPage() {
     originalBody?: string;
   } | null>(null);
 
+  // Recipient validation and duplicate outreach tracking hook
+  const {
+    recipientValidation,
+    isValidatingEmail,
+    isDuplicate: isDuplicateEmail,
+  } = useRecipientValidation(hrEmail, {
+    skipDuplicateCheck: Boolean(followUpContext),
+  });
+
   // Sending state
   const [isSending, setIsSending] = useState(false);
-  const [isDuplicateEmail, setIsDuplicateEmail] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
 
   // Load active resume, user usage & Gmail connection status
@@ -271,11 +274,7 @@ export default function DraftPage() {
 
         const email = data.email;
         setHrEmail(email.hr_email);
-        const formattedDate = new Date(email.created_at).toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
+        const formattedDate = formatShortDate(email.created_at);
 
         const ctx = {
           parentEmailId: email.id,
@@ -316,55 +315,6 @@ export default function DraftPage() {
     loadFollowUp(fId);
   }, [router]);
 
-  // Check duplicate email & validate recipient MX when hrEmail changes
-  useEffect(() => {
-    if (!hrEmail || !hrEmail.includes("@") || hrEmail.length < 5) {
-      const timer = setTimeout(() => {
-        setIsDuplicateEmail(false);
-        setRecipientValidation(null);
-        setIsValidatingEmail(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-
-    const timer = setTimeout(async () => {
-      setIsValidatingEmail(true);
-      try {
-        const trimmed = hrEmail.trim();
-        const promises: Promise<Response>[] = [
-          fetch("/api/validate-recipient", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: trimmed }),
-          }),
-        ];
-
-        if (!followUpContext) {
-          promises.push(fetch(`/api/emails?email=${encodeURIComponent(trimmed)}`));
-        }
-
-        const [valRes, dupRes] = await Promise.all(promises);
-
-        if (valRes && valRes.ok) {
-          const vData = await valRes.json();
-          setRecipientValidation(vData);
-        }
-
-        if (dupRes && dupRes.ok) {
-          const dData = await dupRes.json();
-          setIsDuplicateEmail(Boolean(dData.exists));
-        } else if (!dupRes) {
-          setIsDuplicateEmail(false);
-        }
-      } catch {
-        // Silently continue if network check fails
-      } finally {
-        setIsValidatingEmail(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [hrEmail, followUpContext]);
 
   const handleUpgrade = async () => {
     setIsUpgrading(true);
@@ -573,9 +523,8 @@ export default function DraftPage() {
     }
   };
 
-  const isFreePlan = usage ? usage.plan === "free" : true;
-  const isMonthlyCapped = isCapped || (isFreePlan && usage ? usage.monthlySends >= (usage.monthlyLimit ?? FREE_MONTHLY_LIMIT) : false);
-  const isSafetyDailyCapped = isDailyCapped || (usage && typeof usage.dailySends === "number" && typeof usage.dailyLimit === "number" && usage.dailySends >= usage.dailyLimit);
+  const isMonthlyCapped = isCapped || checkMonthlyCapped(usage);
+  const isSafetyDailyCapped = isDailyCapped || isDailySafetyCapped(usage);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-paper px-4 py-8 sm:px-6 sm:py-10 pb-24 md:pb-12">

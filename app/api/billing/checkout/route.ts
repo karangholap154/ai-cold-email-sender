@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-helper";
 import { dodoClient } from "@/lib/dodo";
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const auth = await getAuthUser("You must be signed in to upgrade.");
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
-    if (authError || !user || !user.email) {
+    if (!user.email) {
       return NextResponse.json(
         { error: "You must be signed in to upgrade." },
         { status: 401 }

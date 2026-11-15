@@ -16,6 +16,8 @@ import {
 import { toast } from "sonner";
 import type { GmailConnectionStatus } from "@/lib/types/database";
 
+import { formatShortDate } from "@/lib/date";
+
 export interface GmailTabProps {
   gmailStatus: GmailConnectionStatus;
   isDisconnectingGmail: boolean;
@@ -117,14 +119,7 @@ export function GmailTab({
                   </span>
                 </div>
                 <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5">
-                  Connected on{" "}
-                  {gmailStatus.connectedAt
-                    ? new Date(gmailStatus.connectedAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : "Recently"}
+                  Connected on {formatShortDate(gmailStatus.connectedAt)}
                 </p>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-helper";
 import { encryptToken } from "@/lib/crypto";
 
 interface ConnectSmtpBody {
@@ -10,18 +10,9 @@ interface ConnectSmtpBody {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in to connect an email account." },
-        { status: 401 }
-      );
-    }
+    const auth = await getAuthUser("You must be signed in to connect an email account.");
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
     const body: ConnectSmtpBody = await req.json();
     const { email, appPassword } = body;

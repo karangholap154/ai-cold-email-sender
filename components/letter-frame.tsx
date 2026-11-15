@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import type { AnalyzeResponse, UserUsage } from "@/lib/types/database";
 import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
+import { isProPlan, isMonthlyCapped, isDailySafetyCapped } from "@/lib/usage";
+import { useRecipientValidation } from "@/hooks/use-recipient-validation";
 
 export interface LetterFrameProps {
   initialData: AnalyzeResponse;
@@ -83,19 +85,18 @@ export function LetterFrame({
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const [recipientEmail, setRecipientEmail] = useState(hrEmail);
-  const [isDuplicate, setIsDuplicate] = useState(isDuplicateEmail);
-  const [duplicateEmailMatched, setDuplicateEmailMatched] = useState(
-    isDuplicateEmail ? hrEmail : ""
-  );
-  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
-  const [recipientValidation, setRecipientValidation] = useState<{
-    isValid: boolean;
-    error?: string;
-    suggestion?: string;
-    domain?: string;
-    mxHost?: string;
-  } | null>(null);
-  const [isValidatingEmail, setIsValidatingEmail] = useState(false);
+  const {
+    recipientValidation,
+    isValidatingEmail,
+    isCheckingDuplicate,
+    isDuplicate,
+    duplicateEmailMatched,
+    setIsDuplicate,
+  } = useRecipientValidation(recipientEmail, {
+    skipDuplicateCheck: isFollowUp,
+    initialDuplicate: isDuplicateEmail,
+    onEmailChange,
+  });
 
   const [subject, setSubject] = useState(initialData.subject);
   const [body, setBody] = useState(initialData.body);
@@ -128,13 +129,13 @@ export function LetterFrame({
     return () => clearTimeout(timer);
   }, [subject, body, companyName, roleTitle, recipientEmail, onDraftChange]);
 
-  const isFreePlan = usage ? usage.plan === "free" : true;
-  const monthlyLimit = usage?.monthlyLimit ?? 5;
+  const isFreePlan = !isProPlan(usage);
+  const monthlyLimit = usage?.monthlyLimit ?? FREE_MONTHLY_LIMIT;
   const monthlySends = usage?.monthlySends ?? 0;
   const dailyLimit = usage?.dailyLimit ?? DAILY_SAFETY_LIMIT;
   const dailySends = usage?.dailySends ?? 0;
-  const reachedDailyCap = dailySends >= dailyLimit;
-  const reachedSendCap = isCapped || (isFreePlan && monthlySends >= monthlyLimit) || reachedDailyCap;
+  const reachedDailyCap = isDailySafetyCapped(usage);
+  const reachedSendCap = isCapped || isMonthlyCapped(usage) || reachedDailyCap;
 
   const reachedRegenCap =
     isFreePlan &&
@@ -142,75 +143,8 @@ export function LetterFrame({
     typeof maxRegenerations === "number" &&
     regenerationCount >= maxRegenerations;
 
-  // Sync initial duplicate state if props change
-  const [prevDuplicateProp, setPrevDuplicateProp] = useState(isDuplicateEmail);
-  if (isDuplicateEmail !== prevDuplicateProp) {
-    setPrevDuplicateProp(isDuplicateEmail);
-    setIsDuplicate(isDuplicateEmail);
-    if (isDuplicateEmail) {
-      setDuplicateEmailMatched(hrEmail);
-    }
-  }
-
-  // Dynamic server checking when recipient email changes
-  useEffect(() => {
-    const trimmed = recipientEmail.trim();
-    if (onEmailChange) {
-      onEmailChange(trimmed);
-    }
-
-    if (!trimmed || !trimmed.includes("@") || trimmed.length < 5) {
-      const timer = setTimeout(() => {
-        setIsDuplicate(false);
-        setDuplicateEmailMatched("");
-        setRecipientValidation(null);
-        setIsValidatingEmail(false);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-
-    const timer = setTimeout(async () => {
-      setIsCheckingDuplicate(true);
-      setIsValidatingEmail(true);
-      try {
-        const [emailRes, valRes] = await Promise.all([
-          fetch(`/api/emails?email=${encodeURIComponent(trimmed)}`),
-          fetch("/api/validate-recipient", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: trimmed }),
-          }),
-        ]);
-
-        if (emailRes.ok) {
-          const data = await emailRes.json();
-          if (data.exists) {
-            setIsDuplicate(true);
-            setDuplicateEmailMatched(trimmed);
-          } else {
-            setIsDuplicate(false);
-            setDuplicateEmailMatched("");
-          }
-        }
-
-        if (valRes && valRes.ok) {
-          const vData = await valRes.json();
-          setRecipientValidation(vData);
-        }
-      } catch {
-        // Silently continue if network check fails
-      } finally {
-        setIsCheckingDuplicate(false);
-        setIsValidatingEmail(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [recipientEmail, onEmailChange]);
-
   const handleEmailChange = (val: string) => {
     setRecipientEmail(val);
-    // If the user modified the email away from the flagged duplicate, immediately clear warning flag
     if (val.trim().toLowerCase() !== duplicateEmailMatched.toLowerCase()) {
       setIsDuplicate(false);
     }

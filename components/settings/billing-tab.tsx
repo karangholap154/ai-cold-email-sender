@@ -3,6 +3,7 @@
 import { CreditCard, Zap, Loader2 } from "lucide-react";
 import type { UserUsage } from "@/lib/types/database";
 import { FREE_PLAN, PRO_PLAN, FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
+import { isProPlan, isMonthlyCapped, getMonthlyQuotaPercent } from "@/lib/usage";
 
 export interface BillingTabProps {
   usage: UserUsage | null;
@@ -19,6 +20,10 @@ export function BillingTab({
   isOpeningPortal,
   handleManageBilling,
 }: BillingTabProps) {
+  const isPro = isProPlan(usage);
+  const isCapped = isMonthlyCapped(usage);
+  const quotaPercent = getMonthlyQuotaPercent(usage);
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-150">
       <div>
@@ -38,11 +43,11 @@ export function BillingTab({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <p className="text-xs sm:text-sm font-medium text-ink">
-                  {usage?.plan === "pro"
+                  {isPro
                     ? "You're on Pro."
                     : `You're on the free plan - ${FREE_MONTHLY_LIMIT} letters this month.`}
                 </p>
-                {usage?.plan === "pro" ? (
+                {isPro ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-seal bg-[#FAF6EE] px-1.5 py-0.5 rounded-sm border border-seal/30">
                     <Zap className="h-2.5 w-2.5 fill-seal text-seal" />
                     <span>Active</span>
@@ -54,14 +59,14 @@ export function BillingTab({
                 )}
               </div>
               <p className="text-[11px] sm:text-xs text-muted-ink mt-0.5 leading-relaxed">
-                {usage?.plan === "pro"
+                {isPro
                   ? "Unlimited tailored letters, automated attachments, and follow-ups."
                   : `${usage?.monthlySends ?? 0} of ${usage?.monthlyLimit ?? FREE_MONTHLY_LIMIT} letters sent this month.`}
               </p>
             </div>
           </div>
 
-          {usage?.plan === "pro" ? (
+          {isPro ? (
             <button
               type="button"
               disabled={isOpeningPortal}
@@ -89,7 +94,7 @@ export function BillingTab({
         </div>
 
         {/* Free quota progress bar */}
-        {usage?.plan !== "pro" && (
+        {!isPro && (
           <div className="space-y-1.5 pt-2 border-t border-hairline">
             <div className="flex justify-between text-[11px] text-muted-ink">
               <span>Monthly quota usage</span>
@@ -100,13 +105,10 @@ export function BillingTab({
             <div className="w-full h-1.5 bg-[#EDEAE2] rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-300 ${
-                  (usage?.monthlySends ?? 0) >= FREE_MONTHLY_LIMIT ? "bg-amber-700" : "bg-seal"
+                  isCapped ? "bg-amber-700" : "bg-seal"
                 }`}
                 style={{
-                  width: `${Math.min(
-                    ((usage?.monthlySends ?? 0) / FREE_MONTHLY_LIMIT) * 100,
-                    100
-                  )}%`,
+                  width: `${quotaPercent}%`,
                 }}
               />
             </div>

@@ -36,17 +36,10 @@ import {
 } from "@/components/ui/dialog";
 import { initiateCheckout } from "@/lib/billing";
 import { PRO_PLAN, FREE_RETENTION_DAYS } from "@/lib/constants/plans";
+import { formatRelativeDays, formatDateTime } from "@/lib/date";
 
 // Outreach follow-up threshold (in calendar days)
 const STALE_FOLLOWUP_DAYS = 5;
-
-function formatRelativeDays(dateString: string, now: number): string {
-  const diffMs = now - new Date(dateString).getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays <= 0) return "Today";
-  if (diffDays === 1) return "1 day ago";
-  return `${diffDays} days ago`;
-}
 
 // Conversation group structure: an initial email plus any follow-ups attached to it
 interface ConversationThread {
@@ -783,16 +776,7 @@ export default function LogPage() {
                       const isFollowUp = item.email_type === "followup";
                       const isCopied = copiedId === item.id;
 
-                      const formattedDate = new Date(item.created_at).toLocaleDateString(
-                        undefined,
-                        {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      );
+                      const formattedDate = formatDateTime(item.created_at);
 
                       return (
                         <div
