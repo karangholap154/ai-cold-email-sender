@@ -1119,6 +1119,8 @@ export default function DraftPage() {
               isCapped={isCapped}
               isFollowUp={Boolean(followUpContext)}
               originalSentDate={followUpContext?.originalSentDate}
+              originalSubject={followUpContext?.originalSubject}
+              originalBody={followUpContext?.originalBody}
               tone={tone}
               onRegenerate={handleRegenerate}
               isRegenerating={isRegenerating}

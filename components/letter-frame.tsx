@@ -21,6 +21,9 @@ import {
   Check,
   Lock,
   ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  History,
 } from "lucide-react";
 import type { AnalyzeResponse, UserUsage } from "@/lib/types/database";
 import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
@@ -40,6 +43,8 @@ export interface LetterFrameProps {
   isCapped?: boolean;
   isFollowUp?: boolean;
   originalSentDate?: string;
+  originalSubject?: string;
+  originalBody?: string;
   tone?: OutreachTone;
   onRegenerate: () => void;
   isRegenerating: boolean;
@@ -75,6 +80,8 @@ export function LetterFrame({
   isCapped = false,
   isFollowUp = false,
   originalSentDate,
+  originalSubject,
+  originalBody,
   tone = "crisp",
   onRegenerate,
   isRegenerating,
@@ -87,6 +94,7 @@ export function LetterFrame({
 }: LetterFrameProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
+  const [showOriginalLetter, setShowOriginalLetter] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState(hrEmail);
   const {
     recipientValidation,
@@ -378,16 +386,49 @@ export function LetterFrame({
           </div>
         )}
 
-        {/* Follow-up Indicator */}
+        {/* Follow-up Indicator & Original Outreach Reference */}
         {isFollowUp && (
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-hairline/60 text-xs">
-            <span className="rounded-sm border border-seal/40 bg-seal/10 text-seal px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase">
-              Follow-up Correspondence
-            </span>
-            {originalSentDate && (
-              <span className="text-[11px] text-muted-ink">
-                Original outreach sent: <strong className="text-ink font-medium">{originalSentDate}</strong>
-              </span>
+          <div className="space-y-2 pt-2 border-t border-hairline/60 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="rounded-sm border border-seal/40 bg-seal/10 text-seal px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase">
+                  Follow-up Correspondence
+                </span>
+                {originalSentDate && (
+                  <span className="text-[11px] text-muted-ink">
+                    Original outreach sent: <strong className="text-ink font-medium">{originalSentDate}</strong>
+                  </span>
+                )}
+              </div>
+              {originalBody && (
+                <button
+                  type="button"
+                  onClick={() => setShowOriginalLetter((prev) => !prev)}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-seal hover:text-seal/80 underline underline-offset-2 cursor-pointer"
+                >
+                  <History className="h-3 w-3" />
+                  <span>{showOriginalLetter ? "Hide original letter" : "View original letter"}</span>
+                  {showOriginalLetter ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+              )}
+            </div>
+
+            {showOriginalLetter && originalBody && (
+              <div className="rounded-sm border border-hairline/90 bg-[#F4F1EA] p-3 text-xs space-y-1.5 animate-in fade-in duration-150">
+                {originalSubject && (
+                  <div className="text-[11px] font-medium text-ink flex items-baseline gap-1.5">
+                    <span className="text-muted-ink font-normal">Subject:</span>
+                    <span className="font-mono text-[11px]">{originalSubject}</span>
+                  </div>
+                )}
+                <div className="text-ink/80 text-[11px] leading-relaxed whitespace-pre-wrap font-sans border-t border-hairline/60 pt-2">
+                  {originalBody}
+                </div>
+              </div>
             )}
           </div>
         )}
