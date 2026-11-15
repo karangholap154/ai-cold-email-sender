@@ -24,6 +24,7 @@ import {
   MessageSquare,
   X,
   RefreshCw,
+  Download,
 } from "lucide-react";
 import type { SentEmail } from "@/lib/types/database";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ import {
 import { initiateCheckout } from "@/lib/billing";
 import { PRO_PLAN, FREE_RETENTION_DAYS } from "@/lib/constants/plans";
 import { formatRelativeDays, formatDateTime } from "@/lib/date";
+import { formatOutreachAsCsv, downloadCsv } from "@/lib/csv";
 
 // Outreach follow-up threshold (in calendar days)
 const STALE_FOLLOWUP_DAYS = 5;
@@ -314,6 +316,9 @@ export default function LogPage() {
     const deliveryRate = total > 0 ? Math.round((sentCount / total) * 100) : 100;
     const needsFollowUpCount = allConversations.filter((t) => t.needsFollowUp).length;
     const respondedCount = allConversations.filter((t) => t.isResponded).length;
+    const totalConversations = allConversations.length;
+    const responseRate =
+      totalConversations > 0 ? Math.round((respondedCount / totalConversations) * 100) : 0;
     return {
       total,
       sentCount,
@@ -323,6 +328,8 @@ export default function LogPage() {
       deliveryRate,
       needsFollowUpCount,
       respondedCount,
+      totalConversations,
+      responseRate,
     };
   }, [emails, allConversations]);
 
@@ -366,6 +373,25 @@ export default function LogPage() {
     return result;
   }, [allConversations, activeFilter, searchQuery]);
 
+  const handleExportCsv = () => {
+    // If the user has an active filter or search query, export the filtered subset. Otherwise export all records.
+    const isFiltered = activeFilter !== "all" || searchQuery.trim().length > 0;
+    const targetEmails = isFiltered
+      ? conversations.flatMap((c) => c.allEmails)
+      : emails;
+
+    if (targetEmails.length === 0) {
+      toast.error("No correspondence records to export.");
+      return;
+    }
+
+    const dateStr = new Date().toISOString().split("T")[0];
+    const filename = `vina-outreach-${dateStr}.csv`;
+    const csvData = formatOutreachAsCsv(targetEmails);
+    downloadCsv(filename, csvData);
+    toast.success(`Exported ${targetEmails.length} letter${targetEmails.length === 1 ? "" : "s"} to ${filename}`);
+  };
+
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-paper px-4 py-8 sm:px-6 sm:py-10 pb-24 md:pb-12">
       <div className="mx-auto w-full max-w-5xl space-y-7">
@@ -386,7 +412,18 @@ export default function LogPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start md:self-end shrink-0">
+          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-end shrink-0">
+            <button
+              type="button"
+              disabled={isLoading || emails.length === 0}
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-1.5 rounded-sm border border-hairline bg-white px-3.5 py-2 text-xs font-medium text-ink shadow-2xs hover:bg-paper transition-all cursor-pointer disabled:opacity-50"
+              title="Export correspondence archive to CSV"
+            >
+              <Download className="h-3.5 w-3.5 text-muted-ink" />
+              <span>Export CSV</span>
+            </button>
+
             <button
               type="button"
               disabled={isSyncingReplies || isLoading}
@@ -414,33 +451,34 @@ export default function LogPage() {
 
         {/* --- Ledger Overview Bar --- */}
         {!isLoading && emails.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <div className="rounded-md border border-hairline bg-white/70 p-4 shadow-2xs">
-              <span className="text-[11px] font-medium text-muted-ink">All Letters</span>
+              <span className="text-[11px] font-medium text-muted-ink">Total Outreach</span>
               <p className="font-heading text-xl sm:text-2xl text-ink mt-1">
                 {stats.total}
               </p>
-              <span className="text-[10px] text-muted-ink">Lifetime dispatched</span>
+              <span className="text-[10px] text-muted-ink">
+                {stats.initialCount} initial · {stats.followUpsCount} follow-up{stats.followUpsCount !== 1 ? "s" : ""}
+              </span>
             </div>
 
             <div className="rounded-md border border-hairline bg-white/70 p-4 shadow-2xs">
-              <span className="text-[11px] font-medium text-muted-ink">Initial Outreaches</span>
-              <p className="font-heading text-xl sm:text-2xl text-ink mt-1">
-                {stats.initialCount}
-              </p>
-              <span className="text-[10px] text-muted-ink">First-contact pitches</span>
+              <span className="text-[11px] font-medium text-muted-ink">Response Rate</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="font-heading text-xl sm:text-2xl text-ink">
+                  {stats.responseRate}%
+                </p>
+                <span className="text-[10px] text-confirmed font-medium">
+                  {stats.respondedCount} repl{stats.respondedCount === 1 ? "y" : "ies"}
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-ink">
+                From {stats.totalConversations} lead{stats.totalConversations !== 1 ? "s" : ""}
+              </span>
             </div>
 
             <div className="rounded-md border border-hairline bg-white/70 p-4 shadow-2xs">
-              <span className="text-[11px] font-medium text-muted-ink">Follow-up Letters</span>
-              <p className="font-heading text-xl sm:text-2xl text-ink mt-1">
-                {stats.followUpsCount}
-              </p>
-              <span className="text-[10px] text-seal font-medium">Threaded follow-ups</span>
-            </div>
-
-            <div className="rounded-md border border-hairline bg-white/70 p-4 shadow-2xs">
-              <span className="text-[11px] font-medium text-muted-ink">Delivery Accuracy</span>
+              <span className="text-[11px] font-medium text-muted-ink">Delivery Success</span>
               <div className="flex items-baseline gap-2 mt-1">
                 <p className="font-heading text-xl sm:text-2xl text-ink">
                   {stats.deliveryRate}%
@@ -449,7 +487,37 @@ export default function LogPage() {
                   {stats.sentCount} delivered
                 </span>
               </div>
-              <span className="text-[10px] text-muted-ink">Sent via personal Gmail</span>
+              <span className="text-[10px] text-muted-ink">Via personal Gmail</span>
+            </div>
+
+            <div
+              className={`rounded-md border p-4 shadow-2xs ${
+                stats.needsFollowUpCount > 0
+                  ? "border-amber-300/80 bg-amber-50/50"
+                  : "border-hairline bg-white/70"
+              }`}
+            >
+              <span className="text-[11px] font-medium text-muted-ink">Pending Follow-ups</span>
+              <p
+                className={`font-heading text-xl sm:text-2xl mt-1 ${
+                  stats.needsFollowUpCount > 0 ? "text-amber-950 font-semibold" : "text-ink"
+                }`}
+              >
+                {stats.needsFollowUpCount}
+              </p>
+              <span className="text-[10px] text-muted-ink">
+                {stats.needsFollowUpCount > 0
+                  ? "Sent 5+ days ago, no reply"
+                  : "All outreach up to date"}
+              </span>
+            </div>
+
+            <div className="rounded-md border border-hairline bg-white/70 p-4 shadow-2xs col-span-2 sm:col-span-1">
+              <span className="text-[11px] font-medium text-muted-ink">Threaded Follow-ups</span>
+              <p className="font-heading text-xl sm:text-2xl text-ink mt-1">
+                {stats.followUpsCount}
+              </p>
+              <span className="text-[10px] text-seal font-medium">Outreach momentum</span>
             </div>
           </div>
         )}
