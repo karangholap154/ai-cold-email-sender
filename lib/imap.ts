@@ -22,10 +22,11 @@ export interface ReplyCheckResult {
 
 /**
  * Checks IMAP (imap.gmail.com:993) for replies from specific HR recipients.
- * Privacy & Security Guarantees:
- * - Only queries: FROM <hrEmail> SINCE <sentDate>
- * - Never fetches, parses, or stores the body of any email message.
- * - Only checks existence (UID count) of matching incoming messages.
+ *
+ * Performance & Privacy Guarantees:
+ * - Batched single-query architecture: 1 search + 1 envelope stream instead of N sequential searches.
+ * - Privacy: ONLY inspects standard RFC envelope headers (From address, Date).
+ * - Never fetches, parses, reads, or stores any email body content.
  */
 export async function checkRepliesForRecipients({
   gmailAddress,
@@ -51,59 +52,81 @@ export async function checkRepliesForRecipients({
     emitLogs: false,
   });
 
-  const results: ReplyCheckResult[] = [];
+  // Map normalized recipient email -> array of RecipientToCheck
+  const recipientMap = new Map<string, RecipientToCheck[]>();
+  let earliestSentTime = Infinity;
+
+  for (const r of recipients) {
+    const key = r.hrEmail.trim().toLowerCase();
+    const existing = recipientMap.get(key) || [];
+    existing.push(r);
+    recipientMap.set(key, existing);
+
+    const sentTime = new Date(r.sentAt).getTime();
+    if (!isNaN(sentTime) && sentTime < earliestSentTime) {
+      earliestSentTime = sentTime;
+    }
+  }
+
+  if (earliestSentTime === Infinity) {
+    earliestSentTime = Date.now() - 60 * 24 * 60 * 60 * 1000;
+  }
+
+  // 24-hour buffer prior to earliest sent date to account for server timezone boundaries
+  const oldestSinceDate = new Date(earliestSentTime - 24 * 60 * 60 * 1000);
+
+  // Map of recipientId -> { hasReply: true, repliedAt: string }
+  const replyMap = new Map<string, { hasReply: boolean; repliedAt?: string }>();
 
   try {
     await client.connect();
     const lock = await client.getMailboxLock("INBOX");
 
     try {
-      for (const item of recipients) {
-        try {
-          const sentDate = new Date(item.sentAt);
-          // 24-hour buffer prior to sent date to account for server timezone boundaries
-          const sinceDate = new Date(sentDate.getTime() - 24 * 60 * 60 * 1000);
+      // Step 1: Search for all message UIDs received in INBOX since oldestSinceDate in 1 query
+      const matchedUids = await client.search({ since: oldestSinceDate }, { uid: true });
 
-          // Targeted search: only search for messages FROM this specific HR email received SINCE sentDate
-          const searchCriteria = {
-            from: item.hrEmail.trim().toLowerCase(),
-            since: sinceDate,
-          };
+      if (Array.isArray(matchedUids) && matchedUids.length > 0) {
+        // Bound peak memory by slicing up to 500 latest incoming messages if inbox has high volume
+        const uidsToFetch = matchedUids.length > 500 ? matchedUids.slice(-500) : matchedUids;
 
-          const matchedUids = await client.search(searchCriteria, { uid: true });
+        // Step 2: Stream only header envelopes (From, Date) for matched UIDs in 1 network operation
+        for await (const message of client.fetch(
+          uidsToFetch,
+          { envelope: true, internalDate: true, uid: true },
+          { uid: true }
+        )) {
+          const fromAddresses = message.envelope?.from || [];
+          const messageDate = message.internalDate
+            ? new Date(message.internalDate)
+            : message.envelope?.date
+            ? new Date(message.envelope.date)
+            : new Date();
 
-          if (matchedUids && matchedUids.length > 0) {
-            let newestDateStr = new Date().toISOString();
-            try {
-              const lastUid = matchedUids[matchedUids.length - 1];
-              const msg = await client.fetchOne(lastUid, { internalDate: true });
-              if (msg && msg.internalDate) {
-                newestDateStr = new Date(msg.internalDate).toISOString();
+          for (const addrObj of fromAddresses) {
+            const senderEmail = (addrObj.address || "").trim().toLowerCase();
+            const matchedRecipients = recipientMap.get(senderEmail);
+
+            if (matchedRecipients) {
+              for (const recipient of matchedRecipients) {
+                const recipientSentTime = new Date(recipient.sentAt).getTime();
+                // Check if incoming reply was received after or around the sent time (1 hour leeway)
+                if (messageDate.getTime() >= recipientSentTime - 60 * 60 * 1000) {
+                  const existing = replyMap.get(recipient.id);
+                  const newIso = messageDate.toISOString();
+                  if (
+                    !existing ||
+                    (existing.repliedAt && new Date(newIso) > new Date(existing.repliedAt))
+                  ) {
+                    replyMap.set(recipient.id, {
+                      hasReply: true,
+                      repliedAt: newIso,
+                    });
+                  }
+                }
               }
-            } catch {
-              // Internal date fetch is optional; fall back to current timestamp
             }
-
-            results.push({
-              emailId: item.id,
-              hrEmail: item.hrEmail,
-              hasReply: true,
-              repliedAt: newestDateStr,
-            });
-          } else {
-            results.push({
-              emailId: item.id,
-              hrEmail: item.hrEmail,
-              hasReply: false,
-            });
           }
-        } catch (itemErr) {
-          console.error(`Error searching IMAP for ${item.hrEmail}:`, itemErr);
-          results.push({
-            emailId: item.id,
-            hrEmail: item.hrEmail,
-            hasReply: false,
-          });
         }
       }
     } finally {
@@ -120,5 +143,14 @@ export async function checkRepliesForRecipients({
     );
   }
 
-  return results;
+  // Construct final results preserving original input order
+  return recipients.map((r) => {
+    const matched = replyMap.get(r.id);
+    return {
+      emailId: r.id,
+      hrEmail: r.hrEmail,
+      hasReply: Boolean(matched?.hasReply),
+      repliedAt: matched?.repliedAt,
+    };
+  });
 }

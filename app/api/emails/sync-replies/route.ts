@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-helper";
 import { decryptToken } from "@/lib/crypto";
 import { checkRepliesForRecipients } from "@/lib/imap";
 
 export async function POST() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthUser();
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
     // 1. Fetch user's active Gmail connection
     const { data: connection, error: connError } = await supabase
@@ -82,7 +76,7 @@ export async function POST() {
       messageId: r.gmail_message_id,
     }));
 
-    // 4. Run isolated targeted IMAP search
+    // 4. Run single batched IMAP search
     const results = await checkRepliesForRecipients({
       gmailAddress: connection.gmail_address,
       appPassword,
@@ -91,18 +85,20 @@ export async function POST() {
 
     const repliedResults = results.filter((r) => r.hasReply);
 
-    // 5. Update database for any matches
+    // 5. Update database for any matches in parallel
     if (repliedResults.length > 0) {
-      for (const item of repliedResults) {
-        await supabase
-          .from("sent_emails")
-          .update({
-            is_responded: true,
-            responded_at: item.repliedAt || new Date().toISOString(),
-          })
-          .eq("id", item.emailId)
-          .eq("user_id", user.id);
-      }
+      await Promise.all(
+        repliedResults.map((item) =>
+          supabase
+            .from("sent_emails")
+            .update({
+              is_responded: true,
+              responded_at: item.repliedAt || new Date().toISOString(),
+            })
+            .eq("id", item.emailId)
+            .eq("user_id", user.id)
+        )
+      );
     }
 
     return NextResponse.json({
