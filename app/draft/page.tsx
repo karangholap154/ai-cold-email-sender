@@ -9,7 +9,6 @@ import {
   PenLine,
   Loader2,
   AlertCircle,
-  ExternalLink,
   Mail,
   ArrowRight,
   CheckCircle2,
@@ -18,9 +17,6 @@ import {
   ShieldCheck,
   RotateCcw,
   Check,
-  Lock,
-  Building2,
-  X,
   FileCheck,
 } from "lucide-react";
 import { LetterFrame } from "@/components/letter-frame";

@@ -3,20 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Building2,
-  Briefcase,
   FileText,
   Lock,
-  Send,
-  Sparkles,
-  CheckCircle2,
   ArrowRight,
   ShieldCheck,
   Check,
-  ChevronRight,
-  ExternalLink,
-  MapPin,
-  Clock,
   BadgeCheck,
 } from "lucide-react";
 

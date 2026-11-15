@@ -20,11 +20,7 @@ import {
   CheckCircle2,
   MapPin,
   Info,
-  Building2,
-  Send,
-  SlidersHorizontal,
   X,
-  BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { JobPosting, JobFilter } from "@/lib/types/job";
@@ -137,13 +133,14 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
-    let active = true;
+    let isMounted = true;
     const run = async () => {
+      if (!isMounted) return;
       await fetchData();
     };
     void run();
     return () => {
-      active = false;
+      isMounted = false;
     };
   }, []);
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Sparkles, X, Plus, Save, Loader2, Check } from "lucide-react";
+import { useState } from "react";
+import { X, Plus, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface SkillsManagerProps {

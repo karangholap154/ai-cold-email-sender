@@ -1,4 +1,4 @@
-import type { JobPosting, JobsResponse, JobFilter } from "@/lib/types/job";
+import type { JobPosting, JobFilter } from "@/lib/types/job";
 
 // In-memory cache to guarantee fast response times (<20ms) and protect upstream free APIs
 interface CacheEntry {
