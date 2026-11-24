@@ -6,6 +6,7 @@ import { decryptToken } from "@/lib/crypto";
 import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
 import { validateRecipientEmail } from "@/lib/email-validator";
 import { getUserSendCounts } from "@/lib/usage";
+import { getActiveResume } from "@/lib/resume";
 
 interface SendRequestBody {
   hrEmail?: string;
@@ -168,20 +169,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Fetch user's specified or default resume PDF from Supabase Storage
-    let resumeQuery = supabase
-      .from("resume")
-      .select("*")
-      .eq("user_id", user.id);
-
-    if (resumeId) {
-      resumeQuery = resumeQuery.eq("id", resumeId);
-    } else {
-      resumeQuery = resumeQuery
-        .order("is_default", { ascending: false })
-        .order("updated_at", { ascending: false });
-    }
-
-    const { data: resumeRow } = await resumeQuery.limit(1).maybeSingle();
+    const resumeRow = await getActiveResume(supabase, user.id, resumeId);
 
     const attachments: Array<{ filename: string; content: Buffer }> = [];
 

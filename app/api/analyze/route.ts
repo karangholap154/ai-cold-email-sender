@@ -5,6 +5,7 @@ import { formatSenderSignature } from "@/lib/signature";
 import { FREE_REGEN_LIMIT, FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 import { aiRateLimiter } from "@/lib/rate-limiter";
 import { getUserSendCounts } from "@/lib/usage";
+import { getActiveResume } from "@/lib/resume";
 
 export async function POST(req: NextRequest) {
   try {
@@ -86,24 +87,9 @@ export async function POST(req: NextRequest) {
     // 6. Fetch authenticated user's background / skills summary from Supabase
     let skillsSummary = "";
     try {
-      // Fetch resume skills summary (specific resumeId if provided, or default)
-      let resumeQuery = supabase
-        .from("resume")
-        .select("id, skills_summary")
-        .eq("user_id", user.id);
-
-      if (body.resumeId) {
-        resumeQuery = resumeQuery.eq("id", body.resumeId);
-      } else {
-        resumeQuery = resumeQuery
-          .order("is_default", { ascending: false })
-          .order("updated_at", { ascending: false });
-      }
-
-      const { data: resumeData } = await resumeQuery.limit(1).maybeSingle();
-
-      if (resumeData?.skills_summary) {
-        skillsSummary = resumeData.skills_summary;
+      const activeResume = await getActiveResume(supabase, user.id, body.resumeId);
+      if (activeResume?.skills_summary) {
+        skillsSummary = activeResume.skills_summary;
       }
     } catch (dbErr) {
       console.warn("Could not fetch user resume from Supabase:", dbErr);
