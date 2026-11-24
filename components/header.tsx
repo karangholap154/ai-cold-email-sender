@@ -146,7 +146,7 @@ export function Header() {
             </Link>
 
             {/* Desktop / Tablet Navigation Pills */}
-            {user && (
+            {user ? (
               <nav className="hidden md:flex items-center gap-1 rounded-full border border-hairline/70 bg-paper/60 p-1 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
                 {navLinks.map((link) => {
                   const isActive = pathname === link.href;
@@ -175,6 +175,20 @@ export function Header() {
                     </Link>
                   );
                 })}
+              </nav>
+            ) : (
+              <nav className="hidden md:flex items-center gap-1">
+                <Link
+                  href="/tools"
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-150 ${
+                    pathname.startsWith("/tools")
+                      ? "bg-ink text-paper font-semibold"
+                      : "text-muted-ink hover:text-ink hover:bg-black/5"
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-seal" />
+                  <span>Free Tools</span>
+                </Link>
               </nav>
             )}
           </div>
@@ -225,6 +239,12 @@ export function Header() {
               </>
             ) : !isLoading && !user && pathname !== "/login" ? (
               <div className="flex items-center gap-2">
+                <Link
+                  href="/tools"
+                  className="md:hidden rounded-full px-2.5 py-1 text-xs font-medium text-muted-ink hover:text-ink"
+                >
+                  Tools
+                </Link>
                 <Link
                   href="/login"
                   className="rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-ink hover:text-ink transition-colors"

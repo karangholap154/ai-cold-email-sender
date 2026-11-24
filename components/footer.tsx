@@ -98,6 +98,38 @@ export function Footer() {
                 </li>
                 <li>
                   <Link
+                    href="/tools"
+                    className="inline-block py-0.5 text-muted-ink hover:text-ink transition-colors font-medium text-seal"
+                  >
+                    Free Outreach Tools
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/tools/email-checker"
+                    className="inline-block py-0.5 text-muted-ink hover:text-ink transition-colors"
+                  >
+                    Spam &amp; MX Checker
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/tools/email-permutator"
+                    className="inline-block py-0.5 text-muted-ink hover:text-ink transition-colors"
+                  >
+                    Email Permutator
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/tools/subject-line-tester"
+                    className="inline-block py-0.5 text-muted-ink hover:text-ink transition-colors"
+                  >
+                    Subject Line Tester
+                  </Link>
+                </li>
+                <li>
+                  <Link
                     href="/#pricing"
                     className="inline-block py-0.5 text-muted-ink hover:text-ink transition-colors"
                   >
