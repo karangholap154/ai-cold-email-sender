@@ -4,6 +4,7 @@ import { analyzeJdAndDraftEmail, generateFollowUpEmail } from "@/lib/ai";
 import { formatSenderSignature } from "@/lib/signature";
 import { FREE_REGEN_LIMIT, FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
 import { aiRateLimiter } from "@/lib/rate-limiter";
+import { getUserSendCounts } from "@/lib/usage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,24 +39,14 @@ export async function POST(req: NextRequest) {
 
     // 4. Enforce Free-tier monthly cap server-side (block drafting once 5 sends used)
     if (plan === "free") {
-      const now = new Date();
-      const startOfMonth = new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-      ).toISOString();
+      const { monthlySends, isMonthlyCapped } = await getUserSendCounts(supabase, user.id, "free");
 
-      const { count: sentCount, error: countError } = await supabase
-        .from("sent_emails")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "sent")
-        .gte("created_at", startOfMonth);
-
-      if (!countError && (sentCount ?? 0) >= FREE_MONTHLY_LIMIT) {
+      if (isMonthlyCapped) {
         return NextResponse.json(
           {
             error: `You've reached your free limit of ${FREE_MONTHLY_LIMIT} letters this month. Please upgrade to Pro to draft and send unlimited letters.`,
             code: "PLAN_LIMIT_REACHED",
-            sentCount,
+            sentCount: monthlySends,
             limit: FREE_MONTHLY_LIMIT,
           },
           { status: 403 }

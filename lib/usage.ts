@@ -1,5 +1,54 @@
 import type { UserUsage } from "@/lib/types/database";
 import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export interface UserSendCounts {
+  monthlySends: number;
+  dailySends: number;
+  isMonthlyCapped: boolean;
+  isDailySafetyCapped: boolean;
+}
+
+/**
+ * Queries monthly and 24-hour sent email counts for a user in parallel.
+ * Calculates UTC start-of-month and rolling 24-hour timestamps.
+ */
+export async function getUserSendCounts(
+  supabase: SupabaseClient,
+  userId: string,
+  plan: "free" | "pro" = "free"
+): Promise<UserSendCounts> {
+  const now = new Date();
+  const startOfMonth = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+  ).toISOString();
+  const past24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const [monthlyResult, dailyResult] = await Promise.all([
+    supabase
+      .from("sent_emails")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "sent")
+      .gte("created_at", startOfMonth),
+    supabase
+      .from("sent_emails")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "sent")
+      .gte("created_at", past24Hours),
+  ]);
+
+  const monthlySends = monthlyResult.count ?? 0;
+  const dailySends = dailyResult.count ?? 0;
+
+  return {
+    monthlySends,
+    dailySends,
+    isMonthlyCapped: plan === "free" && monthlySends >= FREE_MONTHLY_LIMIT,
+    isDailySafetyCapped: dailySends >= DAILY_SAFETY_LIMIT,
+  };
+}
 
 /**
  * Returns true if the user is on the Pro membership.

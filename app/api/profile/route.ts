@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/supabase/auth-helper";
 import { DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
+import { getUserSendCounts } from "@/lib/usage";
 
 export async function GET() {
   try {
@@ -24,27 +25,8 @@ export async function GET() {
       error = fallback.error;
     }
 
-    const now = new Date();
-    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-    const past24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-    const [monthlyResult, dailyResult] = await Promise.all([
-      supabase
-        .from("sent_emails")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "sent")
-        .gte("created_at", startOfMonth),
-      supabase
-        .from("sent_emails")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "sent")
-        .gte("created_at", past24Hours),
-    ]);
-
-    const monthlySends = monthlyResult.count ?? 0;
-    const dailySends = dailyResult.count ?? 0;
+    const plan = (data?.plan || "free") as "free" | "pro";
+    const { monthlySends, dailySends } = await getUserSendCounts(supabase, user.id, plan);
 
     if (error) {
       // If columns don't exist yet in the database, return graceful fallback
@@ -74,8 +56,6 @@ export async function GET() {
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    const plan = (data?.plan || "free") as "free" | "pro";
 
     return NextResponse.json({
       profile: data || {

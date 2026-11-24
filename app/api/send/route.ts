@@ -5,6 +5,7 @@ import { getAuthUser } from "@/lib/supabase/auth-helper";
 import { decryptToken } from "@/lib/crypto";
 import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
 import { validateRecipientEmail } from "@/lib/email-validator";
+import { getUserSendCounts } from "@/lib/usage";
 
 interface SendRequestBody {
   hrEmail?: string;
@@ -65,29 +66,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Gmail Safety Shield: 50 letters per rolling 24-hour window per user
-    // Keeps sending behavior 10x below Google's algorithmic spam threshold
-    const past24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count: dailyCount, error: dailyCountError } = await supabase
-      .from("sent_emails")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("status", "sent")
-      .gte("created_at", past24Hours);
-
-    const dailySentCount = dailyCount ?? 0;
-    if (!dailyCountError && dailySentCount >= DAILY_SAFETY_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `Gmail Safety Shield: You have reached the safe daily sending limit (${DAILY_SAFETY_LIMIT} letters / 24 hours). This ceiling protects your personal Google account reputation from spam flags. Please try again tomorrow.`,
-          code: "DAILY_SAFETY_LIMIT_REACHED",
-          dailySentCount,
-          limit: DAILY_SAFETY_LIMIT,
-        },
-        { status: 429 }
-      );
-    }
-
     // 1. Fetch user's profile and plan (Preserves 100% of subscription checks)
     const { data: profile } = await supabase
       .from("profiles")
@@ -96,6 +74,22 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     const plan = profile?.plan || "free";
+
+    // Gmail Safety Shield (50 letters / 24h) & Monthly Free-tier Cap (5 sends / month)
+    const { dailySends, monthlySends, isDailySafetyCapped, isMonthlyCapped } =
+      await getUserSendCounts(supabase, user.id, plan);
+
+    if (isDailySafetyCapped) {
+      return NextResponse.json(
+        {
+          error: `Gmail Safety Shield: You have reached the safe daily sending limit (${DAILY_SAFETY_LIMIT} letters / 24 hours). This ceiling protects your personal Google account reputation from spam flags. Please try again tomorrow.`,
+          code: "DAILY_SAFETY_LIMIT_REACHED",
+          dailySentCount: dailySends,
+          limit: DAILY_SAFETY_LIMIT,
+        },
+        { status: 429 }
+      );
+    }
 
     // Enforce Pro exclusivity for follow-up emails
     if (emailType === "followup" && plan !== "pro") {
@@ -109,31 +103,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Enforce Free-Tier Monthly Send Cap (5 sends/calendar month, UTC-normalized)
-    if (plan === "free") {
-      const now = new Date();
-      const startOfMonth = new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-      ).toISOString();
-      const { count, error: countError } = await supabase
-        .from("sent_emails")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "sent")
-        .gte("created_at", startOfMonth);
-
-      const sentCount = count ?? 0;
-
-      if (!countError && sentCount >= FREE_MONTHLY_LIMIT) {
-        return NextResponse.json(
-          {
-            error: `You've sent ${FREE_MONTHLY_LIMIT} letters this month on the free plan.`,
-            code: "PLAN_LIMIT_REACHED",
-            sentCount,
-            limit: FREE_MONTHLY_LIMIT,
-          },
-          { status: 403 }
-        );
-      }
+    if (isMonthlyCapped) {
+      return NextResponse.json(
+        {
+          error: `You've sent ${FREE_MONTHLY_LIMIT} letters this month on the free plan.`,
+          code: "PLAN_LIMIT_REACHED",
+          sentCount: monthlySends,
+          limit: FREE_MONTHLY_LIMIT,
+        },
+        { status: 403 }
+      );
     }
 
     // 2. Fetch user's active Gmail connection
