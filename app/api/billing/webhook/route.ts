@@ -96,21 +96,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fallback: look up by customer email across auth.users with pagination
+    // Fallback: look up by customer email across auth.users (bounded to prevent webhook timeout)
     if (!userId && customerEmail) {
       const normalizedEmail = customerEmail.trim().toLowerCase();
+      const maxPages = 3; // Bound to 300 users max to guarantee fast webhook response (<1.5s)
       let page = 1;
       const perPage = 100;
-      let hasMore = true;
 
-      while (hasMore && !userId) {
+      while (page <= maxPages && !userId) {
         const { data: adminUsers, error: listError } = await supabase.auth.admin.listUsers({
           page,
           perPage,
         });
 
         if (listError || !adminUsers?.users || adminUsers.users.length === 0) {
-          hasMore = false;
           break;
         }
 
@@ -123,10 +122,9 @@ export async function POST(req: NextRequest) {
         }
 
         if (adminUsers.users.length < perPage) {
-          hasMore = false;
-        } else {
-          page += 1;
+          break;
         }
+        page += 1;
       }
     }
 
