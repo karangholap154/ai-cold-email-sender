@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-helper";
 
 const PRO_RESUME_LIMIT = 3;
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthUser();
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
     const { data: resumes, error } = await supabase
       .from("resume")
@@ -62,15 +56,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthUser();
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -246,15 +234,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthUser();
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
     const body = await req.json();
     const { id, is_default, label, skills_summary } = body;
@@ -319,15 +301,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await getAuthUser();
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
     const url = new URL(req.url);
     const resumeId = url.searchParams.get("id");

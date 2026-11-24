@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-helper";
 import { analyzeJdAndDraftEmail, generateFollowUpEmail } from "@/lib/ai";
 import { formatSenderSignature } from "@/lib/signature";
 import { FREE_REGEN_LIMIT, FREE_MONTHLY_LIMIT } from "@/lib/constants/plans";
@@ -10,19 +10,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const type = body?.type || "initial";
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
     // 1. Enforce user authentication for all generation requests
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in to generate tailored letters." },
-        { status: 401 }
-      );
-    }
+    const auth = await getAuthUser("You must be signed in to generate tailored letters.");
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
 
     // 2. Enforce AI generation rate limits (per user)
     const rateLimitStatus = aiRateLimiter.check(user.id);

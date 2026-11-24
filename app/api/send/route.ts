@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer, { type SendMailOptions } from "nodemailer";
 import crypto from "crypto";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth-helper";
 import { decryptToken } from "@/lib/crypto";
 import { FREE_MONTHLY_LIMIT, DAILY_SAFETY_LIMIT } from "@/lib/constants/plans";
 import { validateRecipientEmail } from "@/lib/email-validator";
@@ -20,20 +20,15 @@ interface SendRequestBody {
 
 export async function POST(req: NextRequest) {
   let bodyData: Partial<SendRequestBody> = {};
+  let authenticatedUser: { id: string } | null = null;
+  let supabaseClient: Awaited<ReturnType<typeof getAuthUser>>["supabase"] = null;
 
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "You must be signed in to send emails." },
-        { status: 401 }
-      );
-    }
+    const auth = await getAuthUser("You must be signed in to send emails.");
+    if (auth.errorResponse) return auth.errorResponse;
+    const { user, supabase } = auth;
+    authenticatedUser = user;
+    supabaseClient = supabase;
 
     bodyData = await req.json();
     const {
@@ -425,27 +420,20 @@ export async function POST(req: NextRequest) {
 
     // Log failure to database if possible
     try {
-      if (bodyData?.hrEmail) {
-        const supabase = await createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (user) {
-          await supabase.from("sent_emails").insert({
-            user_id: user.id,
-            jd_text: bodyData.jdText || "",
-            hr_email: bodyData.hrEmail.trim().toLowerCase(),
-            company_name: bodyData.companyName || null,
-            role_title: bodyData.roleTitle || null,
-            generated_subject: bodyData.subject || "Unknown",
-            generated_body: bodyData.body || "Unknown",
-            final_subject: bodyData.subject || "Unknown",
-            final_body: bodyData.body || "Unknown",
-            status: "failed",
-            error_message: message,
-          });
-        }
+      if (bodyData?.hrEmail && authenticatedUser && supabaseClient) {
+        await supabaseClient.from("sent_emails").insert({
+          user_id: authenticatedUser.id,
+          jd_text: bodyData.jdText || "",
+          hr_email: bodyData.hrEmail.trim().toLowerCase(),
+          company_name: bodyData.companyName || null,
+          role_title: bodyData.roleTitle || null,
+          generated_subject: bodyData.subject || "Unknown",
+          generated_body: bodyData.body || "Unknown",
+          final_subject: bodyData.subject || "Unknown",
+          final_body: bodyData.body || "Unknown",
+          status: "failed",
+          error_message: message,
+        });
       }
     } catch (logErr) {
       console.error("Failed to log error to sent_emails table:", logErr);
