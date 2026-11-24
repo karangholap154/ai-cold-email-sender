@@ -218,9 +218,13 @@ end $$;
 -- Indices for user queries, searching, and duplicate checking
 create index if not exists idx_sent_emails_user_id on public.sent_emails(user_id);
 create index if not exists idx_sent_emails_hr_email on public.sent_emails(user_id, hr_email);
+create index if not exists idx_sent_emails_user_lower_hr_email on public.sent_emails(user_id, lower(hr_email));
 create index if not exists idx_sent_emails_company_name on public.sent_emails(user_id, company_name);
 create index if not exists idx_sent_emails_created_at on public.sent_emails(user_id, created_at desc);
+create index if not exists idx_sent_emails_user_status_created on public.sent_emails(user_id, status, created_at desc);
 create index if not exists idx_sent_emails_responded on public.sent_emails(user_id, is_responded, status);
+create index if not exists idx_sent_emails_gmail_message_id on public.sent_emails(gmail_message_id) where gmail_message_id is not null;
+create index if not exists idx_sent_emails_gmail_thread_id on public.sent_emails(gmail_thread_id) where gmail_thread_id is not null;
 
 -- 5. Create gmail_connections table
 create table if not exists public.gmail_connections (
