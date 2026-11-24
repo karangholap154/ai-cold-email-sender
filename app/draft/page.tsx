@@ -163,7 +163,14 @@ export default function DraftPage() {
           }
         }
 
-        const saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        // Read saved draft prioritizing localStorage with sessionStorage fallback
+        let saved: string | null = null;
+        try {
+          saved = localStorage.getItem(DRAFT_STORAGE_KEY) || sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        } catch {
+          saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        }
+
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && (parsed.jdText?.trim() || parsed.hrEmail?.trim() || parsed.analyzedData)) {
@@ -176,21 +183,21 @@ export default function DraftPage() {
               if (parsed.step === "review" && parsed.analyzedData) {
                 setAnalyzedData(parsed.analyzedData);
                 setStep("review");
-                setRestoredNotice("Unsaved draft restored from your current session.");
+                setRestoredNotice("Unsaved draft restored.");
               } else if (parsed.jdText?.trim()) {
-                setRestoredNotice("Unsaved job description restored from your current session.");
+                setRestoredNotice("Unsaved job description restored.");
               }
             }, 0);
           }
         }
       } catch (err) {
-        console.warn("Could not read draft session from sessionStorage:", err);
+        console.warn("Could not read draft session from storage:", err);
       }
     }
     isHydratedRef.current = true;
   }, []);
 
-  // Autosave active draft to sessionStorage on changes
+  // Autosave active draft to localStorage (with sessionStorage sync) on changes
   useEffect(() => {
     if (!isHydratedRef.current || typeof window === "undefined") return;
 
@@ -199,6 +206,7 @@ export default function DraftPage() {
 
     if (!jdText.trim() && !hrEmail.trim() && !analyzedData) {
       try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
         sessionStorage.removeItem(DRAFT_STORAGE_KEY);
       } catch {}
       return;
@@ -213,9 +221,11 @@ export default function DraftPage() {
         analyzedData,
         savedAt: Date.now(),
       };
-      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(sessionPayload));
+      const serialized = JSON.stringify(sessionPayload);
+      localStorage.setItem(DRAFT_STORAGE_KEY, serialized);
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, serialized);
     } catch (err) {
-      console.warn("Could not save draft session to sessionStorage:", err);
+      console.warn("Could not save draft session to storage:", err);
     }
   }, [step, jdText, hrEmail, tone, analyzedData, followUpContext]);
 
@@ -228,6 +238,7 @@ export default function DraftPage() {
     setRestoredNotice(null);
     setRegenerationCount(0);
     try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
       sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch {}
     toast.info("Draft discarded.");
@@ -518,8 +529,9 @@ export default function DraftPage() {
       toast.success(`Sent. It's on its way to ${targetEmail}.`);
       // Increment local monthly sends count
       setUsage((prev) => (prev ? { ...prev, monthlySends: prev.monthlySends + 1 } : null));
-      // Clear session storage on successful send
+      // Clear draft storage on successful send
       try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
         sessionStorage.removeItem(DRAFT_STORAGE_KEY);
       } catch {}
       setRestoredNotice(null);
